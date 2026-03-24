@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { SubmitEventForm } from "./form";
+import { getCurrentUser } from "@/lib/session";
 
 export default async function SubmitEventPage({
   params,
@@ -8,6 +9,7 @@ export default async function SubmitEventPage({
   params: Promise<{ orgSlug: string }>;
 }) {
   const { orgSlug } = await params;
+  const user = await getCurrentUser();
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
@@ -38,6 +40,8 @@ export default async function SubmitEventPage({
         rooms={org.rooms.map((r) => ({ id: r.id, name: r.name }))}
         eventTypes={org.eventTypes.map((t) => ({ id: t.id, name: t.name }))}
         requiresApproval={org.requiresApproval}
+        defaultContactName={user.name}
+        defaultContactEmail={user.email}
       />
     </div>
   );

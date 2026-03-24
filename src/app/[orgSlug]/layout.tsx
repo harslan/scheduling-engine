@@ -9,7 +9,12 @@ import {
   Users,
   Building2,
   LogOut,
+  Shield,
 } from "lucide-react";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
+import { notFound } from "next/navigation";
+import { SignOutButton } from "./sign-out-button";
 
 export default async function OrgLayout({
   children,
@@ -19,6 +24,36 @@ export default async function OrgLayout({
   params: Promise<{ orgSlug: string }>;
 }) {
   const { orgSlug } = await params;
+  const session = await getSession();
+
+  const org = await prisma.organization.findUnique({
+    where: { slug: orgSlug },
+  });
+  if (!org) notFound();
+
+  // Get user's role in this org
+  let role: string | null = null;
+  let isSystemAdmin = false;
+  if (session?.user) {
+    const userId = (session.user as { id: string }).id;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    isSystemAdmin = user?.isSystemAdmin ?? false;
+
+    const membership = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: org.id,
+          userId,
+        },
+      },
+    });
+    role = membership?.role ?? null;
+  }
+
+  const isAdmin = isSystemAdmin || role === "ADMIN";
+  const isManager = isAdmin || role === "MANAGER";
+  const userName = session?.user?.name || session?.user?.email || "User";
+  const userEmail = session?.user?.email || "";
 
   return (
     <div className="h-full flex flex-col">
@@ -32,14 +67,17 @@ export default async function OrgLayout({
             href={`/${orgSlug}`}
             className="text-lg font-bold text-slate-900 hover:text-primary transition-colors"
           >
-            Scheduling Engine
+            {org.appDisplayName || org.name}
           </Link>
         </div>
         <div className="flex items-center gap-4">
-          <span className="text-sm text-slate-500">user@example.com</span>
-          <button className="text-slate-400 hover:text-slate-600 transition-colors">
-            <LogOut className="w-4 h-4" />
-          </button>
+          <div className="text-right">
+            <p className="text-sm font-medium text-slate-700">{userName}</p>
+            {userName !== userEmail && (
+              <p className="text-xs text-slate-400">{userEmail}</p>
+            )}
+          </div>
+          <SignOutButton />
         </div>
       </header>
 
@@ -57,19 +95,19 @@ export default async function OrgLayout({
               href={`/${orgSlug}/submit-event`}
               icon={<CalendarPlus className="w-4 h-4" />}
             >
-              Submit Event
+              Submit {org.eventSingularTerm}
             </NavLink>
             <NavLink
               href={`/${orgSlug}/my-events`}
               icon={<List className="w-4 h-4" />}
             >
-              My Events
+              My {org.eventPluralTerm}
             </NavLink>
             <NavLink
               href={`/${orgSlug}/rooms`}
               icon={<Info className="w-4 h-4" />}
             >
-              Room Information
+              {org.roomTerm} Information
             </NavLink>
             <NavLink
               href={`/${orgSlug}/help`}
@@ -79,29 +117,45 @@ export default async function OrgLayout({
             </NavLink>
           </div>
 
-          <div className="px-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-              Administration
-            </p>
-            <NavLink
-              href={`/${orgSlug}/admin`}
-              icon={<Settings className="w-4 h-4" />}
-            >
-              Settings
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/rooms`}
-              icon={<Building2 className="w-4 h-4" />}
-            >
-              Manage Rooms
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/users`}
-              icon={<Users className="w-4 h-4" />}
-            >
-              Users
-            </NavLink>
-          </div>
+          {isManager && (
+            <div className="px-4 mb-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Management
+              </p>
+              <NavLink
+                href={`/${orgSlug}/admin/approvals`}
+                icon={<Shield className="w-4 h-4" />}
+              >
+                Approvals
+              </NavLink>
+            </div>
+          )}
+
+          {isAdmin && (
+            <div className="px-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
+                Administration
+              </p>
+              <NavLink
+                href={`/${orgSlug}/admin`}
+                icon={<Settings className="w-4 h-4" />}
+              >
+                Settings
+              </NavLink>
+              <NavLink
+                href={`/${orgSlug}/admin/rooms`}
+                icon={<Building2 className="w-4 h-4" />}
+              >
+                Manage {org.roomTerm}s
+              </NavLink>
+              <NavLink
+                href={`/${orgSlug}/admin/users`}
+                icon={<Users className="w-4 h-4" />}
+              >
+                Users
+              </NavLink>
+            </div>
+          )}
         </nav>
 
         {/* Main content */}

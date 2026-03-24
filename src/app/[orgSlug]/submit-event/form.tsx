@@ -11,6 +11,8 @@ interface Props {
   rooms: { id: string; name: string }[];
   eventTypes: { id: string; name: string }[];
   requiresApproval: boolean;
+  defaultContactName?: string;
+  defaultContactEmail?: string;
 }
 
 export function SubmitEventForm({
@@ -19,6 +21,8 @@ export function SubmitEventForm({
   rooms,
   eventTypes,
   requiresApproval,
+  defaultContactName,
+  defaultContactEmail,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -159,6 +163,7 @@ export function SubmitEventForm({
               name="contactName"
               type="text"
               required
+              defaultValue={defaultContactName}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
               placeholder="Your name"
             />
@@ -168,6 +173,7 @@ export function SubmitEventForm({
               name="contactEmail"
               type="email"
               required
+              defaultValue={defaultContactEmail}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
               placeholder="you@example.com"
             />

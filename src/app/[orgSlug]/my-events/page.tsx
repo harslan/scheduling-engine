@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Calendar, Plus } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { getCurrentUser } from "@/lib/session";
 
 export default async function MyEventsPage({
   params,
@@ -10,17 +11,21 @@ export default async function MyEventsPage({
   params: Promise<{ orgSlug: string }>;
 }) {
   const { orgSlug } = await params;
+  const user = await getCurrentUser();
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
   });
   if (!org) notFound();
 
-  // For now, show all non-deleted events (auth will filter by user later)
   const events = await prisma.event.findMany({
     where: {
       organizationId: org.id,
       deleted: false,
+      OR: [
+        { submitterId: user.id },
+        { contactEmail: user.email },
+      ],
     },
     include: { room: true, eventType: true },
     orderBy: { startDateTime: "desc" },
@@ -80,8 +85,13 @@ export default async function MyEventsPage({
                   key={event.id}
                   className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
                 >
-                  <td className="px-4 py-3 font-medium text-slate-900">
-                    {event.title || "Untitled"}
+                  <td className="px-4 py-3">
+                    <Link
+                      href={`/${orgSlug}/events/${event.id}`}
+                      className="font-medium text-slate-900 hover:text-primary transition-colors"
+                    >
+                      {event.title || "Untitled"}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {event.room?.name || "—"}
