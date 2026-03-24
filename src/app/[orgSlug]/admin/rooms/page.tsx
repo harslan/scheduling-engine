@@ -1,6 +1,8 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { Plus, Edit, Check, X } from "lucide-react";
+import { Plus, Check, X } from "lucide-react";
+import { RoomRow } from "./room-row";
+import { AddRoomForm } from "./add-room-form";
 
 export default async function AdminRoomsPage({
   params,
@@ -17,6 +19,9 @@ export default async function AdminRoomsPage({
   const rooms = await prisma.room.findMany({
     where: { organizationId: org.id },
     orderBy: { sortOrder: "asc" },
+    include: {
+      _count: { select: { events: true } },
+    },
   });
 
   return (
@@ -31,12 +36,12 @@ export default async function AdminRoomsPage({
             {rooms.length !== 1 ? "s" : ""} configured
           </p>
         </div>
-        <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors">
-          <Plus className="w-4 h-4" />
-          Add {org.roomTerm}
-        </button>
       </div>
 
+      {/* Add Room Form */}
+      <AddRoomForm organizationId={org.id} orgSlug={orgSlug} roomTerm={org.roomTerm} />
+
+      {/* Rooms Table */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full">
           <thead>
@@ -51,10 +56,13 @@ export default async function AdminRoomsPage({
                 Active
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Managers Only
+                Mgr Only
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Capacity
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Events
               </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Actions
@@ -63,44 +71,29 @@ export default async function AdminRoomsPage({
           </thead>
           <tbody>
             {rooms.map((room) => (
-              <tr
+              <RoomRow
                 key={room.id}
-                className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
-              >
-                <td className="px-4 py-3 font-medium text-slate-900">
-                  {room.name}
-                </td>
-                <td className="px-4 py-3">
-                  <span className="inline-flex items-center justify-center w-8 h-6 bg-primary/10 text-primary rounded text-xs font-bold">
-                    {room.iconText}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {room.active ? (
-                    <Check className="w-4 h-4 text-emerald-500 mx-auto" />
-                  ) : (
-                    <X className="w-4 h-4 text-slate-300 mx-auto" />
-                  )}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {room.managersOnly ? (
-                    <Check className="w-4 h-4 text-amber-500 mx-auto" />
-                  ) : (
-                    <span className="text-slate-300">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-center text-sm text-slate-600">
-                  {room.concurrentEventLimit}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <button className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors">
-                    <Edit className="w-4 h-4" />
-                  </button>
-                </td>
-              </tr>
+                room={{
+                  id: room.id,
+                  name: room.name,
+                  iconText: room.iconText,
+                  active: room.active,
+                  managersOnly: room.managersOnly,
+                  concurrentEventLimit: room.concurrentEventLimit,
+                  notes: room.notes,
+                  sortOrder: room.sortOrder,
+                  eventCount: room._count.events,
+                }}
+                orgSlug={orgSlug}
+              />
             ))}
           </tbody>
         </table>
+        {rooms.length === 0 && (
+          <div className="py-12 text-center text-slate-400">
+            No rooms configured. Add one above.
+          </div>
+        )}
       </div>
     </div>
   );

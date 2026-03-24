@@ -1,27 +1,41 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList } from "lucide-react";
 import Link from "next/link";
+import {
+  startOfWeek,
+  endOfWeek,
+  startOfDay,
+  endOfDay,
+  addDays,
+  format,
+  isSameDay,
+  isToday as isDateToday,
+} from "date-fns";
 
 const ROOM_COLORS = [
-  { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-800" },
-  { bg: "bg-green-100", border: "border-green-400", text: "text-green-800" },
-  { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-800" },
-  { bg: "bg-yellow-100", border: "border-yellow-500", text: "text-yellow-800" },
-  { bg: "bg-sky-100", border: "border-sky-400", text: "text-sky-800" },
-  { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-800" },
-  { bg: "bg-teal-100", border: "border-teal-400", text: "text-teal-800" },
-  { bg: "bg-red-100", border: "border-red-400", text: "text-red-800" },
-  { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-800" },
-  { bg: "bg-pink-100", border: "border-pink-400", text: "text-pink-800" },
+  { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-800", solid: "bg-blue-500" },
+  { bg: "bg-green-100", border: "border-green-400", text: "text-green-800", solid: "bg-green-500" },
+  { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-800", solid: "bg-purple-500" },
+  { bg: "bg-amber-100", border: "border-amber-400", text: "text-amber-800", solid: "bg-amber-500" },
+  { bg: "bg-sky-100", border: "border-sky-400", text: "text-sky-800", solid: "bg-sky-500" },
+  { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-800", solid: "bg-orange-500" },
+  { bg: "bg-teal-100", border: "border-teal-400", text: "text-teal-800", solid: "bg-teal-500" },
+  { bg: "bg-red-100", border: "border-red-400", text: "text-red-800", solid: "bg-red-500" },
+  { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-800", solid: "bg-emerald-500" },
+  { bg: "bg-pink-100", border: "border-pink-400", text: "text-pink-800", solid: "bg-pink-500" },
 ];
+
+const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7am to 10pm
+
+type CalendarView = "month" | "week" | "day";
 
 export default async function CalendarPage({
   params,
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ month?: string; year?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; view?: string; date?: string }>;
 }) {
   const { orgSlug } = await params;
   const sp = await searchParams;
@@ -31,26 +45,55 @@ export default async function CalendarPage({
   });
   if (!org) notFound();
 
+  const view: CalendarView = (sp.view as CalendarView) || "month";
   const now = new Date();
-  const month = sp.month ? parseInt(sp.month) - 1 : now.getMonth();
-  const year = sp.year ? parseInt(sp.year) : now.getFullYear();
 
-  const monthStart = new Date(year, month, 1);
-  const monthEnd = new Date(year, month + 1, 0, 23, 59, 59);
-  const monthName = monthStart.toLocaleString("default", { month: "long" });
+  // Parse the reference date
+  let refDate: Date;
+  if (sp.date) {
+    refDate = new Date(sp.date + "T12:00:00");
+  } else if (sp.month && sp.year) {
+    refDate = new Date(parseInt(sp.year), parseInt(sp.month) - 1, 1);
+  } else {
+    refDate = now;
+  }
 
-  // Fetch events for this month
+  // Calculate date range based on view
+  let rangeStart: Date;
+  let rangeEnd: Date;
+  let headerTitle: string;
+
+  if (view === "week") {
+    rangeStart = startOfWeek(refDate, { weekStartsOn: 0 });
+    rangeEnd = endOfWeek(refDate, { weekStartsOn: 0 });
+    const weekEnd = addDays(rangeStart, 6);
+    if (rangeStart.getMonth() === weekEnd.getMonth()) {
+      headerTitle = `${format(rangeStart, "MMMM d")} – ${format(weekEnd, "d, yyyy")}`;
+    } else {
+      headerTitle = `${format(rangeStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}`;
+    }
+  } else if (view === "day") {
+    rangeStart = startOfDay(refDate);
+    rangeEnd = endOfDay(refDate);
+    headerTitle = format(refDate, "EEEE, MMMM d, yyyy");
+  } else {
+    const month = sp.month ? parseInt(sp.month) - 1 : refDate.getMonth();
+    const year = sp.year ? parseInt(sp.year) : refDate.getFullYear();
+    rangeStart = new Date(year, month, 1);
+    rangeEnd = new Date(year, month + 1, 0, 23, 59, 59);
+    headerTitle = format(rangeStart, "MMMM yyyy");
+  }
+
+  // Fetch events for range
   const events = await prisma.event.findMany({
     where: {
       organizationId: org.id,
       deleted: false,
       status: "APPROVED",
-      startDateTime: { gte: monthStart, lte: monthEnd },
+      startDateTime: { lte: rangeEnd },
+      endDateTime: { gte: rangeStart },
     },
-    include: {
-      room: true,
-      eventType: true,
-    },
+    include: { room: true, eventType: true },
     orderBy: { startDateTime: "asc" },
   });
 
@@ -60,142 +103,121 @@ export default async function CalendarPage({
     orderBy: { sortOrder: "asc" },
   });
 
-  // Build room color map
   const roomColorMap = new Map<string, number>();
   rooms.forEach((room, i) => roomColorMap.set(room.id, i % ROOM_COLORS.length));
 
-  // Group events by day
-  const eventsByDay = new Map<number, typeof events>();
-  for (const event of events) {
-    if (!event.startDateTime) continue;
-    const day = event.startDateTime.getDate();
-    if (!eventsByDay.has(day)) eventsByDay.set(day, []);
-    eventsByDay.get(day)!.push(event);
+  // Navigation URLs
+  const dateStr = format(refDate, "yyyy-MM-dd");
+  function navUrl(direction: "prev" | "next" | "today") {
+    if (direction === "today") {
+      return `/${orgSlug}?view=${view}`;
+    }
+    const delta = direction === "prev" ? -1 : 1;
+    let target: Date;
+    if (view === "month") {
+      target = new Date(rangeStart.getFullYear(), rangeStart.getMonth() + delta, 1);
+      return `/${orgSlug}?view=month&month=${target.getMonth() + 1}&year=${target.getFullYear()}`;
+    } else if (view === "week") {
+      target = addDays(rangeStart, delta * 7);
+      return `/${orgSlug}?view=week&date=${format(target, "yyyy-MM-dd")}`;
+    } else {
+      target = addDays(refDate, delta);
+      return `/${orgSlug}?view=day&date=${format(target, "yyyy-MM-dd")}`;
+    }
   }
-
-  // Calendar grid
-  const firstDay = monthStart.getDay();
-  const daysInMonth = monthEnd.getDate();
-  const days: (number | null)[] = [];
-  for (let i = 0; i < firstDay; i++) days.push(null);
-  for (let i = 1; i <= daysInMonth; i++) days.push(i);
-
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const isCurrentMonth =
-    now.getMonth() === month && now.getFullYear() === year;
-  const today = now.getDate();
-
-  // Prev/next month links
-  const prevMonth = month === 0 ? 12 : month;
-  const prevYear = month === 0 ? year - 1 : year;
-  const nextMonth = month === 11 ? 1 : month + 2;
-  const nextYear = month === 11 ? year + 1 : year;
 
   return (
     <div>
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
-            {monthName} {year}
-          </h1>
+          <h1 className="text-2xl font-bold text-slate-900">{headerTitle}</h1>
           <p className="text-sm text-slate-500 mt-1">
             {org.appDisplayName || org.name}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href={`/${orgSlug}?month=${prevMonth}&year=${prevYear}`}
-            className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-          >
-            <ChevronLeft className="w-4 h-4 text-slate-600" />
-          </Link>
-          <Link
-            href={`/${orgSlug}`}
-            className="px-4 py-2 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-          >
-            Today
-          </Link>
-          <Link
-            href={`/${orgSlug}?month=${nextMonth}&year=${nextYear}`}
-            className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-          >
-            <ChevronRight className="w-4 h-4 text-slate-600" />
-          </Link>
-        </div>
-      </div>
-
-      {/* Calendar grid */}
-      <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="grid grid-cols-7 border-b border-slate-200">
-          {weekDays.map((day) => (
-            <div
-              key={day}
-              className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 text-center bg-slate-50"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-7">
-          {days.map((day, i) => {
-            const dayEvents = day ? eventsByDay.get(day) || [] : [];
-            const isToday = isCurrentMonth && day === today;
-
-            return (
-              <div
-                key={i}
-                className={`min-h-28 border-b border-r border-slate-100 p-1.5 ${
-                  day === null ? "bg-slate-50/50" : ""
-                } ${isToday ? "bg-primary/5" : ""}`}
+        <div className="flex items-center gap-3">
+          {/* View switcher */}
+          <div className="flex bg-slate-100 rounded-lg p-0.5">
+            {([
+              { key: "month", label: "Month", icon: CalIcon },
+              { key: "week", label: "Week", icon: Columns3 },
+              { key: "day", label: "Day", icon: LayoutList },
+            ] as const).map(({ key, label, icon: Icon }) => (
+              <Link
+                key={key}
+                href={`/${orgSlug}?view=${key}${key !== "month" ? `&date=${format(refDate, "yyyy-MM-dd")}` : `&month=${rangeStart.getMonth() + 1}&year=${rangeStart.getFullYear()}`}`}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  view === key
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
               >
-                {day !== null && (
-                  <>
-                    <span
-                      className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm mb-0.5 ${
-                        isToday
-                          ? "bg-primary text-white font-bold"
-                          : "text-slate-700"
-                      }`}
-                    >
-                      {day}
-                    </span>
-                    <div className="space-y-0.5">
-                      {dayEvents.slice(0, 3).map((event) => {
-                        const colorIdx = event.roomId
-                          ? roomColorMap.get(event.roomId) ?? 0
-                          : 0;
-                        const color = ROOM_COLORS[colorIdx];
-                        return (
-                          <div
-                            key={event.id}
-                            className={`text-xs px-1.5 py-0.5 rounded border-l-2 truncate ${color.bg} ${color.border} ${color.text}`}
-                            title={`${event.title} — ${event.room?.name || "No room"}`}
-                          >
-                            {event.title}
-                          </div>
-                        );
-                      })}
-                      {dayEvents.length > 3 && (
-                        <div className="text-xs text-slate-400 px-1.5">
-                          +{dayEvents.length - 3} more
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
-            );
-          })}
+                <Icon className="w-3.5 h-3.5" />
+                {label}
+              </Link>
+            ))}
+          </div>
+
+          {/* Navigation */}
+          <div className="flex items-center gap-1">
+            <Link
+              href={navUrl("prev")}
+              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4 text-slate-600" />
+            </Link>
+            <Link
+              href={navUrl("today")}
+              className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              Today
+            </Link>
+            <Link
+              href={navUrl("next")}
+              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+            >
+              <ChevronRight className="w-4 h-4 text-slate-600" />
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* Calendar body */}
+      {view === "month" && (
+        <MonthView
+          orgSlug={orgSlug}
+          rangeStart={rangeStart}
+          rangeEnd={rangeEnd}
+          events={events}
+          roomColorMap={roomColorMap}
+          now={now}
+        />
+      )}
+      {view === "week" && (
+        <WeekView
+          orgSlug={orgSlug}
+          rangeStart={rangeStart}
+          events={events}
+          roomColorMap={roomColorMap}
+          org={org}
+        />
+      )}
+      {view === "day" && (
+        <DayView
+          orgSlug={orgSlug}
+          refDate={refDate}
+          events={events}
+          roomColorMap={roomColorMap}
+          org={org}
+        />
+      )}
 
       {/* Room legend */}
       {rooms.length > 0 && (
         <div className="mt-4 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-            Rooms
+            {org.roomTerm}s
           </h3>
           <div className="flex flex-wrap gap-3">
             {rooms.slice(0, 10).map((room) => {
@@ -203,14 +225,7 @@ export default async function CalendarPage({
               const color = ROOM_COLORS[colorIdx];
               return (
                 <div key={room.id} className="flex items-center gap-1.5">
-                  <span
-                    className={`inline-flex items-center justify-center w-6 h-5 rounded text-[10px] font-bold text-white ${color.bg.replace("100", "500")}`}
-                    style={{
-                      backgroundColor: `var(--tw-${color.bg.replace("bg-", "").replace("-100", "")}-500, #64748b)`,
-                    }}
-                  >
-                    {room.iconText}
-                  </span>
+                  <span className={`w-3 h-3 rounded-sm ${color.solid}`} />
                   <span className="text-xs text-slate-600">{room.name}</span>
                 </div>
               );
@@ -218,6 +233,318 @@ export default async function CalendarPage({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// MONTH VIEW
+// ============================================================
+
+type EventWithRoom = {
+  id: string;
+  title: string;
+  startDateTime: Date | null;
+  endDateTime: Date | null;
+  roomId: string | null;
+  room: { id: string; name: string } | null;
+  eventType: { id: string; name: string } | null;
+};
+
+function MonthView({
+  orgSlug,
+  rangeStart,
+  rangeEnd,
+  events,
+  roomColorMap,
+  now,
+}: {
+  orgSlug: string;
+  rangeStart: Date;
+  rangeEnd: Date;
+  events: EventWithRoom[];
+  roomColorMap: Map<string, number>;
+  now: Date;
+}) {
+  const month = rangeStart.getMonth();
+  const year = rangeStart.getFullYear();
+  const isCurrentMonth = now.getMonth() === month && now.getFullYear() === year;
+  const today = now.getDate();
+
+  const eventsByDay = new Map<number, EventWithRoom[]>();
+  for (const event of events) {
+    if (!event.startDateTime) continue;
+    const day = event.startDateTime.getDate();
+    if (!eventsByDay.has(day)) eventsByDay.set(day, []);
+    eventsByDay.get(day)!.push(event);
+  }
+
+  const firstDay = rangeStart.getDay();
+  const daysInMonth = rangeEnd.getDate();
+  const days: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) days.push(null);
+  for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="grid grid-cols-7 border-b border-slate-200">
+        {weekDays.map((day) => (
+          <div
+            key={day}
+            className="px-3 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 text-center bg-slate-50"
+          >
+            {day}
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-7">
+        {days.map((day, i) => {
+          const dayEvents = day ? eventsByDay.get(day) || [] : [];
+          const isToday = isCurrentMonth && day === today;
+
+          return (
+            <div
+              key={i}
+              className={`min-h-28 border-b border-r border-slate-100 p-1.5 ${
+                day === null ? "bg-slate-50/50" : ""
+              } ${isToday ? "bg-primary/5" : ""}`}
+            >
+              {day !== null && (
+                <>
+                  <Link
+                    href={`/${orgSlug}?view=day&date=${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`}
+                    className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm mb-0.5 hover:bg-primary/10 transition-colors ${
+                      isToday
+                        ? "bg-primary text-white font-bold"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    {day}
+                  </Link>
+                  <div className="space-y-0.5">
+                    {dayEvents.slice(0, 3).map((event) => {
+                      const colorIdx = event.roomId
+                        ? roomColorMap.get(event.roomId) ?? 0
+                        : 0;
+                      const color = ROOM_COLORS[colorIdx];
+                      return (
+                        <Link
+                          key={event.id}
+                          href={`/${orgSlug}/events/${event.id}`}
+                          className={`block text-xs px-1.5 py-0.5 rounded border-l-2 truncate hover:opacity-80 transition-opacity ${color.bg} ${color.border} ${color.text}`}
+                          title={`${event.title} — ${event.room?.name || "No room"}`}
+                        >
+                          {event.title}
+                        </Link>
+                      );
+                    })}
+                    {dayEvents.length > 3 && (
+                      <div className="text-xs text-slate-400 px-1.5">
+                        +{dayEvents.length - 3} more
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// WEEK VIEW
+// ============================================================
+
+function WeekView({
+  orgSlug,
+  rangeStart,
+  events,
+  roomColorMap,
+  org,
+}: {
+  orgSlug: string;
+  rangeStart: Date;
+  events: EventWithRoom[];
+  roomColorMap: Map<string, number>;
+  org: { roomTerm: string };
+}) {
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i));
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      {/* Day headers */}
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200">
+        <div className="bg-slate-50" />
+        {weekDays.map((day) => {
+          const today = isDateToday(day);
+          return (
+            <div
+              key={day.toISOString()}
+              className={`px-2 py-3 text-center border-l border-slate-200 ${today ? "bg-primary/5" : "bg-slate-50"}`}
+            >
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {format(day, "EEE")}
+              </div>
+              <Link
+                href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
+                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm mt-1 hover:bg-primary/10 transition-colors ${
+                  today ? "bg-primary text-white font-bold" : "text-slate-700"
+                }`}
+              >
+                {format(day, "d")}
+              </Link>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Time grid */}
+      <div className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
+        {HOURS.map((hour) => (
+          <div key={hour} className="contents">
+            <div className="h-16 border-b border-slate-100 flex items-start justify-end pr-2 pt-0.5">
+              <span className="text-xs text-slate-400">
+                {hour === 0 ? "12 AM" : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
+              </span>
+            </div>
+            {weekDays.map((day) => {
+              const dayEvents = events.filter((e) => {
+                if (!e.startDateTime || !e.endDateTime) return false;
+                const eventStart = e.startDateTime.getHours();
+                const eventEnd = e.endDateTime.getHours() + (e.endDateTime.getMinutes() > 0 ? 1 : 0);
+                return isSameDay(e.startDateTime, day) && eventStart <= hour && eventEnd > hour;
+              });
+
+              const isFirstHourEvents = dayEvents.filter(
+                (e) => e.startDateTime && e.startDateTime.getHours() === hour
+              );
+
+              return (
+                <div
+                  key={`${hour}-${day.toISOString()}`}
+                  className={`h-16 border-b border-l border-slate-100 relative p-0.5 ${
+                    isDateToday(day) ? "bg-primary/[0.02]" : ""
+                  }`}
+                >
+                  {isFirstHourEvents.map((event) => {
+                    const colorIdx = event.roomId
+                      ? roomColorMap.get(event.roomId) ?? 0
+                      : 0;
+                    const color = ROOM_COLORS[colorIdx];
+                    const durationHours = event.endDateTime && event.startDateTime
+                      ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
+                      : 1;
+                    const heightRem = Math.min(durationHours * 4, 16);
+
+                    return (
+                      <Link
+                        key={event.id}
+                        href={`/${orgSlug}/events/${event.id}`}
+                        className={`absolute left-0.5 right-0.5 rounded-md border-l-3 px-1.5 py-0.5 overflow-hidden hover:opacity-80 transition-opacity z-10 ${color.bg} ${color.border} ${color.text}`}
+                        style={{ height: `${heightRem}rem` }}
+                        title={`${event.title} — ${event.room?.name || "No room"}`}
+                      >
+                        <div className="text-xs font-medium truncate">
+                          {event.title}
+                        </div>
+                        <div className="text-[10px] opacity-75 truncate">
+                          {event.startDateTime && format(event.startDateTime, "h:mm a")}
+                          {event.room && ` · ${event.room.name}`}
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// DAY VIEW
+// ============================================================
+
+function DayView({
+  orgSlug,
+  refDate,
+  events,
+  roomColorMap,
+  org,
+}: {
+  orgSlug: string;
+  refDate: Date;
+  events: EventWithRoom[];
+  roomColorMap: Map<string, number>;
+  org: { roomTerm: string };
+}) {
+  const dayEvents = events.filter(
+    (e) => e.startDateTime && isSameDay(e.startDateTime, refDate)
+  );
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
+        {HOURS.map((hour) => {
+          const hourEvents = dayEvents.filter((e) => {
+            if (!e.startDateTime) return false;
+            return e.startDateTime.getHours() === hour;
+          });
+
+          return (
+            <div key={hour} className="contents">
+              <div className="h-20 border-b border-slate-100 flex items-start justify-end pr-2 pt-1">
+                <span className="text-xs text-slate-400">
+                  {hour === 0 ? "12 AM" : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
+                </span>
+              </div>
+              <div className="h-20 border-b border-slate-100 relative p-0.5">
+                {hourEvents.map((event) => {
+                  const colorIdx = event.roomId
+                    ? roomColorMap.get(event.roomId) ?? 0
+                    : 0;
+                  const color = ROOM_COLORS[colorIdx];
+                  const durationHours = event.endDateTime && event.startDateTime
+                    ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
+                    : 1;
+                  const heightRem = Math.min(durationHours * 5, 20);
+
+                  return (
+                    <Link
+                      key={event.id}
+                      href={`/${orgSlug}/events/${event.id}`}
+                      className={`absolute left-1 right-1 rounded-lg border-l-4 px-3 py-1.5 overflow-hidden hover:shadow-md transition-shadow z-10 ${color.bg} ${color.border} ${color.text}`}
+                      style={{ height: `${heightRem}rem` }}
+                    >
+                      <div className="text-sm font-semibold truncate">
+                        {event.title}
+                      </div>
+                      <div className="text-xs opacity-75 mt-0.5">
+                        {event.startDateTime && format(event.startDateTime, "h:mm a")}
+                        {event.endDateTime && ` – ${format(event.endDateTime, "h:mm a")}`}
+                      </div>
+                      {event.room && (
+                        <div className="text-xs opacity-75 mt-0.5">
+                          {org.roomTerm}: {event.room.name}
+                        </div>
+                      )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

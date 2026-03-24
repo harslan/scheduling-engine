@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { DeleteEventButton } from "./delete-button";
+import { EditButton } from "./event-detail-client";
 
 export default async function EventDetailPage({
   params,
@@ -28,7 +29,12 @@ export default async function EventDetailPage({
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: {
-      organization: true,
+      organization: {
+        include: {
+          rooms: { where: { active: true }, orderBy: { sortOrder: "asc" } },
+          eventTypes: { orderBy: { name: "asc" } },
+        },
+      },
       room: true,
       eventType: true,
       submitter: { select: { id: true, name: true, email: true } },
@@ -47,6 +53,7 @@ export default async function EventDetailPage({
   if (event.organization.slug !== orgSlug) notFound();
 
   const isOwner = event.submitterId === currentUser.id || event.contactEmail === currentUser.email;
+  const canEdit = isOwner && event.organization.allowsEventChanges && event.status !== "CANCELLED";
 
   const statusStyles: Record<string, string> = {
     APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
@@ -87,9 +94,31 @@ export default async function EventDetailPage({
           </p>
         </div>
 
-        {isOwner && event.status !== "CANCELLED" && (
-          <DeleteEventButton eventId={event.id} orgSlug={orgSlug} />
-        )}
+        <div className="flex items-center gap-2">
+          {canEdit && (
+            <EditButton
+              event={{
+                id: event.id,
+                title: event.title,
+                eventTypeId: event.eventTypeId,
+                roomId: event.roomId,
+                startDateTime: event.startDateTime ? format(event.startDateTime, "yyyy-MM-dd'T'HH:mm") : "",
+                endDateTime: event.endDateTime ? format(event.endDateTime, "yyyy-MM-dd'T'HH:mm") : "",
+                expectedAttendeeCount: event.expectedAttendeeCount,
+                contactName: event.contactName,
+                contactEmail: event.contactEmail,
+                contactPhone: event.contactPhone,
+                notes: event.notes,
+              }}
+              rooms={event.organization.rooms.map((r) => ({ id: r.id, name: r.name }))}
+              eventTypes={event.organization.eventTypes.map((t) => ({ id: t.id, name: t.name }))}
+              orgSlug={orgSlug}
+            />
+          )}
+          {isOwner && event.status !== "CANCELLED" && (
+            <DeleteEventButton eventId={event.id} orgSlug={orgSlug} />
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
