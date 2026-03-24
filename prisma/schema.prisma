@@ -1,0 +1,453 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// MULTI-TENANT CORE
+// ========================================
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  shortName String
+  slug      String   @unique // URL segment (e.g., "incae")
+  timezone  String   @default("America/New_York")
+
+  // Display settings
+  appDisplayName   String  @default("")
+  logoUrl          String?
+  primaryColor     String  @default("#0B7DE6")
+  messageBoardHtml String  @default("")
+
+  // Feature flags
+  allowsRoomSelection     Boolean @default(true)
+  allowsMultiDayEvents    Boolean @default(true)
+  allowsRoomlessEvents    Boolean @default(false)
+  allowsUnregisteredUsers Boolean @default(false)
+  calendarIsPrivate       Boolean @default(false)
+  requiresApproval        Boolean @default(false)
+  allowsEventChanges      Boolean @default(true)
+  allowsRoomRequests      Boolean @default(false)
+  collectsEventTitle      Boolean @default(true)
+  collectsAttendeeCount   Boolean @default(true)
+  collectsContactPhone    Boolean @default(false)
+
+  // Scheduling constraints
+  roomOpeningTime       String @default("07:00")
+  roomClosingTime       String @default("22:00")
+  maxEventLengthMinutes Int    @default(480)
+  schedulingCutoffDays  Int?
+
+  // Custom field labels
+  eventSingularTerm String @default("Event")
+  eventPluralTerm   String @default("Events")
+  roomTerm          String @default("Room")
+
+  // Email
+  emailReplyToAddress String @default("")
+
+  // Relations
+  members                OrganizationMember[]
+  rooms                  Room[]
+  events                 Event[]
+  eventTypes             EventType[]
+  roomConfigurationTypes RoomConfigurationType[]
+  emailTemplates         OrganizationEmailTemplate[]
+  calendarViews          OrganizationCalendarView[]
+  contentPages           ContentPage[]
+  eventOrganizations     EventOrganization[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+// ========================================
+// USERS & ROLES
+// ========================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String    @default("")
+  passwordHash  String?
+  active        Boolean   @default(true)
+  isSystemAdmin Boolean   @default(false)
+  emailVerified DateTime?
+  image         String?
+
+  memberships     OrganizationMember[]
+  submittedEvents Event[]          @relation("SubmittedBy")
+  approvalActions ApprovalAction[]
+  accounts        Account[]
+  sessions        Session[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model OrganizationMember {
+  organizationId String
+  userId         String
+  role           OrgRole @default(USER)
+  calendarSecret String  @default("")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([organizationId, userId])
+  @@map("organization_members")
+}
+
+enum OrgRole {
+  ADMIN
+  MANAGER
+  EVENT_SUPPORT
+  USER
+}
+
+// ========================================
+// ROOMS & CONFIGURATIONS
+// ========================================
+
+model Room {
+  id                   String  @id @default(cuid())
+  organizationId       String
+  name                 String
+  slug                 String
+  iconText             String  @default("")
+  notes                String  @default("")
+  active               Boolean @default(true)
+  managersOnly         Boolean @default(false)
+  sortOrder            Int     @default(0)
+  concurrentEventLimit Int     @default(1)
+  parentRoomId         String?
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentRoom     Room?               @relation("RoomHierarchy", fields: [parentRoomId], references: [id])
+  childRooms     Room[]              @relation("RoomHierarchy")
+  configurations RoomConfiguration[]
+  events         Event[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, slug])
+  @@map("rooms")
+}
+
+model RoomConfiguration {
+  id                   String  @id @default(cuid())
+  roomId               String
+  name                 String
+  configurationTypeId  String?
+  concurrentEventLimit Int     @default(1)
+  imageUrl             String?
+
+  room              Room                   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  configurationType RoomConfigurationType? @relation(fields: [configurationTypeId], references: [id])
+  events            Event[]
+
+  @@map("room_configurations")
+}
+
+model RoomConfigurationType {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  imageUrl       String?
+
+  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  configurations RoomConfiguration[]
+  events         Event[]
+
+  @@map("room_configuration_types")
+}
+
+// ========================================
+// EVENTS & SCHEDULING
+// ========================================
+
+model EventType {
+  id               String  @id @default(cuid())
+  organizationId   String
+  name             String
+  colorIndex       Int?
+  iconTextOverride String  @default("")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events       Event[]
+
+  @@map("event_types")
+}
+
+model Event {
+  id                      String  @id @default(cuid())
+  organizationId          String
+  roomId                  String?
+  roomConfigurationId     String?
+  roomConfigurationTypeId String?
+  eventTypeId             String?
+  submitterId             String?
+
+  // Event details
+  title       String @default("")
+  description String @default("")
+  websiteUrl  String @default("")
+  notes       String @default("")
+
+  // Contact
+  contactName       String @default("")
+  contactEmail      String @default("")
+  contactPhone      String @default("")
+  eventOrganization String @default("")
+
+  // Scheduling
+  startDateTime         DateTime?
+  endDateTime           DateTime?
+  allDay                Boolean @default(false)
+  expectedAttendeeCount Int?
+
+  // Recurrence
+  recurrenceRule    String?   // iCal RRULE format
+  recurrenceEndDate DateTime?
+
+  // Status
+  status     EventStatus @default(PENDING)
+  approved   Boolean     @default(false)
+  published  Boolean     @default(true)
+  deleted    Boolean     @default(false)
+  isExternal Boolean     @default(false)
+
+  // Relations
+  organization          Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  room                  Room?                  @relation(fields: [roomId], references: [id])
+  roomConfiguration     RoomConfiguration?     @relation(fields: [roomConfigurationId], references: [id])
+  roomConfigurationType RoomConfigurationType? @relation(fields: [roomConfigurationTypeId], references: [id])
+  eventType             EventType?             @relation(fields: [eventTypeId], references: [id])
+  submitter             User?                  @relation("SubmittedBy", fields: [submitterId], references: [id])
+  instances             EventInstance[]
+  excludedDates         ExcludedDate[]
+  approvalActions       ApprovalAction[]
+  activityLog           EventActivity[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, startDateTime])
+  @@index([organizationId, roomId])
+  @@map("events")
+}
+
+enum EventStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  DENIED
+  CANCELLED
+}
+
+model EventInstance {
+  id                      String   @id @default(cuid())
+  eventId                 String
+  startDateTime           DateTime
+  endDateTime             DateTime
+  roomConfigurationId     String?
+  roomConfigurationTypeId String?
+  eventTypeId             String?
+  expectedAttendeeCount   Int?
+  deleted                 Boolean  @default(false)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@map("event_instances")
+}
+
+model ExcludedDate {
+  id      String   @id @default(cuid())
+  eventId String
+  date    DateTime @db.Date
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, date])
+  @@map("excluded_dates")
+}
+
+// ========================================
+// APPROVAL WORKFLOW
+// ========================================
+
+model ApprovalAction {
+  id      String             @id @default(cuid())
+  eventId String
+  userId  String
+  action  ApprovalActionType
+  comment String             @default("")
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("approval_actions")
+}
+
+enum ApprovalActionType {
+  SUBMITTED
+  APPROVED
+  DENIED
+  CHANGED
+  REMINDER_SENT
+}
+
+// ========================================
+// ACTIVITY LOG
+// ========================================
+
+model EventActivity {
+  id         String  @id @default(cuid())
+  eventId    String
+  action     String
+  details    Json?
+  actorEmail String?
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
+  @@map("event_activities")
+}
+
+// ========================================
+// CONTENT & EMAIL TEMPLATES
+// ========================================
+
+model EmailTemplate {
+  id   String @id @default(cuid())
+  slug String @unique
+  name String
+
+  organizations OrganizationEmailTemplate[]
+
+  @@map("email_templates")
+}
+
+model OrganizationEmailTemplate {
+  organizationId  String
+  emailTemplateId String
+  subject         String  @default("")
+  bodyHtml        String  @default("")
+  active          Boolean @default(true)
+
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  emailTemplate EmailTemplate @relation(fields: [emailTemplateId], references: [id], onDelete: Cascade)
+
+  @@id([organizationId, emailTemplateId])
+  @@map("organization_email_templates")
+}
+
+model ContentPage {
+  id             String @id @default(cuid())
+  organizationId String
+  slug           String
+  title          String
+  bodyHtml       String @default("")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, slug])
+  @@map("content_pages")
+}
+
+model EventOrganization {
+  id             String  @id @default(cuid())
+  organizationId String
+  name           String
+  isExternal     Boolean @default(false)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@map("event_organizations")
+}
+
+// ========================================
+// CALENDAR VIEW SETTINGS
+// ========================================
+
+model OrganizationCalendarView {
+  id             String           @id @default(cuid())
+  organizationId String
+  viewType       CalendarViewType
+  showRoomIcons  Boolean          @default(true)
+  enabled        Boolean          @default(true)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, viewType])
+  @@map("organization_calendar_views")
+}
+
+enum CalendarViewType {
+  YEAR
+  MONTH
+  WEEK
+  DAY
+}
+
+// ========================================
+// NEXTAUTH TABLES
+// ========================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
