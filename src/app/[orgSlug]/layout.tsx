@@ -24,6 +24,8 @@ export default async function OrgLayout({
   // Get user's role in this org
   let role: string | null = null;
   let isSystemAdmin = false;
+  const isAuthenticated = !!session?.user;
+
   if (session?.user) {
     const userId = (session.user as { id: string }).id;
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -42,7 +44,7 @@ export default async function OrgLayout({
 
   const isAdmin = isSystemAdmin || role === "ADMIN";
   const isManager = isAdmin || role === "MANAGER";
-  const userName = session?.user?.name || session?.user?.email || "User";
+  const userName = session?.user?.name || session?.user?.email || "";
   const userEmail = session?.user?.email || "";
 
   return (
@@ -61,13 +63,24 @@ export default async function OrgLayout({
           </Link>
         </div>
         <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="text-sm font-medium text-slate-700">{userName}</p>
-            {userName !== userEmail && (
-              <p className="text-xs text-slate-400">{userEmail}</p>
-            )}
-          </div>
-          <SignOutButton />
+          {isAuthenticated ? (
+            <>
+              <div className="text-right">
+                <p className="text-sm font-medium text-slate-700">{userName}</p>
+                {userName !== userEmail && (
+                  <p className="text-xs text-slate-400">{userEmail}</p>
+                )}
+              </div>
+              <SignOutButton />
+            </>
+          ) : (
+            <Link
+              href={`/login?callbackUrl=/${orgSlug}`}
+              className="text-sm font-medium bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+            >
+              Sign In
+            </Link>
+          )}
         </div>
       </header>
 
@@ -81,6 +94,7 @@ export default async function OrgLayout({
           }}
           isManager={isManager}
           isAdmin={isAdmin}
+          isAuthenticated={isAuthenticated}
         />
 
         {/* Main content */}

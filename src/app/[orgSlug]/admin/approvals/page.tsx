@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
-import { Shield, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Shield, Clock, CheckCircle, XCircle, Search } from "lucide-react";
 import { ApprovalButtons } from "./approval-buttons";
 
 export default async function ApprovalsPage({
@@ -10,11 +10,12 @@ export default async function ApprovalsPage({
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string }>;
 }) {
   const { orgSlug } = await params;
   const sp = await searchParams;
   const filter = sp.filter || "pending";
+  const searchQuery = sp.q || "";
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
@@ -30,11 +31,16 @@ export default async function ApprovalsPage({
           ? { status: "DENIED" as const }
           : { status: "PENDING" as const };
 
+  const searchFilter = searchQuery
+    ? { title: { contains: searchQuery, mode: "insensitive" as const } }
+    : {};
+
   const events = await prisma.event.findMany({
     where: {
       organizationId: org.id,
       deleted: false,
       ...statusFilter,
+      ...searchFilter,
     },
     include: {
       room: true,
@@ -62,27 +68,44 @@ export default async function ApprovalsPage({
         </div>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 mb-6 bg-slate-100 rounded-lg p-1 w-fit">
-        {[
-          { key: "pending", label: "Pending", icon: Clock },
-          { key: "approved", label: "Approved", icon: CheckCircle },
-          { key: "denied", label: "Denied", icon: XCircle },
-          { key: "all", label: "All", icon: Shield },
-        ].map(({ key, label, icon: Icon }) => (
-          <Link
-            key={key}
-            href={`/${orgSlug}/admin/approvals?filter=${key}`}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              filter === key
-                ? "bg-white text-slate-900 shadow-sm"
-                : "text-slate-500 hover:text-slate-700"
-            }`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-            {label}
-          </Link>
-        ))}
+      {/* Filter tabs + search */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+        <div className="flex gap-1 bg-slate-100 rounded-lg p-1">
+          {[
+            { key: "pending", label: "Pending", icon: Clock },
+            { key: "approved", label: "Approved", icon: CheckCircle },
+            { key: "denied", label: "Denied", icon: XCircle },
+            { key: "all", label: "All", icon: Shield },
+          ].map(({ key, label, icon: Icon }) => (
+            <Link
+              key={key}
+              href={`/${orgSlug}/admin/approvals?filter=${key}${searchQuery ? `&q=${searchQuery}` : ""}`}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                filter === key
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </Link>
+          ))}
+        </div>
+        <form
+          action={`/${orgSlug}/admin/approvals`}
+          method="GET"
+          className="relative max-w-xs"
+        >
+          <input type="hidden" name="filter" value={filter} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            name="q"
+            defaultValue={searchQuery}
+            placeholder="Search events..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </form>
       </div>
 
       {events.length === 0 ? (

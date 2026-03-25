@@ -21,6 +21,7 @@ export function Sidebar({
   org,
   isManager,
   isAdmin,
+  isAuthenticated,
 }: {
   orgSlug: string;
   org: {
@@ -30,6 +31,7 @@ export function Sidebar({
   };
   isManager: boolean;
   isAdmin: boolean;
+  isAuthenticated: boolean;
 }) {
   return (
     <nav className="w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
@@ -46,18 +48,22 @@ export function Sidebar({
         >
           Submit {org.eventSingularTerm}
         </NavLink>
-        <NavLink
-          href={`/${orgSlug}/my-events`}
-          icon={<List className="w-4 h-4" />}
-        >
-          My {org.eventPluralTerm}
-        </NavLink>
-        <NavLink
-          href={`/${orgSlug}/chat`}
-          icon={<Sparkles className="w-4 h-4" />}
-        >
-          AI Assistant
-        </NavLink>
+        {isAuthenticated && (
+          <NavLink
+            href={`/${orgSlug}/my-events`}
+            icon={<List className="w-4 h-4" />}
+          >
+            My {org.eventPluralTerm}
+          </NavLink>
+        )}
+        {isAuthenticated && (
+          <NavLink
+            href={`/${orgSlug}/chat`}
+            icon={<Sparkles className="w-4 h-4" />}
+          >
+            AI Assistant
+          </NavLink>
+        )}
         <NavLink
           href={`/${orgSlug}/rooms`}
           icon={<Info className="w-4 h-4" />}

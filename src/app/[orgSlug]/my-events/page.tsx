@@ -1,16 +1,19 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { Calendar, Plus } from "lucide-react";
+import { Calendar, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { getCurrentUser } from "@/lib/session";
 
 export default async function MyEventsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<{ status?: string; q?: string }>;
 }) {
   const { orgSlug } = await params;
+  const { status: statusFilter, q: searchQuery } = await searchParams;
   const user = await getCurrentUser();
 
   const org = await prisma.organization.findUnique({
@@ -18,19 +21,33 @@ export default async function MyEventsPage({
   });
   if (!org) notFound();
 
+  // Build where clause
+  const where: Record<string, unknown> = {
+    organizationId: org.id,
+    deleted: false,
+    OR: [
+      { submitterId: user.id },
+      { contactEmail: user.email },
+    ],
+  };
+
+  if (statusFilter && statusFilter !== "ALL") {
+    where.status = statusFilter;
+  }
+
+  if (searchQuery) {
+    where.title = { contains: searchQuery, mode: "insensitive" };
+  }
+
   const events = await prisma.event.findMany({
-    where: {
-      organizationId: org.id,
-      deleted: false,
-      OR: [
-        { submitterId: user.id },
-        { contactEmail: user.email },
-      ],
-    },
+    where,
     include: { room: true, eventType: true },
     orderBy: { startDateTime: "desc" },
-    take: 50,
+    take: 100,
   });
+
+  const statuses = ["ALL", "PENDING", "APPROVED", "DENIED", "CANCELLED"];
+  const activeStatus = statusFilter || "ALL";
 
   return (
     <div>
@@ -45,19 +62,61 @@ export default async function MyEventsPage({
         </div>
         <Link
           href={`/${orgSlug}/submit-event`}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors"
+          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
           <Plus className="w-4 h-4" />
           Submit {org.eventSingularTerm}
         </Link>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+        {/* Status tabs */}
+        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+          {statuses.map((s) => (
+            <Link
+              key={s}
+              href={`/${orgSlug}/my-events?status=${s}${searchQuery ? `&q=${searchQuery}` : ""}`}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                activeStatus === s
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
+            </Link>
+          ))}
+        </div>
+
+        {/* Search */}
+        <form
+          action={`/${orgSlug}/my-events`}
+          method="GET"
+          className="relative flex-1 max-w-xs"
+        >
+          <input type="hidden" name="status" value={activeStatus} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            name="q"
+            defaultValue={searchQuery || ""}
+            placeholder={`Search ${org.eventPluralTerm.toLowerCase()}...`}
+            className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+          />
+        </form>
+      </div>
+
+      {/* Results */}
       {events.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
           <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <p className="text-slate-500 text-lg">No {org.eventPluralTerm.toLowerCase()} found</p>
+          <p className="text-slate-500 text-lg">
+            No {org.eventPluralTerm.toLowerCase()} found
+          </p>
           <p className="text-slate-400 text-sm mt-1">
-            {org.eventPluralTerm} you submit will appear here.
+            {searchQuery || activeStatus !== "ALL"
+              ? "Try changing your filters."
+              : `${org.eventPluralTerm} you submit will appear here.`}
           </p>
         </div>
       ) : (
@@ -92,6 +151,11 @@ export default async function MyEventsPage({
                     >
                       {event.title || "Untitled"}
                     </Link>
+                    {event.eventType && (
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        {event.eventType.name}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-slate-600">
                     {event.room?.name || "—"}
@@ -108,6 +172,9 @@ export default async function MyEventsPage({
               ))}
             </tbody>
           </table>
+          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-400">
+            Showing {events.length} event{events.length !== 1 ? "s" : ""}
+          </div>
         </div>
       )}
     </div>

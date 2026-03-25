@@ -2,14 +2,18 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
+// Paths that require authentication (relative to /{orgSlug}/)
+const PROTECTED_PATHS = ["/admin", "/my-events", "/chat"];
+
 export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request });
   const { pathname } = request.nextUrl;
 
-  // Allow public routes
+  // Always allow these routes
   if (
     pathname.startsWith("/api/auth") ||
     pathname.startsWith("/api/calendar") ||
+    pathname.startsWith("/api/chat") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
@@ -18,11 +22,20 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect unauthenticated users to login
-  if (!token) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("callbackUrl", pathname);
-    return NextResponse.redirect(loginUrl);
+  // Check if this is a protected org path
+  // Org paths look like /{orgSlug}/admin/*, /{orgSlug}/my-events, etc.
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length >= 2) {
+    const orgSubPath = "/" + segments.slice(1).join("/");
+    const isProtected = PROTECTED_PATHS.some(
+      (p) => orgSubPath === p || orgSubPath.startsWith(p + "/")
+    );
+
+    if (isProtected && !token) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();
