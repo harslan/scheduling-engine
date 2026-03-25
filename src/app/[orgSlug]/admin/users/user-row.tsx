@@ -1,7 +1,7 @@
 "use client";
 
 import { updateMemberRole, removeMember } from "@/lib/actions/users";
-import { Shield, Trash2 } from "lucide-react";
+import { Shield, Trash2, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface MemberData {
@@ -32,6 +32,7 @@ export function UserRow({
   mobileMode?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
+  const [confirmingRemove, setConfirmingRemove] = useState(false);
 
   async function handleRoleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     setLoading(true);
@@ -44,10 +45,14 @@ export function UserRow({
   }
 
   async function handleRemove() {
-    if (!confirm(`Remove ${member.userName || member.userEmail} from this organization?`)) return;
+    if (!confirmingRemove) {
+      setConfirmingRemove(true);
+      return;
+    }
     setLoading(true);
     await removeMember(organizationId, member.userId);
     setLoading(false);
+    setConfirmingRemove(false);
   }
 
   const roleInfo = ROLE_LABELS[member.role] || ROLE_LABELS.USER;
@@ -84,13 +89,32 @@ export function UserRow({
             <option value="EVENT_SUPPORT">Event Support</option>
             <option value="USER">User</option>
           </select>
-          <button
-            onClick={handleRemove}
-            disabled={loading}
-            className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-          >
-            Remove
-          </button>
+          {confirmingRemove ? (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-red-600 font-medium">Remove?</span>
+              <button
+                onClick={handleRemove}
+                disabled={loading}
+                className="px-2 py-0.5 bg-red-500 text-white rounded text-xs font-medium disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes"}
+              </button>
+              <button
+                onClick={() => setConfirmingRemove(false)}
+                className="px-2 py-0.5 text-slate-500"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={handleRemove}
+              disabled={loading}
+              className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+            >
+              Remove
+            </button>
+          )}
         </div>
       </div>
     );
@@ -131,15 +155,34 @@ export function UserRow({
         </select>
       </td>
       <td className="px-4 py-3 text-right">
-        <button
-          onClick={handleRemove}
-          disabled={loading}
-          className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-          title="Remove from organization"
-          aria-label={`Remove ${member.userName || member.userEmail}`}
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
+        {confirmingRemove ? (
+          <div className="flex items-center justify-end gap-1.5 text-xs">
+            <span className="text-red-600 font-medium">Remove?</span>
+            <button
+              onClick={handleRemove}
+              disabled={loading}
+              className="px-2 py-0.5 bg-red-500 text-white rounded text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes"}
+            </button>
+            <button
+              onClick={() => setConfirmingRemove(false)}
+              className="px-2 py-0.5 text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={handleRemove}
+            disabled={loading}
+            className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+            title="Remove from organization"
+            aria-label={`Remove ${member.userName || member.userEmail}`}
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
       </td>
     </tr>
   );

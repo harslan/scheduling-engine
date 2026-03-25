@@ -1,7 +1,7 @@
 "use client";
 
 import { approveEvent, denyEvent } from "@/lib/actions/events";
-import { CheckCircle, XCircle, MessageSquare } from "lucide-react";
+import { CheckCircle, XCircle, MessageSquare, Loader2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 export function ApprovalButtons({
@@ -13,23 +13,38 @@ export function ApprovalButtons({
 }) {
   const [loading, setLoading] = useState<"approve" | "deny" | null>(null);
   const [done, setDone] = useState<"approved" | "denied" | null>(null);
+  const [error, setError] = useState("");
   const [showComment, setShowComment] = useState(false);
   const [comment, setComment] = useState("");
 
   async function handleApprove() {
     setLoading("approve");
-    const result = await approveEvent(eventId, orgSlug, comment || undefined);
-    if (result.success) {
-      setDone("approved");
+    setError("");
+    try {
+      const result = await approveEvent(eventId, orgSlug, comment || undefined);
+      if (result.success) {
+        setDone("approved");
+      } else {
+        setError(result.error || "Failed to approve event");
+      }
+    } catch {
+      setError("Network error — please try again");
     }
     setLoading(null);
   }
 
   async function handleDeny() {
     setLoading("deny");
-    const result = await denyEvent(eventId, orgSlug, comment || undefined);
-    if (result.success) {
-      setDone("denied");
+    setError("");
+    try {
+      const result = await denyEvent(eventId, orgSlug, comment || undefined);
+      if (result.success) {
+        setDone("denied");
+      } else {
+        setError(result.error || "Failed to deny event");
+      }
+    } catch {
+      setError("Network error — please try again");
     }
     setLoading(null);
   }
@@ -52,22 +67,36 @@ export function ApprovalButtons({
 
   return (
     <div className="shrink-0 space-y-2">
+      {error && (
+        <div className="flex items-center gap-1.5 text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          {error}
+        </div>
+      )}
       <div className="flex items-center gap-2">
         <button
           onClick={handleApprove}
           disabled={loading !== null}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-lg text-sm font-medium hover:bg-emerald-100 transition-colors disabled:opacity-50"
         >
-          <CheckCircle className="w-3.5 h-3.5" />
-          {loading === "approve" ? "..." : "Approve"}
+          {loading === "approve" ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <CheckCircle className="w-3.5 h-3.5" />
+          )}
+          Approve
         </button>
         <button
           onClick={handleDeny}
           disabled={loading !== null}
           className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors disabled:opacity-50"
         >
-          <XCircle className="w-3.5 h-3.5" />
-          {loading === "deny" ? "..." : "Deny"}
+          {loading === "deny" ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <XCircle className="w-3.5 h-3.5" />
+          )}
+          Deny
         </button>
         <button
           onClick={() => setShowComment(!showComment)}

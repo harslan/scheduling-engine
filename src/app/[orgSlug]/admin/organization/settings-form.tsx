@@ -77,7 +77,7 @@ export function OrgSettingsForm({
 
       {/* General */}
       <Section title="General">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Organization Name">
             <input name="name" defaultValue={org.name} required className={inputCls} />
           </Field>
@@ -104,7 +104,7 @@ export function OrgSettingsForm({
 
       {/* Custom Labels */}
       <Section title="Custom Labels">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Event (singular)">
             <input name="eventSingularTerm" defaultValue={org.eventSingularTerm} className={inputCls} />
           </Field>
@@ -119,7 +119,7 @@ export function OrgSettingsForm({
 
       {/* Features */}
       <Section title="Features">
-        <div className="grid grid-cols-2 gap-x-8 gap-y-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3">
           <Toggle name="requiresApproval" defaultChecked={org.requiresApproval} label="Require approval for submissions" />
           <Toggle name="allowsRoomSelection" defaultChecked={org.allowsRoomSelection} label="Allow room selection" />
           <Toggle name="allowsMultiDayEvents" defaultChecked={org.allowsMultiDayEvents} label="Allow multi-day events" />
@@ -135,7 +135,7 @@ export function OrgSettingsForm({
 
       {/* Scheduling Constraints */}
       <Section title="Scheduling Constraints">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Rooms Open">
             <input name="roomOpeningTime" type="time" defaultValue={org.roomOpeningTime} className={inputCls} />
           </Field>

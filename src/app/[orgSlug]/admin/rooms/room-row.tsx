@@ -6,7 +6,7 @@ import {
   updateRoomConfiguration,
   deleteRoomConfiguration,
 } from "@/lib/actions/configurations";
-import { Check, X, Edit, Trash2, Save, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import { Check, X, Edit, Trash2, Save, ChevronDown, ChevronRight, Plus, Loader2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 interface ConfigData {
@@ -48,6 +48,7 @@ export function RoomRow({
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function handleToggle() {
     setLoading(true);
@@ -56,10 +57,14 @@ export function RoomRow({
   }
 
   async function handleDelete() {
-    if (!confirm(room.eventCount > 0 ? "This room has events. It will be deactivated instead of deleted." : "Delete this room?")) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
     setLoading(true);
     await deleteRoom(room.id);
     setLoading(false);
+    setConfirmingDelete(false);
   }
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
@@ -106,13 +111,34 @@ export function RoomRow({
     return (
       <div>
         {error && <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 mb-2">{error}</div>}
-        <div className="flex items-center gap-2">
-          <button onClick={() => setEditing(true)} className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">Edit</button>
-          <button onClick={handleToggle} disabled={loading} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
-            {room.active ? "Deactivate" : "Activate"}
-          </button>
-          <button onClick={handleDelete} disabled={loading} className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-500">Delete</button>
-        </div>
+        {confirmingDelete ? (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-red-600 font-medium">
+              {room.eventCount > 0 ? "Room has events — will be deactivated. Continue?" : "Delete this room?"}
+            </span>
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Yes"}
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              className="px-3 py-1.5 text-slate-500"
+            >
+              No
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <button onClick={() => setEditing(true)} className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">Edit</button>
+            <button onClick={handleToggle} disabled={loading} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+              {room.active ? "Deactivate" : "Activate"}
+            </button>
+            <button onClick={handleDelete} disabled={loading} className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-500">Delete</button>
+          </div>
+        )}
       </div>
     );
   }
@@ -243,21 +269,44 @@ export function RoomRow({
           {room.eventCount}
         </td>
         <td className="px-4 py-3 text-right">
-          <div className="flex items-center justify-end gap-1">
-            <button
-              onClick={() => setEditing(true)}
-              className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors"
-            >
-              <Edit className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={loading}
-              className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          </div>
+          {confirmingDelete ? (
+            <div className="flex items-center justify-end gap-1.5 text-xs">
+              <span className="text-red-600 font-medium">
+                {room.eventCount > 0 ? "Deactivate?" : "Delete?"}
+              </span>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="px-2 py-0.5 bg-red-500 text-white rounded text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes"}
+              </button>
+              <button
+                onClick={() => setConfirmingDelete(false)}
+                className="px-2 py-0.5 text-slate-500 hover:text-slate-700 transition-colors"
+              >
+                No
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-1">
+              <button
+                onClick={() => setEditing(true)}
+                className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-primary transition-colors"
+                aria-label={`Edit ${room.name}`}
+              >
+                <Edit className="w-4 h-4" />
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={loading}
+                className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+                aria-label={`Delete ${room.name}`}
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </td>
       </tr>
       {expanded && (
@@ -385,6 +434,7 @@ function ConfigRow({
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -401,12 +451,16 @@ function ConfigRow({
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this configuration? This cannot be undone.")) return;
+    if (!confirmingDelete) {
+      setConfirmingDelete(true);
+      return;
+    }
     setLoading(true);
     setError("");
     const result = await deleteRoomConfiguration(config.id);
     if (result.error) setError(result.error);
     setLoading(false);
+    setConfirmingDelete(false);
   }
 
   if (editing) {
@@ -468,19 +522,40 @@ function ConfigRow({
         {config.eventCount} event{config.eventCount !== 1 ? "s" : ""}
       </span>
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
-        <button
-          onClick={() => setEditing(true)}
-          className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-primary"
-        >
-          <Edit className="w-3 h-3" />
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={loading}
-          className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
+        {confirmingDelete ? (
+          <>
+            <span className="text-xs text-red-600 font-medium mr-1">Delete?</span>
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              className="px-1.5 py-0.5 bg-red-500 text-white rounded text-xs font-medium"
+            >
+              {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : "Yes"}
+            </button>
+            <button
+              onClick={() => setConfirmingDelete(false)}
+              className="px-1.5 py-0.5 text-xs text-slate-500"
+            >
+              No
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={() => setEditing(true)}
+              className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-primary"
+            >
+              <Edit className="w-3 h-3" />
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              className="p-1 rounded hover:bg-red-50 text-slate-400 hover:text-red-500"
+            >
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </>
+        )}
       </div>
     </div>
     </div>

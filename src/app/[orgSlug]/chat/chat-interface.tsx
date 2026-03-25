@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User, Sparkles, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Send, Bot, User, Sparkles, Loader2, Trash2, RotateCcw } from "lucide-react";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  timestamp: Date;
+  error?: boolean;
 }
 
 export function ChatInterface({
@@ -28,45 +30,82 @@ export function ChatInterface({
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
   }, [messages, loading]);
 
+  const sendMessages = useCallback(
+    async (messagesToSend: Message[]) => {
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: messagesToSend.map((m) => ({
+              role: m.role,
+              content: m.content,
+            })),
+            organizationId,
+            orgSlug,
+          }),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          setError(data.error || "Something went wrong");
+          setLoading(false);
+          return;
+        }
+
+        const data = await response.json();
+        setMessages([
+          ...messagesToSend,
+          { role: "assistant", content: data.content, timestamp: new Date() },
+        ]);
+      } catch {
+        setError("Failed to connect to AI service");
+      }
+
+      setLoading(false);
+      inputRef.current?.focus();
+    },
+    [organizationId, orgSlug]
+  );
+
   async function handleSend() {
     if (!input.trim() || loading) return;
 
-    const userMessage: Message = { role: "user", content: input.trim() };
+    const userMessage: Message = {
+      role: "user",
+      content: input.trim(),
+      timestamp: new Date(),
+    };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
     setInput("");
-    setLoading(true);
+    await sendMessages(newMessages);
+  }
+
+  function handleRetry() {
+    if (loading || messages.length === 0) return;
+    // Resend the current conversation to get a new assistant response
+    const lastAssistantIdx = messages.findLastIndex((m) => m.role === "assistant");
+    const messagesToRetry =
+      lastAssistantIdx >= 0 ? messages.slice(0, lastAssistantIdx) : messages;
+    if (messagesToRetry.length === 0) return;
+    setMessages(messagesToRetry);
     setError("");
+    sendMessages(messagesToRetry);
+  }
 
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: newMessages.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          organizationId,
-          orgSlug,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error || "Something went wrong");
-        setLoading(false);
-        return;
-      }
-
-      const data = await response.json();
-      setMessages([...newMessages, { role: "assistant", content: data.content }]);
-    } catch {
-      setError("Failed to connect to AI service");
-    }
-
-    setLoading(false);
+  function handleClear() {
+    setMessages([]);
+    setError("");
+    setInput("");
     inputRef.current?.focus();
+  }
+
+  function formatTime(date: Date) {
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   }
 
   const suggestions = [
@@ -89,7 +128,8 @@ export function ChatInterface({
               How can I help you today?
             </h2>
             <p className="text-sm text-slate-500 max-w-md mb-6">
-              I can book rooms, check availability, view your schedule, and manage events — just ask in plain English.
+              I can book rooms, check availability, view your schedule, and
+              manage events — just ask in plain English.
             </p>
             <div className="flex flex-wrap gap-2 justify-center max-w-lg">
               {suggestions.map((s, i) => (
@@ -118,14 +158,23 @@ export function ChatInterface({
                 <Bot className="w-4 h-4 text-primary" />
               </div>
             )}
-            <div
-              className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                msg.role === "user"
-                  ? "bg-primary text-white rounded-br-md"
-                  : "bg-slate-50 text-slate-700 rounded-bl-md"
-              }`}
-            >
-              <MessageContent content={msg.content} />
+            <div className="flex flex-col">
+              <div
+                className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  msg.role === "user"
+                    ? "bg-primary text-white rounded-br-md"
+                    : "bg-slate-50 text-slate-700 rounded-bl-md"
+                }`}
+              >
+                <MessageContent content={msg.content} />
+              </div>
+              <span
+                className={`text-[10px] text-slate-400 mt-1 ${
+                  msg.role === "user" ? "text-right" : "text-left"
+                }`}
+              >
+                {formatTime(msg.timestamp)}
+              </span>
             </div>
             {msg.role === "user" && (
               <div className="w-8 h-8 bg-slate-200 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
@@ -147,8 +196,17 @@ export function ChatInterface({
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 mx-auto max-w-md">
-            {error}
+          <div className="flex items-center justify-center gap-2">
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 max-w-md">
+              {error}
+            </div>
+            <button
+              onClick={handleRetry}
+              className="p-2 text-slate-400 hover:text-primary hover:bg-primary/5 rounded-lg transition-colors"
+              title="Retry"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
@@ -162,6 +220,17 @@ export function ChatInterface({
           }}
           className="flex items-center gap-2"
         >
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="p-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0"
+              title="Clear chat"
+              aria-label="Clear chat"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
           <input
             ref={inputRef}
             value={input}
@@ -174,6 +243,7 @@ export function ChatInterface({
             type="submit"
             disabled={loading || !input.trim()}
             className="w-10 h-10 bg-primary text-white rounded-xl flex items-center justify-center hover:bg-primary-dark transition-colors disabled:opacity-50 shrink-0"
+            aria-label="Send message"
           >
             <Send className="w-4 h-4" />
           </button>
@@ -214,7 +284,9 @@ function MessageContent({ content }: { content: string }) {
           return (
             <div key={i} className="flex gap-2">
               <span className="shrink-0">•</span>
-              <span><InlineText text={line.replace(/^[\s]*[-•]\s*/, "")} /></span>
+              <span>
+                <InlineText text={line.replace(/^[\s]*[-•]\s*/, "")} />
+              </span>
             </div>
           );
         }
@@ -225,12 +297,18 @@ function MessageContent({ content }: { content: string }) {
           return (
             <div key={i} className="flex gap-2">
               <span className="shrink-0 font-medium">{numMatch[1]}.</span>
-              <span><InlineText text={line.replace(/^\d+\.\s*/, "")} /></span>
+              <span>
+                <InlineText text={line.replace(/^\d+\.\s*/, "")} />
+              </span>
             </div>
           );
         }
 
-        return <p key={i}><InlineText text={line} /></p>;
+        return (
+          <p key={i}>
+            <InlineText text={line} />
+          </p>
+        );
       })}
     </div>
   );

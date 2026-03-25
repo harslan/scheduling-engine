@@ -105,9 +105,9 @@ export default async function EventDetailPage({
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex flex-wrap items-center gap-3 mb-2">
             <h1 className="text-2xl font-bold text-slate-900">
               {event.title || "Untitled Event"}
             </h1>
@@ -124,7 +124,7 @@ export default async function EventDetailPage({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           {canEdit && (
             <EditButton
               event={{
@@ -151,7 +151,7 @@ export default async function EventDetailPage({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {/* Main details */}
         <div className="lg:col-span-2 space-y-6">
           {/* Schedule */}
@@ -246,7 +246,7 @@ export default async function EventDetailPage({
                     href={event.websiteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline"
+                    className="text-sm text-primary hover:underline break-all"
                   >
                     {event.websiteUrl}
                   </a>
