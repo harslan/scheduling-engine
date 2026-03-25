@@ -21,19 +21,9 @@ import {
   Tag,
   Menu,
   X,
+  Home,
+  ChevronLeft,
 } from "lucide-react";
-
-export function MobileMenuButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      onClick={onClick}
-      className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-primary transition-colors"
-      aria-label="Toggle menu"
-    >
-      <Menu className="w-5 h-5" />
-    </button>
-  );
-}
 
 export function Sidebar({
   orgSlug,
@@ -60,125 +50,144 @@ export function Sidebar({
     setMobileOpen(false);
   }, [pathname]);
 
+  // Determine current section for breadcrumb context
+  const isInAdmin = pathname.startsWith(`/${orgSlug}/admin`);
+
   const sidebarContent = (
-    <>
-      <div className="px-4 mb-6">
-        <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-          Calendar
-        </p>
-        <NavLink href={`/${orgSlug}`} icon={<Calendar className="w-4 h-4" />} exact>
-          Calendar
-        </NavLink>
-        <NavLink
-          href={`/${orgSlug}/submit-event`}
-          icon={<CalendarPlus className="w-4 h-4" />}
-        >
-          Submit {org.eventSingularTerm}
-        </NavLink>
-        {isAuthenticated && (
-          <NavLink
-            href={`/${orgSlug}/my-events`}
-            icon={<List className="w-4 h-4" />}
-          >
-            My {org.eventPluralTerm}
-          </NavLink>
+    <div className="flex flex-col h-full">
+      <div className="flex-1">
+        {/* Back to admin dashboard when deep in admin */}
+        {isInAdmin && isAdmin && (
+          <div className="px-4 mb-4">
+            <Link
+              href={`/${orgSlug}/admin`}
+              className="flex items-center gap-2 text-xs font-medium text-slate-400 hover:text-primary transition-colors py-1"
+            >
+              <ChevronLeft className="w-3 h-3" />
+              Admin Dashboard
+            </Link>
+          </div>
         )}
-        {isAuthenticated && (
-          <NavLink
-            href={`/${orgSlug}/chat`}
-            icon={<Sparkles className="w-4 h-4" />}
-          >
-            AI Assistant
+
+        <div className="px-4 mb-6">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2 px-3">
+            Calendar
+          </p>
+          <NavLink href={`/${orgSlug}`} icon={<Calendar className="w-4 h-4" />} exact>
+            Calendar
           </NavLink>
+          <NavLink
+            href={`/${orgSlug}/submit-event`}
+            icon={<CalendarPlus className="w-4 h-4" />}
+          >
+            Submit {org.eventSingularTerm}
+          </NavLink>
+          {isAuthenticated && (
+            <NavLink
+              href={`/${orgSlug}/my-events`}
+              icon={<List className="w-4 h-4" />}
+            >
+              My {org.eventPluralTerm}
+            </NavLink>
+          )}
+          {isAuthenticated && (
+            <NavLink
+              href={`/${orgSlug}/chat`}
+              icon={<Sparkles className="w-4 h-4" />}
+            >
+              AI Assistant
+            </NavLink>
+          )}
+          <NavLink
+            href={`/${orgSlug}/rooms`}
+            icon={<Info className="w-4 h-4" />}
+          >
+            {org.roomTerm} Information
+          </NavLink>
+          <NavLink
+            href={`/${orgSlug}/help`}
+            icon={<HelpCircle className="w-4 h-4" />}
+          >
+            Help
+          </NavLink>
+        </div>
+
+        {isManager && (
+          <div className="px-4 mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2 px-3">
+              Management
+            </p>
+            <NavLink
+              href={`/${orgSlug}/admin/approvals`}
+              icon={<Shield className="w-4 h-4" />}
+            >
+              Approvals
+            </NavLink>
+          </div>
         )}
-        <NavLink
-          href={`/${orgSlug}/rooms`}
-          icon={<Info className="w-4 h-4" />}
-        >
-          {org.roomTerm} Information
-        </NavLink>
-        <NavLink
-          href={`/${orgSlug}/help`}
-          icon={<HelpCircle className="w-4 h-4" />}
-        >
-          Help
-        </NavLink>
+
+        {isAdmin && (
+          <div className="px-4 mb-6">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2 px-3">
+              Administration
+            </p>
+            <NavLink
+              href={`/${orgSlug}/admin`}
+              icon={<Settings className="w-4 h-4" />}
+              exact
+            >
+              Dashboard
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/rooms`}
+              icon={<Building2 className="w-4 h-4" />}
+            >
+              {org.roomTerm}s
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/users`}
+              icon={<Users className="w-4 h-4" />}
+            >
+              Users
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/event-types`}
+              icon={<Tag className="w-4 h-4" />}
+            >
+              Event Types
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/configurations`}
+              icon={<Layers className="w-4 h-4" />}
+            >
+              Configurations
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/reports`}
+              icon={<BarChart3 className="w-4 h-4" />}
+            >
+              Reports
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/import`}
+              icon={<FileSpreadsheet className="w-4 h-4" />}
+            >
+              Import / Export
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/organization`}
+              icon={<Rss className="w-4 h-4" />}
+            >
+              Organization
+            </NavLink>
+          </div>
+        )}
       </div>
 
-      {isManager && (
-        <div className="px-4 mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Management
-          </p>
-          <NavLink
-            href={`/${orgSlug}/admin/approvals`}
-            icon={<Shield className="w-4 h-4" />}
-          >
-            Approvals
-          </NavLink>
-        </div>
-      )}
-
-      {isAdmin && (
-        <div className="px-4 mb-6">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
-            Administration
-          </p>
-          <NavLink
-            href={`/${orgSlug}/admin`}
-            icon={<Settings className="w-4 h-4" />}
-            exact
-          >
-            Settings
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/rooms`}
-            icon={<Building2 className="w-4 h-4" />}
-          >
-            Manage {org.roomTerm}s
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/users`}
-            icon={<Users className="w-4 h-4" />}
-          >
-            Users
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/event-types`}
-            icon={<Tag className="w-4 h-4" />}
-          >
-            Event Types
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/configurations`}
-            icon={<Layers className="w-4 h-4" />}
-          >
-            Configurations
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/reports`}
-            icon={<BarChart3 className="w-4 h-4" />}
-          >
-            Reports
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/import`}
-            icon={<FileSpreadsheet className="w-4 h-4" />}
-          >
-            Import / Export
-          </NavLink>
-          <NavLink
-            href={`/${orgSlug}/admin/organization`}
-            icon={<Rss className="w-4 h-4" />}
-          >
-            Organization
-          </NavLink>
-        </div>
-      )}
-
-      {/* iCal subscription hint */}
+      {/* Footer section */}
       <div className="px-4 mt-auto">
-        <div className="border-t border-slate-100 pt-4">
+        {/* iCal subscription */}
+        <div className="border-t border-slate-100 pt-4 mb-4">
           <p className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
             Calendar Feed
           </p>
@@ -189,16 +198,27 @@ export function Sidebar({
             </code>
           </p>
         </div>
+
+        {/* Back to home */}
+        <div className="border-t border-slate-100 pt-3 pb-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-primary hover:bg-primary/5 transition-colors"
+          >
+            <Home className="w-4 h-4" />
+            Scheduling Engine Home
+          </Link>
+        </div>
       </div>
-    </>
+    </div>
   );
 
   return (
     <>
-      {/* Mobile hamburger button - rendered in the header area */}
+      {/* Mobile hamburger button */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-3 left-4 z-40 p-2 text-slate-600 hover:text-primary transition-colors"
+        className="lg:hidden fixed top-3.5 left-4 z-40 p-1.5 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
         aria-label="Open menu"
       >
         <Menu className="w-5 h-5" />
@@ -207,21 +227,24 @@ export function Sidebar({
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black/30 z-40"
+          className="lg:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-40"
           onClick={() => setMobileOpen(false)}
         />
       )}
 
       {/* Mobile sidebar drawer */}
       <nav
-        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 py-4 overflow-y-auto z-50 transform transition-transform duration-200 ${
+        className={`lg:hidden fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-200 py-4 overflow-y-auto z-50 shadow-2xl transform transition-transform duration-200 ease-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="flex justify-end px-4 mb-2">
+        <div className="flex items-center justify-between px-4 mb-4">
+          <Link href={`/${orgSlug}`} className="text-sm font-bold text-slate-900 truncate">
+            {org.eventSingularTerm} Calendar
+          </Link>
           <button
             onClick={() => setMobileOpen(false)}
-            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
             aria-label="Close menu"
           >
             <X className="w-5 h-5" />
@@ -230,8 +253,8 @@ export function Sidebar({
         {sidebarContent}
       </nav>
 
-      {/* Desktop sidebar - always visible */}
-      <nav className="hidden lg:block w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
+      {/* Desktop sidebar */}
+      <nav className="hidden lg:flex lg:flex-col w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
         {sidebarContent}
       </nav>
     </>
@@ -257,9 +280,9 @@ function NavLink({
   return (
     <Link
       href={href}
-      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+      className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
         isActive
-          ? "bg-primary/10 text-primary"
+          ? "bg-primary/10 text-primary shadow-sm"
           : "text-slate-600 hover:bg-primary/5 hover:text-primary"
       }`}
     >

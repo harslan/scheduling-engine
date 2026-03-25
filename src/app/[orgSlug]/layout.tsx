@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Calendar } from "lucide-react";
+import { Calendar, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -51,12 +51,28 @@ export default async function OrgLayout({
     <div className="h-full flex flex-col">
       {/* Top bar */}
       <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0">
           {/* Spacer for mobile hamburger button */}
-          <div className="w-8 lg:hidden" />
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
-            <Calendar className="w-4 h-4 text-white" />
-          </div>
+          <div className="w-8 lg:hidden shrink-0" />
+
+          {/* Logo → links to home */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 shrink-0 group"
+            title="Back to Scheduling Engine home"
+          >
+            <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:shadow-primary/20 transition-all">
+              <Calendar className="w-4 h-4 text-white" />
+            </div>
+            <span className="hidden xl:inline text-sm font-semibold text-slate-400 group-hover:text-primary transition-colors">
+              Scheduling Engine
+            </span>
+          </Link>
+
+          {/* Breadcrumb separator */}
+          <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 hidden sm:block" />
+
+          {/* Org name → links to org calendar */}
           <Link
             href={`/${orgSlug}`}
             className="text-lg font-bold text-slate-900 hover:text-primary transition-colors truncate"
@@ -64,6 +80,7 @@ export default async function OrgLayout({
             {org.appDisplayName || org.name}
           </Link>
         </div>
+
         <div className="flex items-center gap-2 lg:gap-4 shrink-0">
           {isAuthenticated ? (
             <>
@@ -73,7 +90,7 @@ export default async function OrgLayout({
                   <p className="text-xs text-slate-400">{userEmail}</p>
                 )}
               </div>
-              <SignOutButton />
+              <SignOutButton orgSlug={orgSlug} />
             </>
           ) : (
             <Link

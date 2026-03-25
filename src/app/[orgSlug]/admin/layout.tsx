@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notFound, redirect } from "next/navigation";
+import { AdminBreadcrumb } from "./breadcrumb";
 
 export default async function AdminLayout({
   children,
@@ -28,7 +29,12 @@ export default async function AdminLayout({
 
   // System admins always have access
   if (user?.isSystemAdmin) {
-    return <>{children}</>;
+    return (
+      <>
+        <AdminBreadcrumb orgSlug={orgSlug} />
+        {children}
+      </>
+    );
   }
 
   // Check org membership role
@@ -45,5 +51,10 @@ export default async function AdminLayout({
     redirect(`/${orgSlug}`);
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      <AdminBreadcrumb orgSlug={orgSlug} />
+      {children}
+    </>
+  );
 }
