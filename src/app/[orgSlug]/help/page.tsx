@@ -23,6 +23,12 @@ export default async function HelpPage({
   });
   if (!org) notFound();
 
+  const rooms = await prisma.room.findMany({
+    where: { organizationId: org.id, active: true },
+    orderBy: { sortOrder: "asc" },
+    select: { name: true, slug: true },
+  });
+
   const headersList = await headers();
   const host = headersList.get("host") || "localhost:3000";
   const protocol = headersList.get("x-forwarded-proto") || "https";
@@ -106,14 +112,52 @@ export default async function HelpPage({
           title="Calendar Subscription"
         >
           <p>
-            Subscribe to the calendar in Outlook, Google Calendar, or Apple Calendar using this URL:
+            Subscribe to the calendar in Outlook, Google Calendar, or Apple Calendar.
+            Copy a URL below and add it as a calendar subscription in your calendar app.
           </p>
-          <code className="block mt-2 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 break-all">
-            {baseUrl}/api/calendar/{orgSlug}
-          </code>
-          <p className="mt-2 text-sm text-slate-500">
-            Copy this URL and add it as a calendar subscription in your calendar app.
-          </p>
+
+          <div className="mt-3 space-y-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                All {org.eventPluralTerm.toLowerCase()}
+              </p>
+              <code className="block bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 break-all">
+                {baseUrl}/api/calendar/{orgSlug}
+              </code>
+            </div>
+
+            {rooms.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                  Per {org.roomTerm.toLowerCase()}
+                </p>
+                <div className="space-y-1.5">
+                  {rooms.map((room) => (
+                    <div key={room.slug} className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 shrink-0 w-24 truncate font-medium">
+                        {room.name}
+                      </span>
+                      <code className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-600 break-all">
+                        {baseUrl}/api/calendar/{orgSlug}?room={room.slug}
+                      </code>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                My {org.eventPluralTerm.toLowerCase()} only
+              </p>
+              <code className="block bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 break-all">
+                {baseUrl}/api/calendar/{orgSlug}?secret=YOUR_SECRET&scope=my
+              </code>
+              <p className="mt-1 text-xs text-slate-400">
+                Your personal calendar secret is available from your organization administrator.
+              </p>
+            </div>
+          </div>
         </HelpCard>
 
         <HelpCard

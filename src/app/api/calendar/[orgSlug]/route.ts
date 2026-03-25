@@ -19,6 +19,8 @@ export async function GET(
 ) {
   const { orgSlug } = await params;
   const secret = request.nextUrl.searchParams.get("secret");
+  const roomSlug = request.nextUrl.searchParams.get("room");
+  const scope = request.nextUrl.searchParams.get("scope");
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
@@ -28,36 +30,79 @@ export async function GET(
     return new Response("Organization not found", { status: 404 });
   }
 
-  // If calendar is private, require a valid secret
-  if (org.calendarIsPrivate && secret) {
-    const member = await prisma.organizationMember.findFirst({
+  // Resolve member from secret (used for auth and per-user feeds)
+  let member: { userId: string } | null = null;
+  if (secret) {
+    member = await prisma.organizationMember.findFirst({
       where: {
         organizationId: org.id,
         calendarSecret: secret,
       },
     });
-    if (!member) {
-      return new Response("Invalid calendar secret", { status: 403 });
-    }
-  } else if (org.calendarIsPrivate && !secret) {
-    return new Response("Calendar secret required", { status: 403 });
   }
 
-  // Fetch approved events (last 6 months + next 12 months)
+  // If calendar is private, require a valid secret
+  if (org.calendarIsPrivate) {
+    if (!secret || !member) {
+      return new Response("Valid calendar secret required", { status: 403 });
+    }
+  }
+
+  // Resolve room filter
+  let roomId: string | undefined;
+  if (roomSlug) {
+    const room = await prisma.room.findFirst({
+      where: { organizationId: org.id, slug: roomSlug, active: true },
+      select: { id: true, name: true },
+    });
+    if (!room) {
+      return new Response("Room not found", { status: 404 });
+    }
+    roomId = room.id;
+  }
+
+  // Resolve user filter (scope=my requires a valid secret)
+  let userId: string | undefined;
+  if (scope === "my") {
+    if (!member) {
+      return new Response("Secret required for personal calendar feed", { status: 403 });
+    }
+    userId = member.userId;
+  }
+
+  // Time window: last 6 months + next 12 months
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
   const twelveMonthsAhead = new Date();
   twelveMonthsAhead.setMonth(twelveMonthsAhead.getMonth() + 12);
 
+  // Build query
+  const where: Record<string, unknown> = {
+    organizationId: org.id,
+    deleted: false,
+    status: "APPROVED",
+    startDateTime: { gte: sixMonthsAgo },
+    endDateTime: { lte: twelveMonthsAhead },
+  };
+
+  if (roomId) {
+    where.roomId = roomId;
+  }
+
+  if (userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+    where.OR = [
+      { submitterId: userId },
+      ...(user?.email ? [{ contactEmail: user.email }] : []),
+    ];
+  }
+
   const events = await prisma.event.findMany({
-    where: {
-      organizationId: org.id,
-      deleted: false,
-      status: "APPROVED",
-      startDateTime: { gte: sixMonthsAgo },
-      endDateTime: { lte: twelveMonthsAhead },
-    },
+    where,
     include: {
       room: true,
       eventType: true,
@@ -65,12 +110,28 @@ export async function GET(
     orderBy: { startDateTime: "asc" },
   });
 
+  // Build calendar name based on filters
+  const orgName = org.appDisplayName || org.name;
+  let calendarName = orgName;
+  let filename = `${orgSlug}-calendar`;
+
+  if (roomSlug) {
+    const roomName = events[0]?.room?.name || roomSlug;
+    calendarName = `${orgName} — ${roomName}`;
+    filename = `${orgSlug}-${roomSlug}`;
+  }
+
+  if (userId) {
+    calendarName = `${orgName} — My ${org.eventPluralTerm}`;
+    filename = `${orgSlug}-my-events`;
+  }
+
   // Generate iCal
   const lines: string[] = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     `PRODID:-//Scheduling Engine//${org.name}//EN`,
-    `X-WR-CALNAME:${escapeICalText(org.appDisplayName || org.name)}`,
+    `X-WR-CALNAME:${escapeICalText(calendarName)}`,
     `X-WR-TIMEZONE:${org.timezone}`,
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
@@ -117,7 +178,7 @@ export async function GET(
   return new Response(icalContent, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${orgSlug}-calendar.ics"`,
+      "Content-Disposition": `attachment; filename="${filename}.ics"`,
       "Cache-Control": "public, max-age=300",
     },
   });
