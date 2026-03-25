@@ -86,6 +86,8 @@ model User {
   isSystemAdmin   Boolean              @default(false)
   emailVerified   DateTime?
   image           String?
+  passwordResetToken   String?   @unique
+  passwordResetExpires DateTime?
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   accounts        Account[]
