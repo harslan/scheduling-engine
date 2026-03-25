@@ -6,9 +6,10 @@ export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request });
   const { pathname } = request.nextUrl;
 
-  // Allow auth-related routes and public assets
+  // Allow public routes
   if (
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/calendar") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/_next") ||
     pathname === "/favicon.ico" ||
