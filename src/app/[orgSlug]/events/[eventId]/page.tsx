@@ -14,6 +14,7 @@ import {
   Users,
   FileText,
   Repeat,
+  Layers,
 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { describeRRule } from "@/lib/recurrence";
@@ -44,6 +45,7 @@ export default async function EventDetailPage({
         },
       },
       room: true,
+      roomConfiguration: true,
       eventType: true,
       submitter: { select: { id: true, name: true, email: true } },
       approvalActions: {
@@ -152,6 +154,11 @@ export default async function EventDetailPage({
             {event.room && (
               <DetailRow icon={<MapPin className="w-4 h-4" />} label={event.organization.roomTerm}>
                 {event.room.name}
+              </DetailRow>
+            )}
+            {event.roomConfiguration && (
+              <DetailRow icon={<Layers className="w-4 h-4" />} label="Configuration">
+                {event.roomConfiguration.name}
               </DetailRow>
             )}
             {event.eventType && (

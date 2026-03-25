@@ -16,13 +16,25 @@ export default async function AdminRoomsPage({
   });
   if (!org) notFound();
 
-  const rooms = await prisma.room.findMany({
-    where: { organizationId: org.id },
-    orderBy: { sortOrder: "asc" },
-    include: {
-      _count: { select: { events: true } },
-    },
-  });
+  const [rooms, configTypes] = await Promise.all([
+    prisma.room.findMany({
+      where: { organizationId: org.id },
+      orderBy: { sortOrder: "asc" },
+      include: {
+        _count: { select: { events: true } },
+        configurations: {
+          include: {
+            configurationType: true,
+            _count: { select: { events: true } },
+          },
+        },
+      },
+    }),
+    prisma.roomConfigurationType.findMany({
+      where: { organizationId: org.id },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   return (
     <div>
@@ -88,7 +100,16 @@ export default async function AdminRoomsPage({
                   notes: room.notes,
                   sortOrder: room.sortOrder,
                   eventCount: room._count.events,
+                  configurations: room.configurations.map((c) => ({
+                    id: c.id,
+                    name: c.name,
+                    configurationTypeName: c.configurationType?.name || null,
+                    configurationTypeId: c.configurationTypeId,
+                    concurrentEventLimit: c.concurrentEventLimit,
+                    eventCount: c._count.events,
+                  })),
                 }}
+                configTypes={configTypes.map((ct) => ({ id: ct.id, name: ct.name }))}
                 orgSlug={orgSlug}
               />
             ))}

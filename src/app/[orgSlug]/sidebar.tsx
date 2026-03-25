@@ -16,6 +16,7 @@ import {
   Rss,
   FileSpreadsheet,
   BarChart3,
+  Layers,
 } from "lucide-react";
 
 export function Sidebar({
@@ -117,6 +118,12 @@ export function Sidebar({
             icon={<Users className="w-4 h-4" />}
           >
             Users
+          </NavLink>
+          <NavLink
+            href={`/${orgSlug}/admin/configurations`}
+            icon={<Layers className="w-4 h-4" />}
+          >
+            Configurations
           </NavLink>
           <NavLink
             href={`/${orgSlug}/admin/reports`}

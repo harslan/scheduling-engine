@@ -17,6 +17,11 @@ export default async function SubmitEventPage({
       rooms: {
         where: { active: true },
         orderBy: { sortOrder: "asc" },
+        include: {
+          configurations: {
+            include: { configurationType: true },
+          },
+        },
       },
       eventTypes: { orderBy: { name: "asc" } },
     },
@@ -53,7 +58,15 @@ export default async function SubmitEventPage({
       <SubmitEventForm
         organizationId={org.id}
         orgSlug={orgSlug}
-        rooms={org.rooms.map((r) => ({ id: r.id, name: r.name }))}
+        rooms={org.rooms.map((r) => ({
+          id: r.id,
+          name: r.name,
+          configurations: r.configurations.map((c) => ({
+            id: c.id,
+            name: c.name,
+            typeName: c.configurationType?.name || null,
+          })),
+        }))}
         eventTypes={org.eventTypes.map((t) => ({ id: t.id, name: t.name }))}
         requiresApproval={org.requiresApproval}
         defaultContactName={userName}

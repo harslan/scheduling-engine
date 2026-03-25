@@ -5,10 +5,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Repeat } from "lucide-react";
 
+interface RoomConfig {
+  id: string;
+  name: string;
+  typeName: string | null;
+}
+
+interface RoomWithConfigs {
+  id: string;
+  name: string;
+  configurations: RoomConfig[];
+}
+
 interface Props {
   organizationId: string;
   orgSlug: string;
-  rooms: { id: string; name: string }[];
+  rooms: RoomWithConfigs[];
   eventTypes: { id: string; name: string }[];
   requiresApproval: boolean;
   defaultContactName?: string;
@@ -160,21 +172,7 @@ export function SubmitEventForm({
 
       {/* Room */}
       {rooms.length > 0 && (
-        <Section title="Room">
-          <Field label="Select Room">
-            <select
-              name="roomId"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
-            >
-              <option value="">Choose a room...</option>
-              {rooms.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </Field>
-        </Section>
+        <RoomSection rooms={rooms} />
       )}
 
       {/* Contact */}
@@ -330,6 +328,63 @@ function RecurrenceSection() {
             required
             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
           />
+        </Field>
+      )}
+    </Section>
+  );
+}
+
+function RoomSection({ rooms }: { rooms: RoomWithConfigs[] }) {
+  const [selectedRoomId, setSelectedRoomId] = useState("");
+
+  const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
+  const hasConfigs = selectedRoom && selectedRoom.configurations.length > 0;
+
+  return (
+    <Section title="Room">
+      <Field label="Select Room">
+        <select
+          name="roomId"
+          value={selectedRoomId}
+          onChange={(e) => setSelectedRoomId(e.target.value)}
+          className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
+        >
+          <option value="">Choose a room...</option>
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>
+              {r.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      {hasConfigs && (
+        <Field label="Room Configuration">
+          <div className="space-y-2">
+            {selectedRoom.configurations.map((config) => (
+              <label
+                key={config.id}
+                className="flex items-center gap-3 px-4 py-3 border border-slate-200 rounded-lg cursor-pointer hover:border-primary/30 hover:bg-primary/5 transition-all has-[:checked]:border-primary has-[:checked]:bg-primary/5"
+              >
+                <input
+                  type="radio"
+                  name="roomConfigurationId"
+                  value={config.id}
+                  className="text-primary focus:ring-primary"
+                />
+                <div>
+                  <span className="text-sm font-medium text-slate-700">
+                    {config.name}
+                  </span>
+                  {config.typeName && (
+                    <span className="ml-2 text-xs text-slate-400">
+                      {config.typeName}
+                    </span>
+                  )}
+                </div>
+              </label>
+            ))}
+          </div>
         </Field>
       )}
     </Section>
