@@ -4,6 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { format } from "date-fns";
+import {
+  sendEmail,
+  eventSubmittedEmail,
+  eventApprovedEmail,
+  eventDeniedEmail,
+  approvalRequestEmail,
+} from "@/lib/email";
 
 const SubmitEventSchema = z.object({
   organizationId: z.string(),
@@ -102,6 +110,53 @@ export async function submitEvent(formData: FormData) {
     },
   });
 
+  // Get room name for emails
+  let roomName = "";
+  if (data.roomId) {
+    const r = await prisma.room.findUnique({ where: { id: data.roomId } });
+    roomName = r?.name || "";
+  }
+
+  const formattedDate = format(startDt, "EEEE, MMMM d, yyyy 'at' h:mm a");
+  const status = org.requiresApproval ? "PENDING" : "APPROVED";
+
+  // Send confirmation email to submitter
+  const submittedEmail = eventSubmittedEmail({
+    orgName: org.name,
+    eventTitle: data.title,
+    roomName,
+    startDate: formattedDate,
+    status,
+  });
+  await sendEmail({ to: data.contactEmail, ...submittedEmail });
+
+  // If approval required, notify managers/admins
+  if (org.requiresApproval) {
+    const approvers = await prisma.organizationMember.findMany({
+      where: {
+        organizationId: org.id,
+        role: { in: ["ADMIN", "MANAGER"] },
+      },
+      include: { user: true },
+    });
+
+    const approvalUrl = `${process.env.NEXTAUTH_URL || ""}/${org.slug}/admin/approvals`;
+
+    for (const member of approvers) {
+      if (member.user.email) {
+        const reqEmail = approvalRequestEmail({
+          orgName: org.name,
+          eventTitle: data.title,
+          submitterName: data.contactName,
+          roomName,
+          startDate: formattedDate,
+          approvalUrl,
+        });
+        await sendEmail({ to: member.user.email, ...reqEmail });
+      }
+    }
+  }
+
   revalidatePath(`/${org.slug}`);
   revalidatePath(`/${org.slug}/my-events`);
   revalidatePath(`/${org.slug}/admin/approvals`);
@@ -116,7 +171,7 @@ export async function approveEvent(eventId: string, orgSlug: string, comment?: s
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
-    include: { organization: true },
+    include: { organization: true, room: true },
   });
   if (!event) return { error: "Event not found" };
 
@@ -143,6 +198,15 @@ export async function approveEvent(eventId: string, orgSlug: string, comment?: s
     }),
   ]);
 
+  // Send approval notification to event contact
+  const approvedEmail = eventApprovedEmail({
+    orgName: event.organization.name,
+    eventTitle: event.title,
+    roomName: event.room?.name || "",
+    startDate: event.startDateTime ? format(event.startDateTime, "EEEE, MMMM d, yyyy 'at' h:mm a") : "TBD",
+  });
+  await sendEmail({ to: event.contactEmail, ...approvedEmail });
+
   revalidatePath(`/${orgSlug}`);
   revalidatePath(`/${orgSlug}/admin/approvals`);
   revalidatePath(`/${orgSlug}/my-events`);
@@ -154,6 +218,12 @@ export async function denyEvent(eventId: string, orgSlug: string, comment?: stri
   const session = await getSession();
   const userId = session?.user ? (session.user as { id: string }).id : null;
   if (!userId) return { error: "Not authenticated" };
+
+  const event = await prisma.event.findUnique({
+    where: { id: eventId },
+    include: { organization: true },
+  });
+  if (!event) return { error: "Event not found" };
 
   await prisma.$transaction([
     prisma.event.update({
@@ -172,11 +242,19 @@ export async function denyEvent(eventId: string, orgSlug: string, comment?: stri
       data: {
         eventId,
         action: "EVENT_DENIED",
-        actorEmail: "",
+        actorEmail: session?.user?.email || "",
         details: { comment },
       },
     }),
   ]);
+
+  // Send denial notification to event contact
+  const deniedEmail = eventDeniedEmail({
+    orgName: event.organization.name,
+    eventTitle: event.title,
+    comment,
+  });
+  await sendEmail({ to: event.contactEmail, ...deniedEmail });
 
   revalidatePath(`/${orgSlug}`);
   revalidatePath(`/${orgSlug}/admin/approvals`);
