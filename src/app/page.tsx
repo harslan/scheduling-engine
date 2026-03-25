@@ -9,7 +9,11 @@ import {
   Check,
   Mail,
 } from "lucide-react";
-import { Fragment } from "react";
+import {
+  CALENDAR_TIMES_FULL,
+  CALENDAR_EVENTS_FULL,
+  CalendarGrid,
+} from "@/components/calendar-mockup";
 
 const getLandingStats = unstable_cache(
   async () => {
@@ -22,35 +26,6 @@ const getLandingStats = unstable_cache(
   ["landing-orgs"],
   { revalidate: 300 }
 );
-
-/* ===== Calendar mockup data ===== */
-
-const CALENDAR_DAYS = ["Mon 23", "Tue 24", "Wed 25", "Thu 26", "Fri 27"];
-const CALENDAR_TIMES = ["9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM"];
-
-type CalendarEvent = {
-  row: number;
-  col: number;
-  span: number;
-  label: string;
-  room: string;
-  variant: "primary" | "emerald" | "amber";
-};
-
-const CALENDAR_EVENTS: CalendarEvent[] = [
-  { row: 0, col: 0, span: 1, label: "Team Standup", room: "Room A", variant: "primary" },
-  { row: 1, col: 1, span: 2, label: "Design Review", room: "Room B", variant: "emerald" },
-  { row: 3, col: 2, span: 1, label: "Pending Review", room: "Room C", variant: "amber" },
-  { row: 2, col: 4, span: 1, label: "1:1 Meeting", room: "Room B", variant: "emerald" },
-  { row: 4, col: 3, span: 2, label: "Sprint Planning", room: "Room A", variant: "primary" },
-  { row: 5, col: 0, span: 1, label: "All Hands", room: "Room C", variant: "primary" },
-];
-
-const EVENT_STYLES = {
-  primary: { bg: "bg-primary/15", border: "border-primary", text: "text-primary", sub: "text-primary/60" },
-  emerald: { bg: "bg-emerald-500/15", border: "border-emerald-500", text: "text-emerald-700", sub: "text-emerald-600/60" },
-  amber: { bg: "bg-amber-500/15", border: "border-amber-500", text: "text-amber-700", sub: "text-amber-600/60" },
-};
 
 export default async function Home() {
   const { orgs } = await getLandingStats();
@@ -159,7 +134,6 @@ export default async function Home() {
 
               {/* Calendar mockup */}
               <div className="p-3 sm:p-4">
-                {/* Calendar header */}
                 <div className="flex items-center justify-between mb-3">
                   <div className="text-xs sm:text-sm font-semibold text-slate-700">March 2026</div>
                   <div className="flex gap-1">
@@ -168,34 +142,7 @@ export default async function Home() {
                     <span className="text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded">Day</span>
                   </div>
                 </div>
-
-                {/* Week grid */}
-                <div className="grid grid-cols-[40px_repeat(5,1fr)] sm:grid-cols-[48px_repeat(5,1fr)] gap-px bg-slate-100 rounded-lg overflow-hidden text-[10px]">
-                  {/* Day headers */}
-                  <div className="bg-white p-1.5" />
-                  {CALENDAR_DAYS.map((day) => (
-                    <div key={day} className="bg-slate-50 p-1.5 text-center font-medium text-slate-500">
-                      {day}
-                    </div>
-                  ))}
-
-                  {/* Time rows */}
-                  {CALENDAR_TIMES.map((time, rowIdx) => (
-                    <Fragment key={time}>
-                      <div className="bg-white p-1.5 text-right text-slate-400 pr-2">
-                        {time}
-                      </div>
-                      {CALENDAR_DAYS.map((_, colIdx) => {
-                        const event = CALENDAR_EVENTS.find((e) => e.row === rowIdx && e.col === colIdx);
-                        return (
-                          <div key={colIdx} className="bg-white p-0.5 min-h-[28px] relative">
-                            {event && <CalendarEventBlock event={event} />}
-                          </div>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </div>
+                <CalendarGrid times={CALENDAR_TIMES_FULL} events={CALENDAR_EVENTS_FULL} />
               </div>
             </div>
           </div>
@@ -464,19 +411,3 @@ export default async function Home() {
   );
 }
 
-/* ===== Components ===== */
-
-function CalendarEventBlock({ event }: { event: CalendarEvent }) {
-  const s = EVENT_STYLES[event.variant];
-  const height = event.span > 1 ? `calc(${event.span * 100}% + ${(event.span - 1) * 1}px)` : undefined;
-
-  return (
-    <div
-      className={`absolute inset-x-0.5 top-0.5 ${s.bg} border-l-2 ${s.border} rounded-r-sm px-1 py-0.5 overflow-hidden`}
-      style={height ? { height, zIndex: 1 } : undefined}
-    >
-      <span className={`font-medium ${s.text} leading-tight block truncate`}>{event.label}</span>
-      <span className={`${s.sub} truncate block`}>{event.room}</span>
-    </div>
-  );
-}

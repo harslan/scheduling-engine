@@ -8,6 +8,7 @@ import {
 import { executeReserveImport } from "@/lib/reserve/import";
 
 const PROCESSING_DELAY_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_WEBHOOK_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours — give up after this
 
 /**
  * Cron-triggered webhook queue processor.
@@ -100,15 +101,23 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error(`Reserve: webhook processing failed for org ${orgId}`, error);
 
-      // Mark as processed even on failure to prevent infinite retries
-      await prisma.reserveWebhookEvent.updateMany({
-        where: { id: { in: events.map((e) => e.id) } },
-        data: { processedAt: new Date() },
-      });
+      // Only mark as processed if they've been retrying for over 24 hours.
+      // Otherwise leave them unprocessed so the next cron run retries them.
+      const staleEvents = events.filter(
+        (e) => Date.now() - e.receivedAt.getTime() > MAX_WEBHOOK_AGE_MS
+      );
+      if (staleEvents.length > 0) {
+        await prisma.reserveWebhookEvent.updateMany({
+          where: { id: { in: staleEvents.map((e) => e.id) } },
+          data: { processedAt: new Date() },
+        });
+      }
 
       results.push({
         orgId,
         error: error instanceof Error ? error.message : "Unknown error",
+        retriesExhausted: staleEvents.length,
+        willRetry: events.length - staleEvents.length,
       });
     }
   }

@@ -494,11 +494,12 @@ async function syncInstances(
     }
   }
 
-  // Delete unmatched existing instances
+  // Soft-delete unmatched existing instances (consistent with event soft-delete pattern)
   const toDelete = existing.filter((inst) => !matchedIds.has(inst.id));
   if (toDelete.length > 0) {
-    await tx.eventInstance.deleteMany({
+    await tx.eventInstance.updateMany({
       where: { id: { in: toDelete.map((i) => i.id) } },
+      data: { deleted: true },
     });
   }
 }

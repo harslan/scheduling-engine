@@ -14,48 +14,12 @@ import {
   AlertCircle,
 } from "lucide-react";
 import Link from "next/link";
-import { Suspense, Fragment } from "react";
-
-/* ===== Calendar mockup — same data as landing page ===== */
-
-const CALENDAR_DAYS = ["Mon 23", "Tue 24", "Wed 25", "Thu 26", "Fri 27"];
-const CALENDAR_TIMES = ["9 AM", "10 AM", "11 AM", "12 PM"];
-
-type CalendarEvent = {
-  row: number;
-  col: number;
-  span: number;
-  label: string;
-  room: string;
-  variant: "primary" | "emerald" | "amber";
-};
-
-const CALENDAR_EVENTS: CalendarEvent[] = [
-  { row: 0, col: 0, span: 1, label: "Team Standup", room: "Room A", variant: "primary" },
-  { row: 1, col: 1, span: 2, label: "Design Review", room: "Room B", variant: "emerald" },
-  { row: 3, col: 2, span: 1, label: "Pending Review", room: "Room C", variant: "amber" },
-  { row: 2, col: 4, span: 1, label: "1:1 Meeting", room: "Room B", variant: "emerald" },
-];
-
-const EVENT_STYLES = {
-  primary: { bg: "bg-primary/15", border: "border-primary", text: "text-primary", sub: "text-primary/60" },
-  emerald: { bg: "bg-emerald-500/15", border: "border-emerald-500", text: "text-emerald-700", sub: "text-emerald-600/60" },
-  amber: { bg: "bg-amber-500/15", border: "border-amber-500", text: "text-amber-700", sub: "text-amber-600/60" },
-};
-
-function CalendarEventBlock({ event }: { event: CalendarEvent }) {
-  const s = EVENT_STYLES[event.variant];
-  const height = event.span > 1 ? `calc(${event.span * 100}% + ${(event.span - 1) * 1}px)` : undefined;
-  return (
-    <div
-      className={`absolute inset-x-0.5 top-0.5 ${s.bg} border-l-2 ${s.border} rounded-r-sm px-1 py-0.5 overflow-hidden`}
-      style={height ? { height, zIndex: 1 } : undefined}
-    >
-      <span className={`font-medium ${s.text} leading-tight block truncate`}>{event.label}</span>
-      <span className={`${s.sub} truncate block`}>{event.room}</span>
-    </div>
-  );
-}
+import { Suspense } from "react";
+import {
+  CALENDAR_TIMES_COMPACT,
+  CALENDAR_EVENTS_COMPACT,
+  CalendarGrid,
+} from "@/components/calendar-mockup";
 
 function LoginForm() {
   const router = useRouter();
@@ -267,30 +231,7 @@ function LoginForm() {
                       <span className="text-[9px] font-medium text-slate-400 px-1.5 py-0.5 rounded">Day</span>
                     </div>
                   </div>
-
-                  <div className="grid grid-cols-[36px_repeat(5,1fr)] gap-px bg-slate-100 rounded-lg overflow-hidden text-[9px]">
-                    <div className="bg-white p-1" />
-                    {CALENDAR_DAYS.map((day) => (
-                      <div key={day} className="bg-slate-50 p-1 text-center font-medium text-slate-500">
-                        {day}
-                      </div>
-                    ))}
-                    {CALENDAR_TIMES.map((time, rowIdx) => (
-                      <Fragment key={time}>
-                        <div className="bg-white p-1 text-right text-slate-400 pr-1.5">
-                          {time}
-                        </div>
-                        {CALENDAR_DAYS.map((_, colIdx) => {
-                          const event = CALENDAR_EVENTS.find((e) => e.row === rowIdx && e.col === colIdx);
-                          return (
-                            <div key={colIdx} className="bg-white p-0.5 min-h-[24px] relative">
-                              {event && <CalendarEventBlock event={event} />}
-                            </div>
-                          );
-                        })}
-                      </Fragment>
-                    ))}
-                  </div>
+                  <CalendarGrid times={CALENDAR_TIMES_COMPACT} events={CALENDAR_EVENTS_COMPACT} cellSize="compact" />
                 </div>
               </div>
             </div>
