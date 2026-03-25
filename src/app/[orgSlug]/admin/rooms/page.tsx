@@ -1,24 +1,31 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { Plus, Check, X } from "lucide-react";
+import { Plus, Check, X, Search } from "lucide-react";
 import { RoomRow } from "./room-row";
 import { AddRoomForm } from "./add-room-form";
 
 export default async function AdminRoomsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const { orgSlug } = await params;
+  const { q: searchQuery } = await searchParams;
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
   });
   if (!org) notFound();
 
+  const nameFilter = searchQuery
+    ? { name: { contains: searchQuery, mode: "insensitive" as const } }
+    : {};
+
   const [rooms, configTypes] = await Promise.all([
     prisma.room.findMany({
-      where: { organizationId: org.id },
+      where: { organizationId: org.id, ...nameFilter },
       orderBy: { sortOrder: "asc" },
       include: {
         _count: { select: { events: true } },
@@ -49,6 +56,21 @@ export default async function AdminRoomsPage({
           </p>
         </div>
       </div>
+
+      {/* Search */}
+      <form method="GET" className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            name="q"
+            type="search"
+            defaultValue={searchQuery || ""}
+            placeholder={`Search ${org.roomTerm.toLowerCase()}s...`}
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+          />
+          <button type="submit" className="sr-only">Search</button>
+        </div>
+      </form>
 
       {/* Add Room Form */}
       <AddRoomForm organizationId={org.id} orgSlug={orgSlug} roomTerm={org.roomTerm} />

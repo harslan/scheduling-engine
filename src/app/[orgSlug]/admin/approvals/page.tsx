@@ -118,12 +118,13 @@ export default async function ApprovalsPage({
           <input type="hidden" name="filter" value={filter} />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            type="text"
+            type="search"
             name="q"
             defaultValue={searchQuery}
             placeholder="Search events..."
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
+          <button type="submit" className="sr-only">Search</button>
         </form>
       </div>
 
@@ -131,7 +132,7 @@ export default async function ApprovalsPage({
         <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
           <Shield className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <p className="text-slate-500 text-lg">
-            No {filter === "pending" ? "pending " : ""}
+            No {filter !== "all" ? `${filter} ` : ""}
             {org.eventPluralTerm.toLowerCase()} found
           </p>
         </div>
@@ -142,7 +143,7 @@ export default async function ApprovalsPage({
               key={event.id}
               className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow"
             >
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
                     <Link
@@ -210,7 +211,7 @@ export default async function ApprovalsPage({
           {totalPages > 1 && (
             <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
               <p className="text-xs text-slate-400">
-                {totalCount} event{totalCount !== 1 ? "s" : ""} · Page {currentPage} of {totalPages}
+                {totalCount} {totalCount === 1 ? org.eventSingularTerm.toLowerCase() : org.eventPluralTerm.toLowerCase()} · Page {currentPage} of {totalPages}
               </p>
               <div className="flex items-center gap-1">
                 {currentPage > 1 ? (

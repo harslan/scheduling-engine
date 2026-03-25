@@ -50,6 +50,20 @@ export function Sidebar({
     setMobileOpen(false);
   }, [pathname]);
 
+  // Close mobile menu on Escape key
+  useEffect(() => {
+    if (!mobileOpen) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setMobileOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [mobileOpen]);
+
   // Determine current section for breadcrumb context
   const isInAdmin = pathname.startsWith(`/${orgSlug}/admin`);
 
@@ -220,6 +234,7 @@ export function Sidebar({
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-3.5 left-4 z-40 p-1.5 text-slate-500 hover:text-primary hover:bg-primary/5 rounded-lg transition-all"
         aria-label="Open menu"
+        aria-expanded={mobileOpen}
       >
         <Menu className="w-5 h-5" />
       </button>
@@ -234,6 +249,7 @@ export function Sidebar({
 
       {/* Mobile sidebar drawer */}
       <nav
+        aria-label="Main navigation"
         className={`lg:hidden fixed top-0 left-0 h-full w-72 bg-white border-r border-slate-200 py-4 overflow-y-auto z-50 shadow-2xl transform transition-transform duration-200 ease-out ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
@@ -254,7 +270,7 @@ export function Sidebar({
       </nav>
 
       {/* Desktop sidebar */}
-      <nav className="hidden lg:flex lg:flex-col w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
+      <nav aria-label="Main navigation" className="hidden lg:flex lg:flex-col w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
         {sidebarContent}
       </nav>
     </>

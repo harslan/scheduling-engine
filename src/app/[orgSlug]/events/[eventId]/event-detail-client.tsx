@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Edit } from "lucide-react";
 import { EditEventForm } from "./edit-form";
@@ -32,10 +32,38 @@ export function EditButton({
 }) {
   const [editing, setEditing] = useState(false);
   const router = useRouter();
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Escape key to close edit panel
+  useEffect(() => {
+    if (!editing) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setEditing(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [editing]);
+
+  // Focus the form when it opens
+  useEffect(() => {
+    if (editing && formRef.current) {
+      const firstInput = formRef.current.querySelector<HTMLInputElement>("input, select, textarea");
+      firstInput?.focus();
+    }
+  }, [editing]);
 
   if (editing) {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+      <div
+        ref={formRef}
+        className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm"
+        role="region"
+        aria-label="Edit event"
+      >
         <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 border-l-3 border-primary pl-3">
           Edit Event
         </h2>

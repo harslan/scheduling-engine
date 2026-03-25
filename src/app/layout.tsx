@@ -9,8 +9,26 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Scheduling Engine",
+  title: {
+    default: "Scheduling Engine",
+    template: "%s — Scheduling Engine",
+  },
   description: "Modern AI-native scheduling and room booking platform",
+  metadataBase: new URL("https://scheduling-engine-next.vercel.app"),
+  openGraph: {
+    title: "Scheduling Engine",
+    description: "Modern AI-native scheduling and room booking platform",
+    siteName: "Scheduling Engine",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Scheduling Engine",
+    description: "Modern AI-native scheduling and room booking platform",
+  },
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

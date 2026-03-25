@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Calendar, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
@@ -5,6 +6,31 @@ import { getSession } from "@/lib/session";
 import { notFound } from "next/navigation";
 import { SignOutButton } from "./sign-out-button";
 import { Sidebar } from "./sidebar";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ orgSlug: string }>;
+}): Promise<Metadata> {
+  const { orgSlug } = await params;
+  const org = await prisma.organization.findUnique({
+    where: { slug: orgSlug },
+    select: { name: true, appDisplayName: true },
+  });
+
+  const orgName = org?.appDisplayName || org?.name || orgSlug;
+  return {
+    title: {
+      default: orgName,
+      template: `%s — ${orgName}`,
+    },
+    description: `${orgName} scheduling and room booking`,
+    openGraph: {
+      title: orgName,
+      description: `${orgName} scheduling and room booking`,
+    },
+  };
+}
 
 export default async function OrgLayout({
   children,

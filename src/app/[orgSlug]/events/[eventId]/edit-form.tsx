@@ -1,9 +1,8 @@
 "use client";
 
 import { updateEvent } from "@/lib/actions/event-update";
-import { Save, X } from "lucide-react";
+import { Save, X, Loader2 } from "lucide-react";
 import { useState } from "react";
-import { format } from "date-fns";
 
 interface Props {
   event: {
@@ -63,8 +62,9 @@ export function EditEventForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Title *</label>
+          <label htmlFor="edit-title" className="block text-sm font-medium text-slate-700 mb-1">Title *</label>
           <input
+            id="edit-title"
             name="title"
             defaultValue={event.title}
             required
@@ -74,8 +74,9 @@ export function EditEventForm({
 
         {eventTypes.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
+            <label htmlFor="edit-eventType" className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
             <select
+              id="edit-eventType"
               name="eventTypeId"
               defaultValue={event.eventTypeId || ""}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
@@ -90,8 +91,9 @@ export function EditEventForm({
 
         {rooms.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Room</label>
+            <label htmlFor="edit-room" className="block text-sm font-medium text-slate-700 mb-1">Room</label>
             <select
+              id="edit-room"
               name="roomId"
               defaultValue={event.roomId || ""}
               className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
@@ -105,8 +107,9 @@ export function EditEventForm({
         )}
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Start *</label>
+          <label htmlFor="edit-start" className="block text-sm font-medium text-slate-700 mb-1">Start *</label>
           <input
+            id="edit-start"
             name="startDateTime"
             type="datetime-local"
             defaultValue={event.startDateTime}
@@ -116,8 +119,9 @@ export function EditEventForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">End *</label>
+          <label htmlFor="edit-end" className="block text-sm font-medium text-slate-700 mb-1">End *</label>
           <input
+            id="edit-end"
             name="endDateTime"
             type="datetime-local"
             defaultValue={event.endDateTime}
@@ -127,8 +131,9 @@ export function EditEventForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Attendees</label>
+          <label htmlFor="edit-attendees" className="block text-sm font-medium text-slate-700 mb-1">Attendees</label>
           <input
+            id="edit-attendees"
             name="expectedAttendeeCount"
             type="number"
             min={1}
@@ -138,8 +143,9 @@ export function EditEventForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Contact Name *</label>
+          <label htmlFor="edit-contactName" className="block text-sm font-medium text-slate-700 mb-1">Contact Name *</label>
           <input
+            id="edit-contactName"
             name="contactName"
             defaultValue={event.contactName}
             required
@@ -148,8 +154,9 @@ export function EditEventForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Contact Email *</label>
+          <label htmlFor="edit-contactEmail" className="block text-sm font-medium text-slate-700 mb-1">Contact Email *</label>
           <input
+            id="edit-contactEmail"
             name="contactEmail"
             type="email"
             defaultValue={event.contactEmail}
@@ -159,8 +166,9 @@ export function EditEventForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+          <label htmlFor="edit-phone" className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
           <input
+            id="edit-phone"
             name="contactPhone"
             defaultValue={event.contactPhone}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
@@ -168,8 +176,9 @@ export function EditEventForm({
         </div>
 
         <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
+          <label htmlFor="edit-notes" className="block text-sm font-medium text-slate-700 mb-1">Notes</label>
           <textarea
+            id="edit-notes"
             name="notes"
             rows={3}
             defaultValue={event.notes}
@@ -184,13 +193,18 @@ export function EditEventForm({
           disabled={loading}
           className="flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
         >
-          <Save className="w-4 h-4" />
+          {loading ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4" />
+          )}
           {loading ? "Saving..." : "Save Changes"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors"
+          disabled={loading}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium text-slate-500 hover:bg-slate-100 transition-colors disabled:opacity-50"
         >
           <X className="w-4 h-4" />
           Cancel

@@ -115,12 +115,13 @@ export default async function MyEventsPage({
           <input type="hidden" name="status" value={activeStatus} />
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
-            type="text"
+            type="search"
             name="q"
             defaultValue={searchQuery || ""}
             placeholder={`Search ${org.eventPluralTerm.toLowerCase()}...`}
             className="w-full pl-9 pr-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
+          <button type="submit" className="sr-only">Search</button>
         </form>
       </div>
 
@@ -222,7 +223,7 @@ export default async function MyEventsPage({
           {/* Footer with pagination */}
           <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
             <p className="text-xs text-slate-400">
-              {totalCount} event{totalCount !== 1 ? "s" : ""}
+              {totalCount} {totalCount === 1 ? org.eventSingularTerm.toLowerCase() : org.eventPluralTerm.toLowerCase()}
               {totalPages > 1 && ` · Page ${currentPage} of ${totalPages}`}
             </p>
             {totalPages > 1 && (

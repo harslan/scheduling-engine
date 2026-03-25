@@ -1,23 +1,37 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
+import { Users, Search } from "lucide-react";
 import { AddUserForm } from "./add-user-form";
 import { UserRow } from "./user-row";
 
 export default async function AdminUsersPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<{ q?: string }>;
 }) {
   const { orgSlug } = await params;
+  const { q: searchQuery } = await searchParams;
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
   });
   if (!org) notFound();
 
+  const userFilter = searchQuery
+    ? {
+        user: {
+          OR: [
+            { name: { contains: searchQuery, mode: "insensitive" as const } },
+            { email: { contains: searchQuery, mode: "insensitive" as const } },
+          ],
+        },
+      }
+    : {};
+
   const members = await prisma.organizationMember.findMany({
-    where: { organizationId: org.id },
+    where: { organizationId: org.id, ...userFilter },
     include: {
       user: {
         select: {
@@ -48,6 +62,21 @@ export default async function AdminUsersPage({
           </p>
         </div>
       </div>
+
+      {/* Search */}
+      <form method="GET" className="mb-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            name="q"
+            type="search"
+            defaultValue={searchQuery || ""}
+            placeholder="Search by name or email..."
+            className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl bg-white text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none"
+          />
+          <button type="submit" className="sr-only">Search</button>
+        </div>
+      </form>
 
       {/* Add User Form */}
       <AddUserForm organizationId={org.id} orgSlug={orgSlug} />
