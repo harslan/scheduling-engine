@@ -23,6 +23,9 @@ import {
   X,
   Home,
   ChevronLeft,
+  Copy,
+  Check,
+  ArrowLeftRight,
 } from "lucide-react";
 
 export function Sidebar({
@@ -189,6 +192,12 @@ export function Sidebar({
               Import / Export
             </NavLink>
             <NavLink
+              href={`/${orgSlug}/admin/reserve`}
+              icon={<ArrowLeftRight className="w-4 h-4" />}
+            >
+              Reserve
+            </NavLink>
+            <NavLink
               href={`/${orgSlug}/admin/organization`}
               icon={<Rss className="w-4 h-4" />}
             >
@@ -201,17 +210,7 @@ export function Sidebar({
       {/* Footer section */}
       <div className="px-4 mt-auto">
         {/* iCal subscription */}
-        <div className="border-t border-slate-100 pt-4 mb-4">
-          <p className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
-            Calendar Feed
-          </p>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Subscribe in Outlook or Google Calendar:{" "}
-            <code className="text-[10px] bg-slate-50 px-1 py-0.5 rounded break-all">
-              /api/calendar/{orgSlug}
-            </code>
-          </p>
-        </div>
+        <CalendarFeedCopy orgSlug={orgSlug} />
 
         {/* Back to home */}
         <div className="border-t border-slate-100 pt-3 pb-2">
@@ -305,5 +304,44 @@ function NavLink({
       {icon}
       {children}
     </Link>
+  );
+}
+
+function CalendarFeedCopy({ orgSlug }: { orgSlug: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyUrl = () => {
+    const url = `${window.location.origin}/api/calendar/${orgSlug}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className="border-t border-slate-100 pt-4 mb-4">
+      <p className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold mb-1">
+        Calendar Feed
+      </p>
+      <p className="text-xs text-slate-400 leading-relaxed mb-1.5">
+        Subscribe in Outlook or Google Calendar:
+      </p>
+      <button
+        onClick={copyUrl}
+        className="group flex items-center gap-1.5 w-full text-left"
+      >
+        <code className="text-[10px] bg-slate-50 px-1 py-0.5 rounded break-all text-slate-400 group-hover:text-slate-600 transition-colors">
+          /api/calendar/{orgSlug}
+        </code>
+        {copied ? (
+          <Check className="w-3.5 h-3.5 text-green-500 shrink-0" />
+        ) : (
+          <Copy className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 shrink-0 transition-colors" />
+        )}
+      </button>
+      {copied && (
+        <p className="text-[10px] text-green-500 mt-0.5">Copied!</p>
+      )}
+    </div>
   );
 }

@@ -435,6 +435,9 @@ function MonthView({
                           title={`${event.title} — ${event.room?.name || `No ${org.roomTerm.toLowerCase()}`}`}
                         >
                           {event.title}
+                          {event.room && (
+                            <span className="block truncate opacity-70">{event.room.name}</span>
+                          )}
                         </Link>
                       );
                     })}
@@ -677,20 +680,28 @@ function DayView({
                   <span className="text-xs text-slate-400">{formatHour(hour)}</span>
                 </div>
                 <div className="h-20 border-b border-slate-100 relative p-0.5">
-                  {hourEvents.map((event) => {
+                  {hourEvents.map((event, idx) => {
+                    const total = hourEvents.length;
                     const colorIdx = getEventColorIdx(event, roomColorMap);
                     const color = ROOM_COLORS[colorIdx];
                     const durationHours = event.endDateTime && event.startDateTime
                       ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
                       : 1;
                     const heightRem = Math.min(durationHours * 5, 20);
+                    const widthPercent = total > 1 ? 100 / total : undefined;
+                    const leftPercent = total > 1 ? (100 / total) * idx : undefined;
 
                     return (
                       <Link
                         key={event.id}
                         href={`/${orgSlug}/events/${event.id}`}
-                        className={`absolute left-1 right-1 rounded-lg border-l-4 px-3 py-1.5 overflow-hidden hover:shadow-md transition-shadow z-10 ${color.bg} ${color.border} ${color.text}`}
-                        style={{ height: `${heightRem}rem` }}
+                        className={`absolute rounded-lg border-l-4 px-3 py-1.5 overflow-hidden hover:shadow-md transition-shadow z-10 ${color.bg} ${color.border} ${color.text}`}
+                        style={{
+                          height: `${heightRem}rem`,
+                          ...(total > 1
+                            ? { left: `${leftPercent}%`, width: `${widthPercent}%` }
+                            : { left: '0.25rem', right: '0.25rem' }),
+                        }}
                       >
                         <div className="text-sm font-semibold truncate">{event.title}</div>
                         <div className="text-xs opacity-75 mt-0.5">

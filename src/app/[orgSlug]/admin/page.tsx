@@ -17,6 +17,7 @@ import {
   BarChart3,
   FileSpreadsheet,
   Settings,
+  ArrowLeftRight,
 } from "lucide-react";
 
 export const revalidate = 0;
@@ -316,6 +317,12 @@ export default async function AdminDashboardPage({
           icon={<FileSpreadsheet className="w-5 h-5" />}
           title="Import / Export"
           description="CSV import and event data export"
+        />
+        <AdminCard
+          href={`/${orgSlug}/admin/reserve`}
+          icon={<ArrowLeftRight className="w-5 h-5" />}
+          title="Reserve Interactive"
+          description="Bidirectional sync with Reserve Interactive (Infor SCS)"
         />
         <AdminCard
           href={`/${orgSlug}/admin/organization`}

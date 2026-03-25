@@ -36,6 +36,27 @@ model Organization {
   eventPluralTerm         String                      @default("Events")
   roomTerm                String                      @default("Room")
   emailReplyToAddress     String                      @default("")
+
+  // Reserve Interactive (Infor SCS) integration
+  reserveEnabled              Boolean                     @default(false)
+  reserveExportEnabled        Boolean                     @default(false)
+  reserveImportMode           String?                     // null=off, "manual", "automatic"
+  reserveGatewayUsername      String                      @default("")
+  reserveGatewayPassword      String                      @default("")
+  reserveWebhookSecret        String                      @default("")
+  reserveSiteName             String                      @default("")
+  reserveEventIdFieldName     String                      @default("")
+  reserveEventNotesFieldName  String                      @default("")
+  reserveEventOrgFieldName    String                      @default("")
+  reserveOwnerUsername        String                      @default("")
+  reserveSalespersonUsername  String                      @default("")
+  reserveLifecycleStage      String                      @default("")
+  reserveHoldFunctionType    String                      @default("")
+  reserveHoldContactId       String                      @default("")
+  reserveLastSyncAt          DateTime?
+  reserveLastExportAt        DateTime?
+  reserveLastImportAt        DateTime?
+
   createdAt               DateTime                    @default(now())
   updatedAt               DateTime                    @updatedAt
   contentPages            ContentPage[]
@@ -47,6 +68,11 @@ model Organization {
   members                 OrganizationMember[]
   roomConfigurationTypes  RoomConfigurationType[]
   rooms                   Room[]
+  reserveAccounts         ReserveAccount[]
+  reserveContacts         ReserveContact[]
+  reserveEvents           ReserveEvent[]
+  reserveWebhookEvents    ReserveWebhookEvent[]
+  reserveSyncLogs         ReserveSyncLog[]
 
   @@map("organizations")
 }
@@ -100,6 +126,7 @@ model Room {
   updatedAt            DateTime            @updatedAt
   bufferMinutes        Int                 @default(0)
   capacity             Int?
+  reserveLocationName  String              @default("")
   events               Event[]
   configurations       RoomConfiguration[]
   organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -125,25 +152,27 @@ model RoomConfiguration {
 }
 
 model RoomConfigurationType {
-  id             String              @id @default(cuid())
-  organizationId String
-  name           String
-  imageUrl       String?
-  events         Event[]
-  organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  configurations RoomConfiguration[]
+  id                String              @id @default(cuid())
+  organizationId    String
+  name              String
+  imageUrl          String?
+  reserveSetupStyle String              @default("")
+  events            Event[]
+  organization      Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  configurations    RoomConfiguration[]
 
   @@map("room_configuration_types")
 }
 
 model EventType {
-  id               String       @id @default(cuid())
-  organizationId   String
-  name             String
-  colorIndex       Int?
-  iconTextOverride String       @default("")
-  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  events           Event[]
+  id                  String       @id @default(cuid())
+  organizationId      String
+  name                String
+  colorIndex          Int?
+  iconTextOverride    String       @default("")
+  reserveFunctionType String       @default("")
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  events              Event[]
 
   @@map("event_types")
 }
@@ -187,6 +216,7 @@ model Event {
   room                    Room?                  @relation(fields: [roomId], references: [id])
   submitter               User?                  @relation("SubmittedBy", fields: [submitterId], references: [id])
   excludedDates           ExcludedDate[]
+  reserveEvents           ReserveEvent[]
 
   @@index([organizationId, startDateTime])
   @@index([organizationId, roomId])
@@ -338,6 +368,81 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
+}
+
+model ReserveAccount {
+  id              String       @id @default(cuid())
+  organizationId  String
+  reserveUniqueId String
+  name            String       @default("")
+  reserveData     Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, reserveUniqueId])
+  @@map("reserve_accounts")
+}
+
+model ReserveContact {
+  id              String       @id @default(cuid())
+  organizationId  String
+  reserveUniqueId String
+  name            String       @default("")
+  accountName     String       @default("")
+  reserveData     Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, reserveUniqueId])
+  @@map("reserve_contacts")
+}
+
+model ReserveEvent {
+  id              String       @id @default(cuid())
+  organizationId  String
+  reserveUniqueId String
+  eventId         String?
+  generalData     Json?
+  importData      Json?
+  importDataUpdatedAt DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event           Event?       @relation(fields: [eventId], references: [id])
+
+  @@unique([organizationId, reserveUniqueId])
+  @@index([organizationId, eventId])
+  @@map("reserve_events")
+}
+
+model ReserveWebhookEvent {
+  id              String       @id @default(cuid())
+  organizationId  String
+  reserveUniqueId String       @default("")
+  action          String
+  receivedAt      DateTime     @default(now())
+  processedAt     DateTime?
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, processedAt])
+  @@map("reserve_webhook_events")
+}
+
+model ReserveSyncLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  direction      String       // "export" or "import"
+  status         String       // "success", "error", "partial"
+  summary        Json?
+  eventsProcessed Int         @default(0)
+  errorMessage   String?
+  createdAt      DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@map("reserve_sync_logs")
 }
 
 enum OrgRole {
