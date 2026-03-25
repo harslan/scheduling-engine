@@ -12,6 +12,8 @@ const RoomSchema = z.object({
   active: z.coerce.boolean().optional(),
   managersOnly: z.coerce.boolean().optional(),
   concurrentEventLimit: z.coerce.number().int().min(1).optional(),
+  bufferMinutes: z.coerce.number().int().min(0).optional(),
+  capacity: z.coerce.number().int().min(1).optional().or(z.literal("")),
   sortOrder: z.coerce.number().int().optional(),
 });
 
@@ -59,6 +61,8 @@ export async function createRoom(formData: FormData) {
       active: data.active ?? true,
       managersOnly: data.managersOnly ?? false,
       concurrentEventLimit: data.concurrentEventLimit ?? 1,
+      bufferMinutes: data.bufferMinutes ?? 0,
+      capacity: typeof data.capacity === "number" ? data.capacity : null,
       sortOrder: data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1,
     },
   });
@@ -94,6 +98,8 @@ export async function updateRoom(roomId: string, formData: FormData) {
       active: data.active ?? room.active,
       managersOnly: data.managersOnly ?? room.managersOnly,
       concurrentEventLimit: data.concurrentEventLimit ?? room.concurrentEventLimit,
+      bufferMinutes: data.bufferMinutes ?? room.bufferMinutes,
+      capacity: typeof data.capacity === "number" ? data.capacity : room.capacity,
       sortOrder: data.sortOrder ?? room.sortOrder,
     },
   });

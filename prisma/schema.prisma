@@ -131,6 +131,8 @@ model Room {
   managersOnly         Boolean @default(false)
   sortOrder            Int     @default(0)
   concurrentEventLimit Int     @default(1)
+  bufferMinutes        Int     @default(0) // Buffer time between events for room turnover
+  capacity             Int?    // Maximum room capacity
   parentRoomId         String?
 
   organization   Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)

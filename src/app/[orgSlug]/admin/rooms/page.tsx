@@ -59,7 +59,10 @@ export default async function AdminRoomsPage({
                 Mgr Only
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Capacity
+                Concurrent
+              </th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
+                Buffer
               </th>
               <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Events
@@ -80,6 +83,8 @@ export default async function AdminRoomsPage({
                   active: room.active,
                   managersOnly: room.managersOnly,
                   concurrentEventLimit: room.concurrentEventLimit,
+                  bufferMinutes: room.bufferMinutes,
+                  capacity: room.capacity,
                   notes: room.notes,
                   sortOrder: room.sortOrder,
                   eventCount: room._count.events,

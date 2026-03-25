@@ -11,6 +11,8 @@ interface RoomData {
   active: boolean;
   managersOnly: boolean;
   concurrentEventLimit: number;
+  bufferMinutes: number;
+  capacity: number | null;
   notes: string;
   sortOrder: number;
   eventCount: number;
@@ -53,7 +55,7 @@ export function RoomRow({ room, orgSlug }: { room: RoomData; orgSlug: string }) 
   if (editing) {
     return (
       <tr className="border-b border-slate-100 bg-primary/5">
-        <td colSpan={7} className="px-4 py-3">
+        <td colSpan={8} className="px-4 py-3">
           <form onSubmit={handleSave} className="flex items-center gap-3 flex-wrap">
             {error && (
               <div className="w-full text-sm text-red-600 mb-2">{error}</div>
@@ -75,7 +77,24 @@ export function RoomRow({ room, orgSlug }: { room: RoomData; orgSlug: string }) 
               type="number"
               min={1}
               defaultValue={room.concurrentEventLimit}
+              placeholder="Concurrent"
               className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm w-16"
+            />
+            <input
+              name="bufferMinutes"
+              type="number"
+              min={0}
+              defaultValue={room.bufferMinutes}
+              placeholder="Buffer min"
+              className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm w-20"
+            />
+            <input
+              name="capacity"
+              type="number"
+              min={1}
+              defaultValue={room.capacity || ""}
+              placeholder="Capacity"
+              className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm w-20"
             />
             <label className="flex items-center gap-1 text-sm">
               <input
@@ -135,6 +154,9 @@ export function RoomRow({ room, orgSlug }: { room: RoomData; orgSlug: string }) 
       </td>
       <td className="px-4 py-3 text-center text-sm text-slate-600">
         {room.concurrentEventLimit}
+      </td>
+      <td className="px-4 py-3 text-center text-sm text-slate-400">
+        {room.bufferMinutes > 0 ? `${room.bufferMinutes}m` : "—"}
       </td>
       <td className="px-4 py-3 text-center text-sm text-slate-400">
         {room.eventCount}

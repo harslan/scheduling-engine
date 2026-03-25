@@ -125,15 +125,34 @@ export function SubmitEventForm({
           </Field>
         </div>
 
-        <Field label="Expected Attendees">
-          <input
-            name="expectedAttendeeCount"
-            type="number"
-            min="1"
-            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
-            placeholder="Number of attendees"
+        <Field label="Description">
+          <textarea
+            name="description"
+            rows={3}
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all resize-y"
+            placeholder="Detailed description of the event..."
           />
         </Field>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Expected Attendees">
+            <input
+              name="expectedAttendeeCount"
+              type="number"
+              min="1"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
+              placeholder="Number of attendees"
+            />
+          </Field>
+          <Field label="Website URL">
+            <input
+              name="websiteUrl"
+              type="url"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
+              placeholder="https://..."
+            />
+          </Field>
+        </div>
       </Section>
 
       {/* Recurrence */}

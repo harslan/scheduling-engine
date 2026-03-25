@@ -15,6 +15,7 @@ import {
   Sparkles,
   Rss,
   FileSpreadsheet,
+  BarChart3,
 } from "lucide-react";
 
 export function Sidebar({
@@ -116,6 +117,12 @@ export function Sidebar({
             icon={<Users className="w-4 h-4" />}
           >
             Users
+          </NavLink>
+          <NavLink
+            href={`/${orgSlug}/admin/reports`}
+            icon={<BarChart3 className="w-4 h-4" />}
+          >
+            Reports
           </NavLink>
           <NavLink
             href={`/${orgSlug}/admin/import`}

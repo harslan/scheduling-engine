@@ -211,6 +211,28 @@ export default async function EventDetailPage({
             )}
           </DetailCard>
 
+          {/* Description */}
+          {event.description && (
+            <DetailCard title="Description">
+              <div className="flex gap-3">
+                <FileText className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-slate-600 whitespace-pre-wrap">{event.description}</p>
+              </div>
+              {event.websiteUrl && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <a
+                    href={event.websiteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    {event.websiteUrl}
+                  </a>
+                </div>
+              )}
+            </DetailCard>
+          )}
+
           {/* Notes */}
           {event.notes && (
             <DetailCard title="Notes">

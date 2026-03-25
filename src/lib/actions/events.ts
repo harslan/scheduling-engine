@@ -25,6 +25,8 @@ const SubmitEventSchema = z.object({
   contactName: z.string().min(1, "Contact name is required"),
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().optional(),
+  description: z.string().optional(),
+  websiteUrl: z.string().optional(),
   notes: z.string().optional(),
   recurrenceRule: z.string().optional(),
   recurrenceEndDate: z.string().optional(),
@@ -67,19 +69,27 @@ export async function submitEvent(formData: FormData) {
 
     if (!room) return { error: "Room not found" };
 
+    // Include buffer time in conflict window
+    const bufferMs = (room.bufferMinutes || 0) * 60 * 1000;
+    const conflictStart = new Date(startDt.getTime() - bufferMs);
+    const conflictEnd = new Date(endDt.getTime() + bufferMs);
+
     const overlapping = await prisma.event.count({
       where: {
         roomId: data.roomId,
         deleted: false,
         status: { in: ["APPROVED", "PENDING"] },
-        startDateTime: { lt: endDt },
-        endDateTime: { gt: startDt },
+        startDateTime: { lt: conflictEnd },
+        endDateTime: { gt: conflictStart },
       },
     });
 
     if (overlapping >= room.concurrentEventLimit) {
+      const bufferNote = room.bufferMinutes > 0
+        ? ` (includes ${room.bufferMinutes}-minute buffer between events)`
+        : "";
       return {
-        error: `${room.name} already has ${overlapping} event(s) during this time. Maximum concurrent events: ${room.concurrentEventLimit}.`,
+        error: `${room.name} already has ${overlapping} event(s) during this time. Maximum concurrent events: ${room.concurrentEventLimit}.${bufferNote}`,
       };
     }
   }
@@ -100,6 +110,8 @@ export async function submitEvent(formData: FormData) {
       contactName: data.contactName,
       contactEmail: data.contactEmail,
       contactPhone: data.contactPhone || "",
+      description: data.description || "",
+      websiteUrl: data.websiteUrl || "",
       notes: data.notes || "",
       recurrenceRule: hasRecurrence ? data.recurrenceRule! : null,
       recurrenceEndDate: hasRecurrence ? recEndDate : null,
