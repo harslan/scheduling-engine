@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -19,6 +20,8 @@ export async function createEventType(formData: FormData) {
   }
 
   const data = parsed.data;
+  await requireOrgRole(data.organizationId, ["ADMIN", "MANAGER"]);
+
   const org = await prisma.organization.findUnique({
     where: { id: data.organizationId },
   });
@@ -48,6 +51,7 @@ export async function updateEventType(id: string, formData: FormData) {
     include: { organization: true },
   });
   if (!et) return { error: "Event type not found" };
+  await requireOrgRole(et.organization.id, ["ADMIN", "MANAGER"]);
 
   await prisma.eventType.update({
     where: { id },
@@ -69,6 +73,7 @@ export async function deleteEventType(id: string) {
     include: { organization: true, events: { take: 1 } },
   });
   if (!et) return { error: "Event type not found" };
+  await requireOrgRole(et.organization.id, ["ADMIN", "MANAGER"]);
 
   if (et.events.length > 0) {
     return { error: "Cannot delete — this event type has events. Remove events first." };

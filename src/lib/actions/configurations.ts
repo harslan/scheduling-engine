@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -22,6 +23,8 @@ export async function createConfigurationType(formData: FormData) {
   }
 
   const data = parsed.data;
+  await requireOrgRole(data.organizationId, ["ADMIN", "MANAGER"]);
+
   const org = await prisma.organization.findUnique({
     where: { id: data.organizationId },
   });
@@ -51,6 +54,7 @@ export async function updateConfigurationType(id: string, formData: FormData) {
     include: { organization: true },
   });
   if (!type) return { error: "Configuration type not found" };
+  await requireOrgRole(type.organization.id, ["ADMIN", "MANAGER"]);
 
   await prisma.roomConfigurationType.update({
     where: { id },
@@ -71,6 +75,7 @@ export async function deleteConfigurationType(id: string) {
     },
   });
   if (!type) return { error: "Configuration type not found" };
+  await requireOrgRole(type.organization.id, ["ADMIN", "MANAGER"]);
 
   if (type.configurations.length > 0 || type.events.length > 0) {
     return { error: "Cannot delete — this type is in use by configurations or events" };
@@ -107,6 +112,7 @@ export async function createRoomConfiguration(formData: FormData) {
     include: { organization: true },
   });
   if (!room) return { error: "Room not found" };
+  await requireOrgRole(room.organizationId, ["ADMIN", "MANAGER"]);
 
   await prisma.roomConfiguration.create({
     data: {
@@ -133,6 +139,7 @@ export async function updateRoomConfiguration(id: string, formData: FormData) {
     include: { room: { include: { organization: true } } },
   });
   if (!config) return { error: "Configuration not found" };
+  await requireOrgRole(config.room.organizationId, ["ADMIN", "MANAGER"]);
 
   await prisma.roomConfiguration.update({
     where: { id },
@@ -158,6 +165,7 @@ export async function deleteRoomConfiguration(id: string) {
     },
   });
   if (!config) return { error: "Configuration not found" };
+  await requireOrgRole(config.room.organizationId, ["ADMIN", "MANAGER"]);
 
   if (config.events.length > 0) {
     return { error: "Cannot delete — this configuration has events" };

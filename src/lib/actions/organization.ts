@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -40,6 +41,8 @@ const OrgSettingsSchema = z.object({
 });
 
 export async function updateOrganization(orgId: string, formData: FormData) {
+  await requireOrgRole(orgId, ["ADMIN"]);
+
   const raw = Object.fromEntries(formData.entries());
 
   // Checkboxes that are unchecked don't appear in FormData

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -32,6 +33,8 @@ export async function createRoom(formData: FormData) {
   }
 
   const data = parsed.data;
+  await requireOrgRole(data.organizationId, ["ADMIN", "MANAGER"]);
+
   const org = await prisma.organization.findUnique({
     where: { id: data.organizationId },
   });
@@ -86,6 +89,7 @@ export async function updateRoom(roomId: string, formData: FormData) {
     include: { organization: true },
   });
   if (!room) return { error: "Room not found" };
+  await requireOrgRole(room.organizationId, ["ADMIN", "MANAGER"]);
 
   const data = parsed.data;
 
@@ -116,6 +120,7 @@ export async function deleteRoom(roomId: string) {
     include: { organization: true, events: { take: 1 } },
   });
   if (!room) return { error: "Room not found" };
+  await requireOrgRole(room.organizationId, ["ADMIN", "MANAGER"]);
 
   if (room.events.length > 0) {
     // Soft delete — just deactivate
@@ -139,6 +144,7 @@ export async function toggleRoomActive(roomId: string) {
     include: { organization: true },
   });
   if (!room) return { error: "Room not found" };
+  await requireOrgRole(room.organizationId, ["ADMIN", "MANAGER"]);
 
   await prisma.room.update({
     where: { id: roomId },

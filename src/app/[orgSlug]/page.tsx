@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList, Grid3X3 } from "lucide-react";
 import Link from "next/link";
+import sanitizeHtml from "sanitize-html";
 import {
   startOfWeek,
   endOfWeek,
@@ -179,7 +180,7 @@ export default async function CalendarPage({
       {org.messageBoardHtml && (
         <div
           className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6 text-sm text-blue-800 prose prose-sm prose-blue max-w-none"
-          dangerouslySetInnerHTML={{ __html: org.messageBoardHtml }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(org.messageBoardHtml) }}
         />
       )}
 

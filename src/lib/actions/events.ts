@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/session";
+import { getSession, requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { format } from "date-fns";
@@ -246,15 +246,13 @@ export async function submitEvent(formData: FormData) {
 }
 
 export async function approveEvent(eventId: string, orgSlug: string, comment?: string) {
-  const session = await getSession();
-  const userId = session?.user ? (session.user as { id: string }).id : null;
-  if (!userId) return { error: "Not authenticated" };
-
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: { organization: true, room: true },
   });
   if (!event) return { error: "Event not found" };
+  const { user } = await requireOrgRole(event.organizationId, ["ADMIN", "MANAGER"]);
+  const userId = user.id;
 
   await prisma.$transaction([
     prisma.event.update({
@@ -273,7 +271,7 @@ export async function approveEvent(eventId: string, orgSlug: string, comment?: s
       data: {
         eventId,
         action: "EVENT_APPROVED",
-        actorEmail: session?.user?.email || "",
+        actorEmail: user.email || "",
         details: { comment },
       },
     }),
@@ -296,15 +294,13 @@ export async function approveEvent(eventId: string, orgSlug: string, comment?: s
 }
 
 export async function denyEvent(eventId: string, orgSlug: string, comment?: string) {
-  const session = await getSession();
-  const userId = session?.user ? (session.user as { id: string }).id : null;
-  if (!userId) return { error: "Not authenticated" };
-
   const event = await prisma.event.findUnique({
     where: { id: eventId },
     include: { organization: true },
   });
   if (!event) return { error: "Event not found" };
+  const { user } = await requireOrgRole(event.organizationId, ["ADMIN", "MANAGER"]);
+  const userId = user.id;
 
   await prisma.$transaction([
     prisma.event.update({
@@ -323,7 +319,7 @@ export async function denyEvent(eventId: string, orgSlug: string, comment?: stri
       data: {
         eventId,
         action: "EVENT_DENIED",
-        actorEmail: session?.user?.email || "",
+        actorEmail: user.email || "",
         details: { comment },
       },
     }),
@@ -361,9 +357,9 @@ export async function adminUpdateEventStatus(
   orgSlug: string,
   status: "APPROVED" | "PENDING" | "DENIED" | "CANCELLED"
 ) {
-  const session = await getSession();
-  const userId = session?.user ? (session.user as { id: string }).id : null;
-  if (!userId) return { error: "Not authenticated" };
+  const event = await prisma.event.findUnique({ where: { id: eventId } });
+  if (!event) return { error: "Event not found" };
+  const { user } = await requireOrgRole(event.organizationId, ["ADMIN", "MANAGER"]);
 
   await prisma.$transaction([
     prisma.event.update({
@@ -376,7 +372,7 @@ export async function adminUpdateEventStatus(
     prisma.approvalAction.create({
       data: {
         eventId,
-        userId,
+        userId: user.id,
         action: status === "APPROVED" ? "APPROVED" : status === "DENIED" ? "DENIED" : "CHANGED",
         comment: `Status changed to ${status}`,
       },
@@ -385,7 +381,7 @@ export async function adminUpdateEventStatus(
       data: {
         eventId,
         action: `STATUS_CHANGED_TO_${status}`,
-        actorEmail: session?.user?.email || "",
+        actorEmail: user.email || "",
       },
     }),
   ]);
