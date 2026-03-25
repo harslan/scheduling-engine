@@ -15,6 +15,8 @@ import {
   Users,
   CheckCircle2,
   ArrowRight,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -50,30 +52,33 @@ function LoginForm() {
 
   return (
     <div className="min-h-full flex">
-      {/* Left panel — brand/feature showcase */}
-      <div className="hidden lg:flex lg:w-[480px] xl:w-[540px] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 relative overflow-hidden flex-col justify-between p-12">
-        {/* Decorative grid */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-        }} />
-        {/* Decorative gradient orbs */}
+      {/* Left panel — brand showcase (matches landing footer palette) */}
+      <div className="hidden lg:flex lg:w-[480px] xl:w-[540px] bg-slate-900 relative overflow-hidden flex-col justify-between p-12">
+        {/* Decorative — same hero-grid as landing page */}
+        <div className="absolute inset-0 hero-grid opacity-10" />
         <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-600/15 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-indigo-500/15 rounded-full blur-3xl" />
 
         <div className="relative z-10">
-          {/* Logo */}
+          {/* Logo — matches landing header */}
           <Link href="/" className="inline-flex items-center gap-3 group">
-            <div className="w-11 h-11 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center border border-white/10 group-hover:bg-white/15 transition-colors">
-              <Calendar className="w-5 h-5 text-white" />
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <Calendar className="w-5 h-5 text-white" />
+              </div>
+              <div className="absolute -inset-1 bg-primary/20 rounded-xl blur-md -z-10" />
             </div>
-            <span className="text-lg font-bold text-white tracking-tight">Scheduling Engine</span>
+            <span className="text-xl font-bold text-white tracking-tight">Scheduling Engine</span>
           </Link>
 
-          {/* Headline */}
+          {/* Headline — gradient matches landing (primary → blue → indigo) */}
           <div className="mt-16">
-            <h1 className="text-4xl font-bold text-white leading-tight tracking-tight">
-              Streamline your<br />
-              <span className="bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">scheduling workflow</span>
+            <h1 className="text-4xl font-extrabold text-white leading-tight tracking-tight">
+              Room scheduling,
+              <br />
+              <span className="bg-gradient-to-r from-primary via-blue-500 to-indigo-400 bg-clip-text text-transparent">
+                powered by AI
+              </span>
             </h1>
             <p className="mt-4 text-slate-400 text-base leading-relaxed max-w-sm">
               A unified platform for managing rooms, events, and approvals across your entire organization.
@@ -84,12 +89,12 @@ function LoginForm() {
           <div className="mt-12 space-y-5">
             {[
               { icon: <Clock className="w-4 h-4" />, text: "Real-time calendar with instant availability" },
-              { icon: <Shield className="w-4 h-4" />, text: "Multi-level approval workflows" },
+              { icon: <Shield className="w-4 h-4" />, text: "Configurable approval workflows" },
               { icon: <Users className="w-4 h-4" />, text: "Role-based access for teams of any size" },
-              { icon: <CheckCircle2 className="w-4 h-4" />, text: "AI-powered booking assistant" },
+              { icon: <Sparkles className="w-4 h-4" />, text: "AI-powered booking assistant" },
             ].map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/[0.07] border border-white/[0.08] flex items-center justify-center text-blue-400">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                   {feature.icon}
                 </div>
                 <span className="text-sm text-slate-300">{feature.text}</span>
@@ -98,26 +103,29 @@ function LoginForm() {
           </div>
         </div>
 
-        {/* Bottom trust bar */}
+        {/* Bottom — matches landing footer style */}
         <div className="relative z-10 pt-8 border-t border-white/[0.08]">
-          <p className="text-xs text-slate-500">
-            Trusted by organizations worldwide for secure, reliable scheduling.
+          <p className="text-sm text-slate-500">
+            Modern room scheduling for the AI era.
           </p>
         </div>
       </div>
 
       {/* Right panel — login form */}
-      <div className="flex-1 flex flex-col min-h-full bg-gradient-to-br from-slate-50 via-white to-blue-50/30">
+      <div className="flex-1 flex flex-col min-h-full bg-white">
         {/* Top bar */}
         <header className="flex items-center justify-between px-6 sm:px-10 py-5">
           <Link
             href="/"
-            className="lg:hidden inline-flex items-center gap-2.5 group"
+            className="lg:hidden inline-flex items-center gap-2.5"
           >
-            <div className="w-9 h-9 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-primary/15">
-              <Calendar className="w-4.5 h-4.5 text-white" />
+            <div className="relative">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <Calendar className="w-5 h-5 text-white" />
+              </div>
+              <div className="absolute -inset-1 bg-primary/20 rounded-xl blur-md -z-10" />
             </div>
-            <span className="text-sm font-bold text-slate-900 tracking-tight">Scheduling Engine</span>
+            <span className="text-xl font-bold text-slate-900 tracking-tight">Scheduling Engine</span>
           </Link>
           <div className="lg:ml-auto" />
         </header>
@@ -127,7 +135,7 @@ function LoginForm() {
           <div className="w-full max-w-[400px]">
             {/* Heading */}
             <div className="mb-8">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 Sign in to your account
               </h2>
               <p className="text-sm text-slate-500 mt-1.5">
@@ -139,9 +147,7 @@ function LoginForm() {
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
                 <div className="flex items-center gap-2.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
-                  <div className="w-5 h-5 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                    <span className="text-red-500 text-xs font-bold">!</span>
-                  </div>
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                   {error}
                 </div>
               )}
@@ -162,7 +168,7 @@ function LoginForm() {
                     required
                     autoComplete="email"
                     autoFocus
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-slate-400"
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-slate-400"
                     placeholder="you@company.com"
                   />
                 </div>
@@ -183,7 +189,7 @@ function LoginForm() {
                     type={showPassword ? "text" : "password"}
                     required
                     autoComplete="current-password"
-                    className="w-full pl-10 pr-11 py-2.5 border border-slate-200 rounded-lg bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-slate-400"
+                    className="w-full pl-10 pr-11 py-2.5 border border-slate-200 rounded-xl bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-slate-400"
                     placeholder="Enter your password"
                   />
                   <button
@@ -197,11 +203,11 @@ function LoginForm() {
                 </div>
               </div>
 
-              {/* Submit */}
+              {/* Submit — matches landing CTA: blue gradient, rounded-2xl */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 focus:ring-2 focus:ring-slate-900/20 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-blue-600 text-white py-3 rounded-2xl text-sm font-semibold hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none disabled:hover:translate-y-0"
               >
                 {loading ? (
                   <>
@@ -221,10 +227,9 @@ function LoginForm() {
         </div>
 
         {/* Footer */}
-        <footer className="px-6 sm:px-10 py-4 text-center">
-          <p className="text-xs text-slate-400">
-            Secured with end-to-end encryption
-          </p>
+        <footer className="px-6 sm:px-10 py-4 flex items-center justify-center gap-1.5 text-xs text-slate-400">
+          <Lock className="w-3 h-3" />
+          Secure, authenticated connection
         </footer>
       </div>
     </div>
