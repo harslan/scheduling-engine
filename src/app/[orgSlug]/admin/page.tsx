@@ -115,7 +115,7 @@ export default async function AdminDashboardPage({
     <div className="max-w-6xl">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
           <p className="text-sm text-slate-500 mt-1">
             Overview of {org.appDisplayName || org.name}
           </p>

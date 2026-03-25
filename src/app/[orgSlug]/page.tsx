@@ -196,7 +196,7 @@ export default async function CalendarPage({
       <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center justify-between sm:block">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{headerTitle}</h1>
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-slate-900">{headerTitle}</h1>
             <p className="text-sm text-slate-500 mt-0.5">
               {org.appDisplayName || org.name}
             </p>

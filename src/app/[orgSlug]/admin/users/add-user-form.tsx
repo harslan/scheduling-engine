@@ -39,7 +39,7 @@ export function AddUserForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors mb-4"
+        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors mb-4"
       >
         <UserPlus className="w-4 h-4" />
         Add User
@@ -109,7 +109,7 @@ export function AddUserForm({
         <button
           type="submit"
           disabled={loading}
-          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
+          className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
         >
           {loading ? "Adding..." : "Add User"}
         </button>

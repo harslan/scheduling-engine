@@ -70,7 +70,7 @@ export default async function MyEventsPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             My {org.eventPluralTerm}
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -79,7 +79,7 @@ export default async function MyEventsPage({
         </div>
         <Link
           href={`/${orgSlug}/submit-event`}
-          className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+          className="flex items-center gap-2 bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-2 rounded-xl text-sm font-semibold hover:shadow-md hover:shadow-primary/20 transition-all"
         >
           <Plus className="w-4 h-4" />
           <span className="hidden sm:inline">Submit {org.eventSingularTerm}</span>

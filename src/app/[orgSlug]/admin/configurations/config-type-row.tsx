@@ -84,7 +84,7 @@ export function ConfigTypeRow({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
+                  className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50"
                 >
                   {loading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />

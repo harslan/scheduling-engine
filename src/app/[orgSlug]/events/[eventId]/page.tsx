@@ -108,7 +108,7 @@ export default async function EventDetailPage({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
         <div>
           <div className="flex flex-wrap items-center gap-3 mb-2">
-            <h1 className="text-2xl font-bold text-slate-900">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
               {event.title || "Untitled Event"}
             </h1>
             <span

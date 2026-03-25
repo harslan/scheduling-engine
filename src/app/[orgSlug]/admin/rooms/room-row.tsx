@@ -103,7 +103,7 @@ export function RoomRow({
             Managers only
           </label>
           <div className="flex gap-2">
-            <button type="submit" disabled={loading} className="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium">Save</button>
+            <button type="submit" disabled={loading} className="flex-1 px-3 py-2 bg-primary text-white rounded-xl text-sm font-medium">Save</button>
             <button type="button" onClick={() => setEditing(false)} className="px-3 py-2 text-slate-500 text-sm">Cancel</button>
           </div>
         </form>
@@ -201,7 +201,7 @@ export function RoomRow({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium"
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-xl text-sm font-medium"
             >
               <Save className="w-3.5 h-3.5" />
               Save

@@ -96,7 +96,7 @@ export function EventTypeRow({
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-lg text-sm font-medium"
+              className="flex items-center gap-1 px-3 py-1.5 bg-primary text-white rounded-xl text-sm font-medium"
             >
               <Save className="w-3.5 h-3.5" /> Save
             </button>

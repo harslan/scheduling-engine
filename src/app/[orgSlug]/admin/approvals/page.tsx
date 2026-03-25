@@ -78,7 +78,7 @@ export default async function ApprovalsPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
             {org.eventSingularTerm} Approvals
           </h1>
           <p className="text-sm text-slate-500 mt-1">

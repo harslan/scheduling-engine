@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { SubmitEventForm } from "./form";
 import { getSession } from "@/lib/session";
 
@@ -41,7 +42,7 @@ export default async function SubmitEventPage({
 
   return (
     <div className="max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900 mb-1">
+      <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">
         Submit {org.eventSingularTerm}
       </h1>
       <p className="text-sm text-slate-500 mb-8">
@@ -50,8 +51,8 @@ export default async function SubmitEventPage({
       </p>
 
       {!session?.user && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 mb-6 text-sm text-blue-700">
-          You&apos;re submitting as a guest. <a href={`/login?callbackUrl=/${orgSlug}/submit-event`} className="font-medium underline">Sign in</a> to track your events.
+        <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-6 text-sm text-blue-700">
+          You&apos;re submitting as a guest. <Link href={`/login?callbackUrl=/${orgSlug}/submit-event`} className="font-medium underline">Sign in</Link> to track your events.
         </div>
       )}
 

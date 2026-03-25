@@ -129,7 +129,7 @@ export function ImportReviewClient({
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
         >
           {loading ? "Refreshing..." : "Refresh from Reserve"}
         </button>

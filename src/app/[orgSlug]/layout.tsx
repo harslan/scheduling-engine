@@ -121,7 +121,7 @@ export default async function OrgLayout({
           ) : (
             <Link
               href={`/login?callbackUrl=/${orgSlug}`}
-              className="text-sm font-medium bg-primary text-white px-4 py-1.5 rounded-lg hover:bg-primary/90 transition-colors"
+              className="text-sm font-semibold bg-gradient-to-r from-primary to-blue-600 text-white px-4 py-1.5 rounded-xl hover:shadow-md hover:shadow-primary/20 transition-all"
             >
               Sign In
             </Link>

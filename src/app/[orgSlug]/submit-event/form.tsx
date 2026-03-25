@@ -102,7 +102,7 @@ export function SubmitEventForm({
         <div className="flex items-center justify-center gap-3">
           <Link
             href={`/${orgSlug}/my-events`}
-            className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl font-medium hover:bg-primary/90 transition-colors"
           >
             View My {orgSettings.eventPluralTerm} <ArrowRight className="w-4 h-4" />
           </Link>

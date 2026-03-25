@@ -41,7 +41,7 @@ export function AddRoomForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors mb-4"
+        className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors mb-4"
       >
         <Plus className="w-4 h-4" />
         Add {roomTerm}
@@ -113,7 +113,7 @@ export function AddRoomForm({
         <button
           type="submit"
           disabled={loading}
-          className="bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
+          className="bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50"
         >
           {loading ? "Adding..." : `Add ${roomTerm}`}
         </button>

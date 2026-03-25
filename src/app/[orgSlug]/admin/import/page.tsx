@@ -21,7 +21,7 @@ export default async function ImportPage({
 
   return (
     <div className="max-w-3xl">
-      <h1 className="text-2xl font-bold text-slate-900 mb-1">
+      <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight mb-1">
         Import / Export Events
       </h1>
       <p className="text-sm text-slate-500 mb-8">
@@ -37,7 +37,7 @@ export default async function ImportPage({
         <div className="flex gap-3">
           <a
             href={`/api/events/export?org=${orgSlug}`}
-            className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
             <Download className="w-4 h-4" />
             Export All Events
