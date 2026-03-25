@@ -24,10 +24,12 @@ export function UserRow({
   member,
   organizationId,
   orgSlug,
+  mobileMode,
 }: {
   member: MemberData;
   organizationId: string;
   orgSlug: string;
+  mobileMode?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -49,6 +51,50 @@ export function UserRow({
   }
 
   const roleInfo = ROLE_LABELS[member.role] || ROLE_LABELS.USER;
+
+  if (mobileMode) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-slate-200 rounded-full flex items-center justify-center text-sm font-bold text-slate-500 shrink-0">
+            {(member.userName || member.userEmail).charAt(0).toUpperCase()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-slate-900 truncate">
+              {member.userName || "—"}
+              {member.isSystemAdmin && (
+                <span className="ml-2 inline-flex items-center gap-0.5 text-xs text-amber-600">
+                  <Shield className="w-3 h-3" /> Sys Admin
+                </span>
+              )}
+            </p>
+            <p className="text-sm text-slate-500 truncate">{member.userEmail}</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+          <select
+            value={member.role}
+            onChange={handleRoleChange}
+            disabled={loading}
+            className={`px-2.5 py-1.5 rounded-full text-xs font-medium border cursor-pointer ${roleInfo.color}`}
+            aria-label="User role"
+          >
+            <option value="ADMIN">Admin</option>
+            <option value="MANAGER">Manager</option>
+            <option value="EVENT_SUPPORT">Event Support</option>
+            <option value="USER">User</option>
+          </select>
+          <button
+            onClick={handleRemove}
+            disabled={loading}
+            className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <tr className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
@@ -76,6 +122,7 @@ export function UserRow({
           onChange={handleRoleChange}
           disabled={loading}
           className={`px-2.5 py-1 rounded-full text-xs font-medium border cursor-pointer ${roleInfo.color}`}
+          aria-label="User role"
         >
           <option value="ADMIN">Admin</option>
           <option value="MANAGER">Manager</option>
@@ -89,6 +136,7 @@ export function UserRow({
           disabled={loading}
           className="p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
           title="Remove from organization"
+          aria-label={`Remove ${member.userName || member.userEmail}`}
         >
           <Trash2 className="w-4 h-4" />
         </button>

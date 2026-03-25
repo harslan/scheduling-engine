@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { unstable_cache } from "next/cache";
 import {
   Calendar,
   Building2,
@@ -19,17 +20,25 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-export default async function Home() {
-  const orgs = await prisma.organization.findMany({
-    select: { slug: true, name: true, appDisplayName: true },
-    take: 5,
-  });
+const getLandingStats = unstable_cache(
+  async () => {
+    const [orgs, totalEvents, totalOrgs, totalRooms] = await Promise.all([
+      prisma.organization.findMany({
+        select: { slug: true, name: true, appDisplayName: true },
+        take: 5,
+      }),
+      prisma.event.count({ where: { deleted: false } }),
+      prisma.organization.count(),
+      prisma.room.count(),
+    ]);
+    return { orgs, totalEvents, totalOrgs, totalRooms };
+  },
+  ["landing-stats"],
+  { revalidate: 300 } // Cache for 5 minutes
+);
 
-  const [totalEvents, totalOrgs, totalRooms] = await Promise.all([
-    prisma.event.count({ where: { deleted: false } }),
-    prisma.organization.count(),
-    prisma.room.count(),
-  ]);
+export default async function Home() {
+  const { orgs, totalEvents, totalOrgs, totalRooms } = await getLandingStats();
 
   return (
     <div className="min-h-full bg-white overflow-hidden">

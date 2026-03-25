@@ -52,23 +52,41 @@ export default async function AdminUsersPage({
       {/* Add User Form */}
       <AddUserForm organizationId={org.id} orgSlug={orgSlug} />
 
-      {/* Members Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      {/* Mobile: User Cards */}
+      <div className="md:hidden space-y-3">
+        {members.length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-xl py-12 text-center">
+            <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="text-slate-400">No members yet. Invite one above.</p>
+          </div>
+        )}
+        {sorted.map((member) => (
+          <UserRow
+            key={`mobile-${member.userId}`}
+            member={{
+              userId: member.userId,
+              role: member.role,
+              userName: member.user.name,
+              userEmail: member.user.email,
+              isSystemAdmin: member.user.isSystemAdmin,
+              active: member.user.active,
+            }}
+            organizationId={org.id}
+            orgSlug={orgSlug}
+            mobileMode
+          />
+        ))}
+      </div>
+
+      {/* Desktop: Members Table */}
+      <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                User
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Email
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Role
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Actions
-              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Email</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
             </tr>
           </thead>
           <tbody>

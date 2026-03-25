@@ -37,10 +37,12 @@ export function RoomRow({
   room,
   configTypes,
   orgSlug,
+  mobileMode,
 }: {
   room: RoomData;
   configTypes: { id: string; name: string }[];
   orgSlug: string;
+  mobileMode?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -74,6 +76,45 @@ export function RoomRow({
       setEditing(false);
     }
     setLoading(false);
+  }
+
+  // Mobile card mode — just show action buttons
+  if (mobileMode) {
+    if (editing) {
+      return (
+        <form onSubmit={handleSave} className="space-y-2">
+          {error && <div className="text-sm text-red-600">{error}</div>}
+          <input name="name" defaultValue={room.name} required className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Room name" />
+          <div className="grid grid-cols-2 gap-2">
+            <input name="iconText" defaultValue={room.iconText} maxLength={4} className="px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Icon" />
+            <input name="capacity" type="number" min={1} defaultValue={room.capacity || ""} placeholder="Capacity" className="px-3 py-2 border border-slate-200 rounded-lg text-sm" />
+            <input name="concurrentEventLimit" type="number" min={1} defaultValue={room.concurrentEventLimit} className="px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Max concurrent" />
+            <input name="bufferMinutes" type="number" min={0} defaultValue={room.bufferMinutes} className="px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Buffer (min)" />
+          </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input name="managersOnly" type="checkbox" value="true" defaultChecked={room.managersOnly} />
+            Managers only
+          </label>
+          <div className="flex gap-2">
+            <button type="submit" disabled={loading} className="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium">Save</button>
+            <button type="button" onClick={() => setEditing(false)} className="px-3 py-2 text-slate-500 text-sm">Cancel</button>
+          </div>
+        </form>
+      );
+    }
+
+    return (
+      <div>
+        {error && <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 mb-2">{error}</div>}
+        <div className="flex items-center gap-2">
+          <button onClick={() => setEditing(true)} className="flex-1 px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">Edit</button>
+          <button onClick={handleToggle} disabled={loading} className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50 text-slate-600">
+            {room.active ? "Deactivate" : "Activate"}
+          </button>
+          <button onClick={handleDelete} disabled={loading} className="px-3 py-1.5 text-sm border border-red-200 rounded-lg hover:bg-red-50 text-red-500">Delete</button>
+        </div>
+      </div>
+    );
   }
 
   if (editing) {

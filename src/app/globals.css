@@ -144,3 +144,42 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
+
+/* Reduced motion: disable all animations for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-float-slow,
+  .animate-float-delay,
+  .animate-fade-in-up,
+  .animate-fade-in-up-delay-1,
+  .animate-fade-in-up-delay-2,
+  .animate-fade-in-up-delay-3,
+  .animate-fade-in-up-delay-4,
+  .animate-shimmer,
+  .animate-gradient-shift {
+    animation: none !important;
+    opacity: 1 !important;
+  }
+  .feature-card:hover {
+    transform: none;
+  }
+  .tech-badge:hover {
+    transform: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles for calendar */
+@media print {
+  header, nav, .sidebar, button, a[href*="submit-event"] {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .shadow-sm, .shadow-lg {
+    box-shadow: none !important;
+  }
+}

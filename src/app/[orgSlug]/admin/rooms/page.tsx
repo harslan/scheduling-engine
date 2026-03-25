@@ -53,35 +53,82 @@ export default async function AdminRoomsPage({
       {/* Add Room Form */}
       <AddRoomForm organizationId={org.id} orgSlug={orgSlug} roomTerm={org.roomTerm} />
 
-      {/* Rooms Table */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      {/* Mobile: Room Cards */}
+      <div className="md:hidden space-y-3">
+        {rooms.length === 0 && (
+          <div className="bg-white border border-slate-200 rounded-xl py-12 text-center text-slate-400">
+            No rooms configured. Add one above.
+          </div>
+        )}
+        {rooms.map((room) => {
+          const roomData = {
+            id: room.id,
+            name: room.name,
+            iconText: room.iconText,
+            active: room.active,
+            managersOnly: room.managersOnly,
+            concurrentEventLimit: room.concurrentEventLimit,
+            bufferMinutes: room.bufferMinutes,
+            capacity: room.capacity,
+            notes: room.notes,
+            sortOrder: room.sortOrder,
+            eventCount: room._count.events,
+            configurations: room.configurations.map((c) => ({
+              id: c.id,
+              name: c.name,
+              configurationTypeName: c.configurationType?.name || null,
+              configurationTypeId: c.configurationTypeId,
+              concurrentEventLimit: c.concurrentEventLimit,
+              eventCount: c._count.events,
+            })),
+          };
+          return (
+            <div key={room.id} className={`bg-white border border-slate-200 rounded-xl p-4 shadow-sm ${!room.active ? "opacity-50" : ""}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="inline-flex items-center justify-center w-9 h-7 bg-primary/10 text-primary rounded text-xs font-bold">
+                    {room.iconText}
+                  </span>
+                  <div>
+                    <p className="font-medium text-slate-900">{room.name}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
+                      <span>{room._count.events} events</span>
+                      {room.bufferMinutes > 0 && <span>· {room.bufferMinutes}m buffer</span>}
+                      {room.managersOnly && <span className="text-amber-600">· Managers only</span>}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className={`inline-block w-2 h-2 rounded-full ${room.active ? "bg-emerald-500" : "bg-slate-300"}`} />
+                  <span className="text-xs text-slate-400">{room.active ? "Active" : "Inactive"}</span>
+                </div>
+              </div>
+              <div className="mt-3">
+                <RoomRow
+                  room={roomData}
+                  configTypes={configTypes.map((ct) => ({ id: ct.id, name: ct.name }))}
+                  orgSlug={orgSlug}
+                  mobileMode
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: Rooms Table */}
+      <div className="hidden md:block bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
         <table className="w-full">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Name
-              </th>
-              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Icon
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Active
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Mgr Only
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Concurrent
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Buffer
-              </th>
-              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Events
-              </th>
-              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Actions
-              </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Icon</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500" title="Active status">Active</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500" title="Managers only access">Managers Only</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500" title="Maximum concurrent events">Max Concurrent</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500" title="Buffer time between events">Buffer</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Events</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
             </tr>
           </thead>
           <tbody>

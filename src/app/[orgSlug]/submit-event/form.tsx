@@ -3,7 +3,8 @@
 import { submitEvent } from "@/lib/actions/events";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Repeat } from "lucide-react";
+import { CheckCircle, Repeat, ArrowRight, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 interface RoomConfig {
   id: string;
@@ -60,14 +61,28 @@ export function SubmitEventForm({
     const formData = new FormData(e.currentTarget);
     formData.set("organizationId", organizationId);
 
+    // Client-side time validation
+    const startStr = formData.get("startDateTime") as string;
+    const endStr = formData.get("endDateTime") as string;
+    if (startStr && endStr) {
+      const startDt = new Date(startStr);
+      const endDt = new Date(endStr);
+      if (endDt <= startDt) {
+        setError("End time must be after start time.");
+        setLoading(false);
+        return;
+      }
+    }
+
     const result = await submitEvent(formData);
 
     if (result.error) {
       setError(result.error);
       setLoading(false);
+      // Scroll to top so user sees the error
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       setSuccess(true);
-      setTimeout(() => router.push(`/${orgSlug}/my-events`), 2000);
     }
   }
 
@@ -78,11 +93,25 @@ export function SubmitEventForm({
         <h2 className="text-xl font-bold text-slate-900 mb-2">
           Event Submitted!
         </h2>
-        <p className="text-slate-500">
+        <p className="text-slate-500 mb-6">
           {requiresApproval
-            ? "Your event has been submitted for approval."
+            ? "Your event has been submitted for approval. You'll receive an email when it's reviewed."
             : "Your event has been approved and added to the calendar."}
         </p>
+        <div className="flex items-center justify-center gap-3">
+          <Link
+            href={`/${orgSlug}/my-events`}
+            className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-colors"
+          >
+            View My Events <ArrowRight className="w-4 h-4" />
+          </Link>
+          <Link
+            href={`/${orgSlug}`}
+            className="inline-flex items-center gap-2 border border-slate-200 text-slate-700 px-5 py-2.5 rounded-lg font-medium hover:bg-slate-50 transition-colors"
+          >
+            Back to Calendar
+          </Link>
+        </div>
       </div>
     );
   }
@@ -129,7 +158,7 @@ export function SubmitEventForm({
           </Field>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Start Date & Time" required>
             <input
               name="startDateTime"
@@ -147,6 +176,9 @@ export function SubmitEventForm({
             />
           </Field>
         </div>
+        <p className="text-xs text-slate-400 -mt-2">
+          Available hours: {orgSettings.roomOpeningTime} – {orgSettings.roomClosingTime}
+        </p>
 
         <Field label="Description">
           <textarea
@@ -157,7 +189,7 @@ export function SubmitEventForm({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {orgSettings.collectsAttendeeCount && (
             <Field label="Expected Attendees">
               <input
@@ -190,7 +222,7 @@ export function SubmitEventForm({
 
       {/* Contact */}
       <Section title="Contact Information">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Contact Name" required>
             <input
               name="contactName"
@@ -235,9 +267,16 @@ export function SubmitEventForm({
       <button
         type="submit"
         disabled={loading}
-        className="w-full bg-primary text-white py-3 rounded-xl text-lg font-semibold hover:bg-primary-dark transition-colors shadow-lg shadow-primary/25 disabled:opacity-50"
+        className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl text-lg font-semibold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25 disabled:opacity-60 disabled:cursor-not-allowed"
       >
-        {loading ? "Submitting..." : "Submit Event"}
+        {loading ? (
+          <>
+            <Loader2 className="w-5 h-5 animate-spin" />
+            Submitting...
+          </>
+        ) : (
+          `Submit ${orgSettings.eventSingularTerm}`
+        )}
       </button>
     </form>
   );

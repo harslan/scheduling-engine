@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList, Grid3X3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList, Grid3X3, CalendarX } from "lucide-react";
 import Link from "next/link";
 import sanitizeHtml from "sanitize-html";
 import {
@@ -28,6 +28,13 @@ const ROOM_COLORS = [
 ];
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7am to 10pm
+
+function formatHour(hour: number) {
+  if (hour === 0) return "12 AM";
+  if (hour < 12) return `${hour} AM`;
+  if (hour === 12) return "12 PM";
+  return `${hour - 12} PM`;
+}
 
 type CalendarView = "year" | "month" | "week" | "day";
 
@@ -185,16 +192,30 @@ export default async function CalendarPage({
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">{headerTitle}</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            {org.appDisplayName || org.name}
-          </p>
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center justify-between sm:block">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{headerTitle}</h1>
+            <p className="text-sm text-slate-500 mt-0.5">
+              {org.appDisplayName || org.name}
+            </p>
+          </div>
+          {/* Navigation — shown inline on mobile */}
+          <div className="flex items-center gap-1 sm:hidden">
+            <Link href={navUrl("prev")} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors" aria-label="Previous">
+              <ChevronLeft className="w-4 h-4 text-slate-600" />
+            </Link>
+            <Link href={navUrl("today")} className="px-2.5 py-1.5 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors">
+              Today
+            </Link>
+            <Link href={navUrl("next")} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors" aria-label="Next">
+              <ChevronRight className="w-4 h-4 text-slate-600" />
+            </Link>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* View switcher */}
-          <div className="flex bg-slate-100 rounded-lg p-0.5">
+          <div className="flex bg-slate-100 rounded-lg p-0.5 flex-1 sm:flex-none">
             {([
               { key: "year", label: "Year", icon: Grid3X3 },
               { key: "month", label: "Month", icon: CalIcon },
@@ -204,36 +225,29 @@ export default async function CalendarPage({
               <Link
                 key={key}
                 href={`/${orgSlug}?view=${key}${key === "year" ? `&year=${rangeStart.getFullYear()}` : key === "month" ? `&month=${rangeStart.getMonth() + 1}&year=${rangeStart.getFullYear()}` : `&date=${format(refDate, "yyyy-MM-dd")}`}`}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex-1 sm:flex-none ${
                   view === key
                     ? "bg-white text-slate-900 shadow-sm"
                     : "text-slate-500 hover:text-slate-700"
                 }`}
+                aria-label={`${label} view`}
+                aria-current={view === key ? "page" : undefined}
               >
                 <Icon className="w-3.5 h-3.5" />
-                {label}
+                <span className="hidden sm:inline">{label}</span>
               </Link>
             ))}
           </div>
 
-          {/* Navigation */}
-          <div className="flex items-center gap-1">
-            <Link
-              href={navUrl("prev")}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-            >
+          {/* Navigation — hidden on mobile (shown above) */}
+          <div className="hidden sm:flex items-center gap-1">
+            <Link href={navUrl("prev")} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors" aria-label="Previous">
               <ChevronLeft className="w-4 h-4 text-slate-600" />
             </Link>
-            <Link
-              href={navUrl("today")}
-              className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-            >
+            <Link href={navUrl("today")} className="px-3 py-1.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors">
               Today
             </Link>
-            <Link
-              href={navUrl("next")}
-              className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
-            >
+            <Link href={navUrl("next")} className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors" aria-label="Next">
               <ChevronRight className="w-4 h-4 text-slate-600" />
             </Link>
           </div>
@@ -285,7 +299,7 @@ export default async function CalendarPage({
             {org.roomTerm}s
           </h3>
           <div className="flex flex-wrap gap-3">
-            {rooms.slice(0, 10).map((room) => {
+            {rooms.map((room) => {
               const colorIdx = roomColorMap.get(room.id) ?? 0;
               const color = ROOM_COLORS[colorIdx];
               return (
@@ -456,94 +470,131 @@ function WeekView({
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i));
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-      {/* Day headers */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200">
-        <div className="bg-slate-50" />
+    <>
+      {/* Mobile: vertical day list */}
+      <div className="md:hidden space-y-3">
         {weekDays.map((day) => {
           const today = isDateToday(day);
+          const dayEvents = events
+            .filter((e) => e.startDateTime && isSameDay(e.startDateTime, day))
+            .sort((a, b) => (a.startDateTime?.getTime() ?? 0) - (b.startDateTime?.getTime() ?? 0));
+
           return (
-            <div
-              key={day.toISOString()}
-              className={`px-2 py-3 text-center border-l border-slate-200 ${today ? "bg-primary/5" : "bg-slate-50"}`}
-            >
-              <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                {format(day, "EEE")}
-              </div>
+            <div key={day.toISOString()} className={`bg-white rounded-xl border ${today ? "border-primary/30 ring-1 ring-primary/10" : "border-slate-200"} overflow-hidden shadow-sm`}>
               <Link
                 href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
-                className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm mt-1 hover:bg-primary/10 transition-colors ${
-                  today ? "bg-primary text-white font-bold" : "text-slate-700"
-                }`}
+                className={`flex items-center gap-2 px-4 py-2.5 border-b ${today ? "bg-primary/5 border-primary/10" : "bg-slate-50 border-slate-100"}`}
               >
-                {format(day, "d")}
+                <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${today ? "bg-primary text-white" : "text-slate-700"}`}>
+                  {format(day, "d")}
+                </span>
+                <span className={`text-sm font-semibold ${today ? "text-primary" : "text-slate-700"}`}>
+                  {format(day, "EEEE")}
+                </span>
+                {dayEvents.length > 0 && (
+                  <span className="ml-auto text-xs font-medium text-slate-400">{dayEvents.length} event{dayEvents.length !== 1 ? "s" : ""}</span>
+                )}
               </Link>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Time grid */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
-        {HOURS.map((hour) => (
-          <div key={hour} className="contents">
-            <div className="h-16 border-b border-slate-100 flex items-start justify-end pr-2 pt-0.5">
-              <span className="text-xs text-slate-400">
-                {hour === 0 ? "12 AM" : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
-              </span>
-            </div>
-            {weekDays.map((day) => {
-              const dayEvents = events.filter((e) => {
-                if (!e.startDateTime || !e.endDateTime) return false;
-                const eventStart = e.startDateTime.getHours();
-                const eventEnd = e.endDateTime.getHours() + (e.endDateTime.getMinutes() > 0 ? 1 : 0);
-                return isSameDay(e.startDateTime, day) && eventStart <= hour && eventEnd > hour;
-              });
-
-              const isFirstHourEvents = dayEvents.filter(
-                (e) => e.startDateTime && e.startDateTime.getHours() === hour
-              );
-
-              return (
-                <div
-                  key={`${hour}-${day.toISOString()}`}
-                  className={`h-16 border-b border-l border-slate-100 relative p-0.5 ${
-                    isDateToday(day) ? "bg-primary/[0.02]" : ""
-                  }`}
-                >
-                  {isFirstHourEvents.map((event) => {
+              {dayEvents.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-slate-400">No events</div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {dayEvents.map((event) => {
                     const colorIdx = getEventColorIdx(event, roomColorMap);
                     const color = ROOM_COLORS[colorIdx];
-                    const durationHours = event.endDateTime && event.startDateTime
-                      ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
-                      : 1;
-                    const heightRem = Math.min(durationHours * 4, 16);
-
                     return (
                       <Link
                         key={event.id}
                         href={`/${orgSlug}/events/${event.id}`}
-                        className={`absolute left-0.5 right-0.5 rounded-md border-l-3 px-1.5 py-0.5 overflow-hidden hover:opacity-80 transition-opacity z-10 ${color.bg} ${color.border} ${color.text}`}
-                        style={{ height: `${heightRem}rem` }}
-                        title={`${event.title} — ${event.room?.name || "No room"}`}
+                        className="flex items-start gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
                       >
-                        <div className="text-xs font-medium truncate">
-                          {event.title}
-                        </div>
-                        <div className="text-[10px] opacity-75 truncate">
-                          {event.startDateTime && format(event.startDateTime, "h:mm a")}
-                          {event.room && ` · ${event.room.name}`}
+                        <div className={`w-1 self-stretch rounded-full ${color.solid} shrink-0`} />
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-medium text-slate-900 truncate">{event.title}</div>
+                          <div className="text-xs text-slate-500 mt-0.5">
+                            {event.startDateTime && format(event.startDateTime, "h:mm a")}
+                            {event.endDateTime && ` – ${format(event.endDateTime, "h:mm a")}`}
+                            {event.room && <span className="text-slate-400"> · {event.room.name}</span>}
+                          </div>
                         </div>
                       </Link>
                     );
                   })}
                 </div>
-              );
-            })}
-          </div>
-        ))}
+              )}
+            </div>
+          );
+        })}
       </div>
-    </div>
+
+      {/* Desktop: time grid */}
+      <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-slate-200">
+          <div className="bg-slate-50" />
+          {weekDays.map((day) => {
+            const today = isDateToday(day);
+            return (
+              <div key={day.toISOString()} className={`px-2 py-3 text-center border-l border-slate-200 ${today ? "bg-primary/5" : "bg-slate-50"}`}>
+                <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{format(day, "EEE")}</div>
+                <Link
+                  href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
+                  className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm mt-1 hover:bg-primary/10 transition-colors ${today ? "bg-primary text-white font-bold" : "text-slate-700"}`}
+                >
+                  {format(day, "d")}
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+        <div className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
+          {HOURS.map((hour) => (
+            <div key={hour} className="contents">
+              <div className="h-16 border-b border-slate-100 flex items-start justify-end pr-2 pt-0.5">
+                <span className="text-xs text-slate-400">{formatHour(hour)}</span>
+              </div>
+              {weekDays.map((day) => {
+                const isFirstHourEvents = events.filter((e) => {
+                  if (!e.startDateTime) return false;
+                  return isSameDay(e.startDateTime, day) && e.startDateTime.getHours() === hour;
+                });
+
+                return (
+                  <div
+                    key={`${hour}-${day.toISOString()}`}
+                    className={`h-16 border-b border-l border-slate-100 relative p-0.5 ${isDateToday(day) ? "bg-primary/[0.02]" : ""}`}
+                  >
+                    {isFirstHourEvents.map((event) => {
+                      const colorIdx = getEventColorIdx(event, roomColorMap);
+                      const color = ROOM_COLORS[colorIdx];
+                      const durationHours = event.endDateTime && event.startDateTime
+                        ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
+                        : 1;
+                      const heightRem = Math.min(durationHours * 4, 16);
+
+                      return (
+                        <Link
+                          key={event.id}
+                          href={`/${orgSlug}/events/${event.id}`}
+                          className={`absolute left-0.5 right-0.5 rounded-md border-l-3 px-1.5 py-0.5 overflow-hidden hover:opacity-80 transition-opacity z-10 ${color.bg} ${color.border} ${color.text}`}
+                          style={{ height: `${heightRem}rem` }}
+                          title={`${event.title} — ${event.room?.name || "No room"}`}
+                        >
+                          <div className="text-xs font-medium truncate">{event.title}</div>
+                          <div className="text-[10px] opacity-75 truncate">
+                            {event.startDateTime && format(event.startDateTime, "h:mm a")}
+                            {event.room && ` · ${event.room.name}`}
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -564,63 +615,93 @@ function DayView({
   roomColorMap: Map<string, number>;
   org: { roomTerm: string };
 }) {
-  const dayEvents = events.filter(
-    (e) => e.startDateTime && isSameDay(e.startDateTime, refDate)
-  );
+  const dayEvents = events
+    .filter((e) => e.startDateTime && isSameDay(e.startDateTime, refDate))
+    .sort((a, b) => (a.startDateTime?.getTime() ?? 0) - (b.startDateTime?.getTime() ?? 0));
+
+  if (dayEvents.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-16 px-4">
+        <CalendarX className="w-12 h-12 text-slate-300 mb-3" />
+        <p className="text-slate-500 text-sm">No events scheduled for this day</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
-        {HOURS.map((hour) => {
-          const hourEvents = dayEvents.filter((e) => {
-            if (!e.startDateTime) return false;
-            return e.startDateTime.getHours() === hour;
-          });
-
+    <>
+      {/* Mobile: card list */}
+      <div className="md:hidden bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm divide-y divide-slate-100">
+        {dayEvents.map((event) => {
+          const colorIdx = getEventColorIdx(event, roomColorMap);
+          const color = ROOM_COLORS[colorIdx];
           return (
-            <div key={hour} className="contents">
-              <div className="h-20 border-b border-slate-100 flex items-start justify-end pr-2 pt-1">
-                <span className="text-xs text-slate-400">
-                  {hour === 0 ? "12 AM" : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
-                </span>
+            <Link
+              key={event.id}
+              href={`/${orgSlug}/events/${event.id}`}
+              className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors"
+            >
+              <div className={`w-1.5 self-stretch rounded-full ${color.solid} shrink-0`} />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-semibold text-slate-900">{event.title}</div>
+                <div className="text-xs text-slate-500 mt-1">
+                  {event.startDateTime && format(event.startDateTime, "h:mm a")}
+                  {event.endDateTime && ` – ${format(event.endDateTime, "h:mm a")}`}
+                </div>
+                {event.room && (
+                  <div className="text-xs text-slate-400 mt-0.5">{org.roomTerm}: {event.room.name}</div>
+                )}
               </div>
-              <div className="h-20 border-b border-slate-100 relative p-0.5">
-                {hourEvents.map((event) => {
-                  const colorIdx = getEventColorIdx(event, roomColorMap);
-                  const color = ROOM_COLORS[colorIdx];
-                  const durationHours = event.endDateTime && event.startDateTime
-                    ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
-                    : 1;
-                  const heightRem = Math.min(durationHours * 5, 20);
-
-                  return (
-                    <Link
-                      key={event.id}
-                      href={`/${orgSlug}/events/${event.id}`}
-                      className={`absolute left-1 right-1 rounded-lg border-l-4 px-3 py-1.5 overflow-hidden hover:shadow-md transition-shadow z-10 ${color.bg} ${color.border} ${color.text}`}
-                      style={{ height: `${heightRem}rem` }}
-                    >
-                      <div className="text-sm font-semibold truncate">
-                        {event.title}
-                      </div>
-                      <div className="text-xs opacity-75 mt-0.5">
-                        {event.startDateTime && format(event.startDateTime, "h:mm a")}
-                        {event.endDateTime && ` – ${format(event.endDateTime, "h:mm a")}`}
-                      </div>
-                      {event.room && (
-                        <div className="text-xs opacity-75 mt-0.5">
-                          {org.roomTerm}: {event.room.name}
-                        </div>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
+            </Link>
           );
         })}
       </div>
-    </div>
+
+      {/* Desktop: time grid */}
+      <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
+          {HOURS.map((hour) => {
+            const hourEvents = dayEvents.filter((e) => e.startDateTime?.getHours() === hour);
+
+            return (
+              <div key={hour} className="contents">
+                <div className="h-20 border-b border-slate-100 flex items-start justify-end pr-2 pt-1">
+                  <span className="text-xs text-slate-400">{formatHour(hour)}</span>
+                </div>
+                <div className="h-20 border-b border-slate-100 relative p-0.5">
+                  {hourEvents.map((event) => {
+                    const colorIdx = getEventColorIdx(event, roomColorMap);
+                    const color = ROOM_COLORS[colorIdx];
+                    const durationHours = event.endDateTime && event.startDateTime
+                      ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
+                      : 1;
+                    const heightRem = Math.min(durationHours * 5, 20);
+
+                    return (
+                      <Link
+                        key={event.id}
+                        href={`/${orgSlug}/events/${event.id}`}
+                        className={`absolute left-1 right-1 rounded-lg border-l-4 px-3 py-1.5 overflow-hidden hover:shadow-md transition-shadow z-10 ${color.bg} ${color.border} ${color.text}`}
+                        style={{ height: `${heightRem}rem` }}
+                      >
+                        <div className="text-sm font-semibold truncate">{event.title}</div>
+                        <div className="text-xs opacity-75 mt-0.5">
+                          {event.startDateTime && format(event.startDateTime, "h:mm a")}
+                          {event.endDateTime && ` – ${format(event.endDateTime, "h:mm a")}`}
+                        </div>
+                        {event.room && (
+                          <div className="text-xs opacity-75 mt-0.5">{org.roomTerm}: {event.room.name}</div>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
   );
 }
 
