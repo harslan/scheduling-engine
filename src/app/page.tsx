@@ -4,7 +4,6 @@ import { unstable_cache } from "next/cache";
 import {
   Calendar,
   Building2,
-  Zap,
   Shield,
   MessageSquare,
   Globe,
@@ -16,29 +15,23 @@ import {
   Lock,
   Layers,
   ChevronRight,
-  Star,
   CheckCircle2,
 } from "lucide-react";
 
 const getLandingStats = unstable_cache(
   async () => {
-    const [orgs, totalEvents, totalOrgs, totalRooms] = await Promise.all([
-      prisma.organization.findMany({
-        select: { slug: true, name: true, appDisplayName: true },
-        take: 5,
-      }),
-      prisma.event.count({ where: { deleted: false } }),
-      prisma.organization.count(),
-      prisma.room.count(),
-    ]);
-    return { orgs, totalEvents, totalOrgs, totalRooms };
+    const orgs = await prisma.organization.findMany({
+      select: { slug: true, name: true, appDisplayName: true },
+      take: 5,
+    });
+    return { orgs };
   },
-  ["landing-stats"],
-  { revalidate: 300 } // Cache for 5 minutes
+  ["landing-orgs"],
+  { revalidate: 300 }
 );
 
 export default async function Home() {
-  const { orgs, totalEvents, totalOrgs, totalRooms } = await getLandingStats();
+  const { orgs } = await getLandingStats();
 
   return (
     <div className="min-h-full bg-white overflow-hidden">
@@ -61,14 +54,14 @@ export default async function Home() {
               href="/login"
               className="text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors px-4 py-2"
             >
-              Log in
+              Sign in
             </Link>
             {orgs.length > 0 && (
               <Link
                 href={`/${orgs[0].slug}`}
                 className="text-sm font-semibold bg-gradient-to-r from-primary to-blue-600 text-white px-5 py-2.5 rounded-xl hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all"
               >
-                Try Demo
+                View Demo
               </Link>
             )}
           </nav>
@@ -77,10 +70,7 @@ export default async function Home() {
 
       {/* ========== HERO ========== */}
       <section className="relative hero-mesh">
-        {/* Animated grid overlay */}
         <div className="absolute inset-0 hero-grid opacity-40" />
-
-        {/* Floating decorative elements */}
         <div className="absolute top-20 left-[10%] w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-float" />
         <div className="absolute top-40 right-[10%] w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float-delay" />
         <div className="absolute bottom-10 left-[30%] w-64 h-64 bg-sky-500/5 rounded-full blur-3xl animate-float-slow" />
@@ -93,23 +83,22 @@ export default async function Home() {
                 <Sparkles className="w-4 h-4 relative z-10" />
                 <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" style={{ animationDuration: '2s' }} />
               </div>
-              AI-Powered Room Scheduling
+              Built for enterprise scheduling
             </div>
 
             {/* Headline */}
             <h1 className="animate-fade-in-up-delay-1 text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-slate-900 leading-[1.05]">
-              Room scheduling,
+              Manage every room.
               <br />
               <span className="bg-gradient-to-r from-primary via-blue-600 to-indigo-600 bg-clip-text text-transparent animate-gradient-shift">
-                powered by AI
+                Automate every booking.
               </span>
             </h1>
 
             {/* Subheadline */}
             <p className="animate-fade-in-up-delay-2 mt-8 text-xl lg:text-2xl text-slate-500 max-w-2xl mx-auto leading-relaxed font-light">
-              The modern platform for managing rooms, events, and approvals.
-              <span className="text-slate-700 font-normal"> Book by conversation.</span>
-              {" "}Deploy in minutes.
+              One platform for rooms, events, and approvals.
+              <span className="text-slate-700 font-normal"> AI assistant included.</span>
             </p>
 
             {/* CTA Buttons */}
@@ -120,7 +109,7 @@ export default async function Home() {
                   className="group relative bg-gradient-to-r from-primary to-blue-600 text-white px-10 py-4 rounded-2xl text-lg font-semibold hover:shadow-2xl hover:shadow-primary/30 hover:-translate-y-1 transition-all flex items-center gap-3 overflow-hidden"
                 >
                   <span className="absolute inset-0 animate-shimmer" />
-                  <span className="relative">Try Live Demo</span>
+                  <span className="relative">Explore the Demo</span>
                   <ArrowRight className="w-5 h-5 relative group-hover:translate-x-1 transition-transform" />
                 </Link>
               )}
@@ -132,15 +121,10 @@ export default async function Home() {
                 <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
               </Link>
             </div>
-
-            <p className="animate-fade-in-up-delay-4 mt-5 text-sm text-slate-400">
-              No sign-up required for the demo
-            </p>
           </div>
 
           {/* Floating UI preview cards */}
           <div className="hidden lg:block">
-            {/* Left floating card */}
             <div className="absolute left-[5%] top-[45%] animate-float-slow">
               <div className="glass-card rounded-2xl p-4 shadow-xl shadow-slate-200/50 w-56">
                 <div className="flex items-center gap-3 mb-3">
@@ -148,7 +132,7 @@ export default async function Home() {
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-slate-700">Event Approved</p>
+                    <p className="text-xs font-semibold text-slate-700">Booking Approved</p>
                     <p className="text-[10px] text-slate-400">Just now</p>
                   </div>
                 </div>
@@ -158,7 +142,6 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Right floating card */}
             <div className="absolute right-[5%] top-[35%] animate-float">
               <div className="glass-card rounded-2xl p-4 shadow-xl shadow-slate-200/50 w-60">
                 <div className="flex items-center gap-3 mb-3">
@@ -167,7 +150,7 @@ export default async function Home() {
                   </div>
                   <div>
                     <p className="text-xs font-semibold text-slate-700">AI Assistant</p>
-                    <p className="text-[10px] text-slate-400">Finding rooms...</p>
+                    <p className="text-[10px] text-slate-400">Finding availability...</p>
                   </div>
                 </div>
                 <div className="bg-slate-50 rounded-lg p-2.5">
@@ -180,7 +163,6 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Bottom wave divider */}
         <div className="absolute bottom-0 left-0 right-0">
           <svg viewBox="0 0 1440 60" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
             <path d="M0 60V20C240 45 480 55 720 45C960 35 1200 15 1440 25V60H0Z" fill="white" />
@@ -188,30 +170,19 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ========== LIVE STATS ========== */}
-      <section className="relative -mt-1 bg-white">
-        <div className="max-w-5xl mx-auto px-6 py-16">
-          <div className="grid grid-cols-3 gap-8">
-            <StatBlock value={totalEvents} label="Events Managed" />
-            <StatBlock value={totalOrgs} label="Organizations" />
-            <StatBlock value={totalRooms} label="Rooms Configured" />
-          </div>
-        </div>
-      </section>
-
-      {/* ========== FEATURES ========== */}
+      {/* ========== CAPABILITIES ========== */}
       <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-6 pt-8 pb-24">
+        <div className="max-w-7xl mx-auto px-6 pt-20 pb-24">
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-4 bg-primary/5 px-4 py-1.5 rounded-full">
               <Layers className="w-4 h-4" />
-              Platform Features
+              Core Capabilities
             </div>
             <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-              Everything you need
+              One platform, complete control
             </h2>
             <p className="mt-5 text-xl text-slate-500 max-w-2xl mx-auto">
-              A complete scheduling platform built for modern organizations
+              Purpose-built for organizations that need reliable, configurable room scheduling
             </p>
           </div>
 
@@ -219,55 +190,55 @@ export default async function Home() {
             <FeatureCard
               icon={<MessageSquare className="w-6 h-6" />}
               title="AI-Powered Booking"
-              description="Book rooms with natural language. Just say what you need and let AI find the perfect space and time."
+              description="Describe what you need in plain language. The AI assistant finds available rooms and creates the booking."
               gradient="from-blue-500 to-primary"
             />
             <FeatureCard
-              icon={<Building2 className="w-6 h-6" />}
-              title="Multi-Tenant Architecture"
-              description="One platform, unlimited organizations. Each with their own rooms, rules, and customizable labels."
-              gradient="from-violet-500 to-purple-600"
-            />
-            <FeatureCard
               icon={<Calendar className="w-6 h-6" />}
-              title="Smart Calendars"
-              description="Month, week, day, and year views with real-time availability, conflict detection, and iCal feeds."
+              title="Multi-View Calendar"
+              description="Year, month, week, and day views with real-time availability, conflict detection, and iCal subscription feeds."
               gradient="from-sky-500 to-cyan-600"
             />
             <FeatureCard
               icon={<Shield className="w-6 h-6" />}
               title="Approval Workflows"
-              description="Configurable approval chains with email notifications, comments, and full activity tracking."
+              description="Route bookings through configurable approval chains. Email notifications, comments, and complete audit trails."
               gradient="from-amber-500 to-orange-600"
             />
             <FeatureCard
-              icon={<BarChart3 className="w-6 h-6" />}
-              title="Analytics & Reports"
-              description="Room utilization, event trends, and usage analytics to optimize your space management."
-              gradient="from-emerald-500 to-green-600"
-            />
-            <FeatureCard
-              icon={<Globe className="w-6 h-6" />}
-              title="iCal & API Ready"
-              description="Subscribe from Outlook, Google Calendar, or Apple Calendar. CSV import/export built in."
-              gradient="from-rose-500 to-pink-600"
+              icon={<Building2 className="w-6 h-6" />}
+              title="Multi-Organization"
+              description="Serve multiple organizations from a single deployment. Each with independent rooms, rules, and terminology."
+              gradient="from-violet-500 to-purple-600"
             />
             <FeatureCard
               icon={<Lock className="w-6 h-6" />}
-              title="Role-Based Access"
-              description="Admin, Manager, and User roles with granular permissions. Server-side authorization on every action."
+              title="Role-Based Access Control"
+              description="Admin, Manager, and User roles with granular permissions. Server-side authorization enforced on every action."
               gradient="from-slate-600 to-slate-800"
             />
             <FeatureCard
               icon={<Clock className="w-6 h-6" />}
-              title="Scheduling Rules"
-              description="Opening hours, buffer periods, max duration limits, and advance booking cutoffs — all configurable."
+              title="Scheduling Rules Engine"
+              description="Operating hours, buffer periods, duration limits, advance booking cutoffs, and concurrent event caps — all configurable per room."
               gradient="from-teal-500 to-teal-700"
             />
             <FeatureCard
-              icon={<Zap className="w-6 h-6" />}
-              title="Instant Deploy"
-              description="Deploy to Vercel in one click. Serverless, auto-scaling, edge-optimized. Zero maintenance."
+              icon={<BarChart3 className="w-6 h-6" />}
+              title="Analytics & Reporting"
+              description="Room utilization rates, booking trends, and usage analytics. CSV export for integration with external tools."
+              gradient="from-emerald-500 to-green-600"
+            />
+            <FeatureCard
+              icon={<Globe className="w-6 h-6" />}
+              title="Calendar Integration"
+              description="iCal feeds for Outlook, Google Calendar, and Apple Calendar. Subscribe once, stay in sync automatically."
+              gradient="from-rose-500 to-pink-600"
+            />
+            <FeatureCard
+              icon={<Users className="w-6 h-6" />}
+              title="White-Label Ready"
+              description="Custom terminology, branding, and display names per organization. Your platform, your language."
               gradient="from-indigo-500 to-indigo-700"
             />
           </div>
@@ -280,7 +251,7 @@ export default async function Home() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-4 bg-primary/5 px-4 py-1.5 rounded-full">
               <ArrowRight className="w-4 h-4" />
-              Simple Workflow
+              Three Steps
             </div>
             <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
               How it works
@@ -290,63 +261,63 @@ export default async function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-0">
             <StepCard
               step="1"
-              title="Submit a request"
-              description="Fill out a form or chat with the AI assistant to find and book available rooms instantly."
+              title="Request a booking"
+              description="Submit through the form or ask the AI assistant. Choose your room, time, and configuration."
               icon={<MessageSquare className="w-5 h-5" />}
             />
             <StepCard
               step="2"
-              title="Get approved"
-              description="Managers receive email notifications and can approve or deny with one click from the dashboard."
+              title="Review & approve"
+              description="Managers are notified instantly. Approve or deny with one click from the admin dashboard."
               icon={<Shield className="w-5 h-5" />}
             />
             <StepCard
               step="3"
-              title="On the calendar"
-              description="Approved events appear on the shared calendar and sync via iCal to Outlook, Google, and Apple Calendar."
+              title="Confirmed & synced"
+              description="Approved bookings appear on the shared calendar and sync to Outlook, Google, and Apple Calendar via iCal."
               icon={<Calendar className="w-5 h-5" />}
             />
           </div>
         </div>
       </section>
 
-      {/* ========== WHY CHOOSE US ========== */}
+      {/* ========== TRUST ========== */}
       <section className="bg-white border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-slate-900">
-              Built for organizations that care about their space
+              Built for reliability at any scale
             </h2>
             <p className="mt-3 text-lg text-slate-500 max-w-2xl mx-auto">
-              Whether you manage 5 rooms or 500, Scheduling Engine scales with you
+              Enterprise-grade infrastructure with zero maintenance overhead
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <TrustCard
               icon={<Shield className="w-5 h-5" />}
               title="Secure by default"
-              description="Role-based access, server-side authorization on every action, encrypted connections"
+              description="Server-side authorization on every action. Role-based access control. Encrypted connections."
             />
             <TrustCard
-              icon={<Zap className="w-5 h-5" />}
+              icon={<CheckCircle2 className="w-5 h-5" />}
               title="Always available"
-              description="Serverless architecture with auto-scaling. No downtime, no maintenance windows"
+              description="Serverless architecture with automatic scaling. No maintenance windows, no capacity planning."
             />
             <TrustCard
-              icon={<Users className="w-5 h-5" />}
-              title="Multi-organization"
-              description="One deployment serves unlimited organizations, each with independent settings"
+              icon={<Building2 className="w-5 h-5" />}
+              title="Multi-tenant isolation"
+              description="Each organization operates independently with its own data, rules, and configuration."
             />
             <TrustCard
               icon={<Globe className="w-5 h-5" />}
               title="Works everywhere"
-              description="Responsive design, iCal sync, email notifications. Access from any device"
+              description="Responsive on every device. iCal sync, email notifications, and CSV data portability."
             />
           </div>
         </div>
       </section>
 
-      {/* ========== CTA / DEMO ORGS ========== */}
+      {/* ========== CTA ========== */}
       {orgs.length > 0 && (
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-600 to-indigo-700" />
@@ -355,15 +326,11 @@ export default async function Home() {
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
 
           <div className="relative max-w-7xl mx-auto px-6 py-20 text-center">
-            <div className="inline-flex items-center gap-2 text-blue-100 text-sm font-semibold mb-6 bg-white/10 px-4 py-1.5 rounded-full border border-white/10">
-              <Star className="w-4 h-4" />
-              Live Demos
-            </div>
             <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 tracking-tight">
               See it in action
             </h2>
             <p className="text-blue-100 text-xl mb-10 max-w-xl mx-auto">
-              Explore live organizations with rooms, events, calendars, and the AI assistant.
+              Explore a live deployment with rooms, calendars, approvals, and the AI booking assistant.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               {orgs.map((org) => (
@@ -414,21 +381,6 @@ export default async function Home() {
 }
 
 /* ===== Components ===== */
-
-function StatBlock({ value, label }: { value: number; label: string }) {
-  const formatted = value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toString();
-  return (
-    <div className="text-center">
-      <p className="text-4xl lg:text-5xl font-extrabold text-slate-900 stat-glow tracking-tight">
-        {formatted}
-        <span className="text-primary">+</span>
-      </p>
-      <p className="mt-2 text-sm font-medium text-slate-500 uppercase tracking-wider">
-        {label}
-      </p>
-    </div>
-  );
-}
 
 function FeatureCard({
   icon,
