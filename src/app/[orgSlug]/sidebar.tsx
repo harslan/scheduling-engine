@@ -14,6 +14,7 @@ import {
   Shield,
   Sparkles,
   Rss,
+  FileSpreadsheet,
 } from "lucide-react";
 
 export function Sidebar({
@@ -115,6 +116,12 @@ export function Sidebar({
             icon={<Users className="w-4 h-4" />}
           >
             Users
+          </NavLink>
+          <NavLink
+            href={`/${orgSlug}/admin/import`}
+            icon={<FileSpreadsheet className="w-4 h-4" />}
+          >
+            Import / Export
           </NavLink>
           <NavLink
             href={`/${orgSlug}/admin/organization`}

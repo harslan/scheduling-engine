@@ -13,8 +13,10 @@ import {
   Tag,
   Users,
   FileText,
+  Repeat,
 } from "lucide-react";
-import { getCurrentUser } from "@/lib/session";
+import { getSession } from "@/lib/session";
+import { describeRRule } from "@/lib/recurrence";
 import { DeleteEventButton } from "./delete-button";
 import { EditButton } from "./event-detail-client";
 
@@ -24,7 +26,13 @@ export default async function EventDetailPage({
   params: Promise<{ orgSlug: string; eventId: string }>;
 }) {
   const { orgSlug, eventId } = await params;
-  const currentUser = await getCurrentUser();
+  const session = await getSession();
+  let currentUserId: string | null = null;
+  let currentUserEmail: string | null = null;
+  if (session?.user) {
+    currentUserId = (session.user as { id: string }).id;
+    currentUserEmail = session.user.email || null;
+  }
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -46,13 +54,18 @@ export default async function EventDetailPage({
         orderBy: { createdAt: "desc" },
         take: 20,
       },
+      instances: {
+        where: { deleted: false },
+        orderBy: { startDateTime: "asc" },
+        take: 20,
+      },
     },
   });
 
   if (!event || event.deleted) notFound();
   if (event.organization.slug !== orgSlug) notFound();
 
-  const isOwner = event.submitterId === currentUser.id || event.contactEmail === currentUser.email;
+  const isOwner = currentUserId ? (event.submitterId === currentUserId || event.contactEmail === currentUserEmail) : false;
   const canEdit = isOwner && event.organization.allowsEventChanges && event.status !== "CANCELLED";
 
   const statusStyles: Record<string, string> = {
@@ -152,6 +165,36 @@ export default async function EventDetailPage({
               </DetailRow>
             )}
           </DetailCard>
+
+          {/* Recurrence */}
+          {event.recurrenceRule && (
+            <DetailCard title="Recurrence">
+              <DetailRow icon={<Repeat className="w-4 h-4" />} label="Pattern">
+                {describeRRule(event.recurrenceRule)}
+              </DetailRow>
+              {event.recurrenceEndDate && (
+                <DetailRow icon={<Calendar className="w-4 h-4" />} label="Repeats until">
+                  {format(event.recurrenceEndDate, "MMMM d, yyyy")}
+                </DetailRow>
+              )}
+              {event.instances.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <p className="text-xs font-medium text-slate-500 mb-2">
+                    Upcoming instances ({event.instances.length})
+                  </p>
+                  <div className="space-y-1 max-h-40 overflow-y-auto">
+                    {event.instances.map((inst) => (
+                      <div key={inst.id} className="text-sm text-slate-600 flex items-center gap-2">
+                        <Clock className="w-3 h-3 text-slate-300" />
+                        {format(inst.startDateTime, "EEE, MMM d")} at{" "}
+                        {format(inst.startDateTime, "h:mm a")} – {format(inst.endDateTime, "h:mm a")}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </DetailCard>
+          )}
 
           {/* Contact */}
           <DetailCard title="Contact Information">

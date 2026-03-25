@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList, Grid3X3 } from "lucide-react";
 import Link from "next/link";
 import {
   startOfWeek,
@@ -28,7 +28,7 @@ const ROOM_COLORS = [
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7am to 10pm
 
-type CalendarView = "month" | "week" | "day";
+type CalendarView = "year" | "month" | "week" | "day";
 
 export default async function CalendarPage({
   params,
@@ -63,7 +63,12 @@ export default async function CalendarPage({
   let rangeEnd: Date;
   let headerTitle: string;
 
-  if (view === "week") {
+  if (view === "year") {
+    const year = sp.year ? parseInt(sp.year) : refDate.getFullYear();
+    rangeStart = new Date(year, 0, 1);
+    rangeEnd = new Date(year, 11, 31, 23, 59, 59);
+    headerTitle = `${year}`;
+  } else if (view === "week") {
     rangeStart = startOfWeek(refDate, { weekStartsOn: 0 });
     rangeEnd = endOfWeek(refDate, { weekStartsOn: 0 });
     const weekEnd = addDays(rangeStart, 6);
@@ -84,17 +89,56 @@ export default async function CalendarPage({
     headerTitle = format(rangeStart, "MMMM yyyy");
   }
 
-  // Fetch events for range
-  const events = await prisma.event.findMany({
+  // Fetch single (non-recurring) events
+  const singleEvents = await prisma.event.findMany({
     where: {
       organizationId: org.id,
       deleted: false,
       status: "APPROVED",
+      recurrenceRule: null,
       startDateTime: { lte: rangeEnd },
       endDateTime: { gte: rangeStart },
     },
     include: { room: true, eventType: true },
     orderBy: { startDateTime: "asc" },
+  });
+
+  // Fetch recurring event instances in range
+  const recurringInstances = await prisma.eventInstance.findMany({
+    where: {
+      deleted: false,
+      startDateTime: { lte: rangeEnd },
+      endDateTime: { gte: rangeStart },
+      event: {
+        organizationId: org.id,
+        deleted: false,
+        status: "APPROVED",
+        recurrenceRule: { not: null },
+      },
+    },
+    include: {
+      event: { include: { room: true, eventType: true } },
+    },
+    orderBy: { startDateTime: "asc" },
+  });
+
+  // Merge into unified calendar items
+  const events: EventWithRoom[] = [
+    ...singleEvents,
+    ...recurringInstances.map((inst) => ({
+      id: inst.event.id,
+      title: inst.event.title,
+      startDateTime: inst.startDateTime,
+      endDateTime: inst.endDateTime,
+      roomId: inst.event.roomId,
+      room: inst.event.room,
+      eventType: inst.event.eventType,
+      isInstance: true,
+    })),
+  ].sort((a, b) => {
+    const aTime = a.startDateTime?.getTime() ?? 0;
+    const bTime = b.startDateTime?.getTime() ?? 0;
+    return aTime - bTime;
   });
 
   // Fetch rooms for legend
@@ -114,7 +158,10 @@ export default async function CalendarPage({
     }
     const delta = direction === "prev" ? -1 : 1;
     let target: Date;
-    if (view === "month") {
+    if (view === "year") {
+      const y = rangeStart.getFullYear() + delta;
+      return `/${orgSlug}?view=year&year=${y}`;
+    } else if (view === "month") {
       target = new Date(rangeStart.getFullYear(), rangeStart.getMonth() + delta, 1);
       return `/${orgSlug}?view=month&month=${target.getMonth() + 1}&year=${target.getFullYear()}`;
     } else if (view === "week") {
@@ -140,13 +187,14 @@ export default async function CalendarPage({
           {/* View switcher */}
           <div className="flex bg-slate-100 rounded-lg p-0.5">
             {([
+              { key: "year", label: "Year", icon: Grid3X3 },
               { key: "month", label: "Month", icon: CalIcon },
               { key: "week", label: "Week", icon: Columns3 },
               { key: "day", label: "Day", icon: LayoutList },
             ] as const).map(({ key, label, icon: Icon }) => (
               <Link
                 key={key}
-                href={`/${orgSlug}?view=${key}${key !== "month" ? `&date=${format(refDate, "yyyy-MM-dd")}` : `&month=${rangeStart.getMonth() + 1}&year=${rangeStart.getFullYear()}`}`}
+                href={`/${orgSlug}?view=${key}${key === "year" ? `&year=${rangeStart.getFullYear()}` : key === "month" ? `&month=${rangeStart.getMonth() + 1}&year=${rangeStart.getFullYear()}` : `&date=${format(refDate, "yyyy-MM-dd")}`}`}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   view === key
                     ? "bg-white text-slate-900 shadow-sm"
@@ -184,6 +232,14 @@ export default async function CalendarPage({
       </div>
 
       {/* Calendar body */}
+      {view === "year" && (
+        <YearView
+          orgSlug={orgSlug}
+          year={rangeStart.getFullYear()}
+          events={events}
+          now={now}
+        />
+      )}
       {view === "month" && (
         <MonthView
           orgSlug={orgSlug}
@@ -249,6 +305,7 @@ type EventWithRoom = {
   roomId: string | null;
   room: { id: string; name: string } | null;
   eventType: { id: string; name: string } | null;
+  isInstance?: boolean;
 };
 
 function MonthView({
@@ -537,6 +594,103 @@ function DayView({
                           {org.roomTerm}: {event.room.name}
                         </div>
                       )}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// YEAR VIEW
+// ============================================================
+
+function YearView({
+  orgSlug,
+  year,
+  events,
+  now,
+}: {
+  orgSlug: string;
+  year: number;
+  events: EventWithRoom[];
+  now: Date;
+}) {
+  const months = Array.from({ length: 12 }, (_, i) => i);
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  const dayLetters = ["S", "M", "T", "W", "T", "F", "S"];
+
+  // Count events per day
+  const eventCountByDate = new Map<string, number>();
+  for (const event of events) {
+    if (!event.startDateTime) continue;
+    const key = format(event.startDateTime, "yyyy-MM-dd");
+    eventCountByDate.set(key, (eventCountByDate.get(key) || 0) + 1);
+  }
+
+  const isCurrentYear = now.getFullYear() === year;
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        {months.map((month) => {
+          const firstDay = new Date(year, month, 1).getDay();
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const cells: (number | null)[] = [];
+          for (let i = 0; i < firstDay; i++) cells.push(null);
+          for (let i = 1; i <= daysInMonth; i++) cells.push(i);
+
+          return (
+            <div key={month}>
+              <Link
+                href={`/${orgSlug}?view=month&month=${month + 1}&year=${year}`}
+                className="block text-sm font-semibold text-slate-700 mb-2 hover:text-primary transition-colors"
+              >
+                {monthNames[month]}
+              </Link>
+              <div className="grid grid-cols-7 gap-0">
+                {dayLetters.map((d, i) => (
+                  <div
+                    key={i}
+                    className="text-center text-[9px] font-medium text-slate-400 pb-1"
+                  >
+                    {d}
+                  </div>
+                ))}
+                {cells.map((day, i) => {
+                  if (day === null) {
+                    return <div key={`e-${i}`} className="h-5" />;
+                  }
+
+                  const dateKey = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                  const count = eventCountByDate.get(dateKey) || 0;
+                  const isToday =
+                    isCurrentYear &&
+                    now.getMonth() === month &&
+                    now.getDate() === day;
+
+                  return (
+                    <Link
+                      key={`d-${day}`}
+                      href={`/${orgSlug}?view=day&date=${dateKey}`}
+                      className={`h-5 flex items-center justify-center text-[10px] rounded-sm transition-colors ${
+                        isToday
+                          ? "bg-primary text-white font-bold"
+                          : count > 0
+                            ? "bg-primary/15 text-primary font-medium hover:bg-primary/25"
+                            : "text-slate-500 hover:bg-slate-100"
+                      }`}
+                      title={count > 0 ? `${count} event${count > 1 ? "s" : ""}` : undefined}
+                    >
+                      {day}
                     </Link>
                   );
                 })}

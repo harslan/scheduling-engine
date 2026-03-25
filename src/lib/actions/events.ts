@@ -12,6 +12,7 @@ import {
   eventDeniedEmail,
   approvalRequestEmail,
 } from "@/lib/email";
+import { generateInstances } from "@/lib/recurrence";
 
 const SubmitEventSchema = z.object({
   organizationId: z.string(),
@@ -25,6 +26,8 @@ const SubmitEventSchema = z.object({
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().optional(),
   notes: z.string().optional(),
+  recurrenceRule: z.string().optional(),
+  recurrenceEndDate: z.string().optional(),
 });
 
 export async function submitEvent(formData: FormData) {
@@ -81,6 +84,9 @@ export async function submitEvent(formData: FormData) {
     }
   }
 
+  const hasRecurrence = data.recurrenceRule && data.recurrenceRule.length > 0 && data.recurrenceEndDate;
+  const recEndDate = data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null;
+
   const event = await prisma.event.create({
     data: {
       organizationId: data.organizationId,
@@ -95,10 +101,27 @@ export async function submitEvent(formData: FormData) {
       contactEmail: data.contactEmail,
       contactPhone: data.contactPhone || "",
       notes: data.notes || "",
+      recurrenceRule: hasRecurrence ? data.recurrenceRule! : null,
+      recurrenceEndDate: hasRecurrence ? recEndDate : null,
       status: org.requiresApproval ? "PENDING" : "APPROVED",
       approved: !org.requiresApproval,
     },
   });
+
+  // Generate recurring instances
+  if (hasRecurrence && recEndDate) {
+    const instances = generateInstances(startDt, endDt, data.recurrenceRule!, recEndDate);
+    if (instances.length > 0) {
+      await prisma.eventInstance.createMany({
+        data: instances.map((inst) => ({
+          eventId: event.id,
+          startDateTime: inst.startDateTime,
+          endDateTime: inst.endDateTime,
+          expectedAttendeeCount: data.expectedAttendeeCount || null,
+        })),
+      });
+    }
+  }
 
   // Log activity
   await prisma.eventActivity.create({
@@ -106,7 +129,10 @@ export async function submitEvent(formData: FormData) {
       eventId: event.id,
       action: "EVENT_SUBMITTED",
       actorEmail: data.contactEmail,
-      details: { title: data.title },
+      details: {
+        title: data.title,
+        ...(hasRecurrence ? { recurrence: data.recurrenceRule } : {}),
+      },
     },
   });
 

@@ -3,7 +3,7 @@
 import { submitEvent } from "@/lib/actions/events";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Repeat } from "lucide-react";
 
 interface Props {
   organizationId: string;
@@ -136,6 +136,9 @@ export function SubmitEventForm({
         </Field>
       </Section>
 
+      {/* Recurrence */}
+      <RecurrenceSection />
+
       {/* Room */}
       {rooms.length > 0 && (
         <Section title="Room">
@@ -214,6 +217,103 @@ function Section({
       </h2>
       <div className="space-y-4">{children}</div>
     </div>
+  );
+}
+
+function RecurrenceSection() {
+  const [recurrenceType, setRecurrenceType] = useState("none");
+  const [selectedDays, setSelectedDays] = useState<string[]>([]);
+
+  const toggleDay = (day: string) => {
+    setSelectedDays((prev) =>
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+    );
+  };
+
+  // Build the hidden RRULE value
+  let rruleValue = "";
+  if (recurrenceType === "daily") {
+    rruleValue = "FREQ=DAILY;INTERVAL=1";
+  } else if (recurrenceType === "weekly") {
+    rruleValue = "FREQ=WEEKLY;INTERVAL=1";
+  } else if (recurrenceType === "weekdays") {
+    rruleValue = "FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,TU,WE,TH,FR";
+  } else if (recurrenceType === "biweekly") {
+    rruleValue = "FREQ=WEEKLY;INTERVAL=2";
+  } else if (recurrenceType === "monthly") {
+    rruleValue = "FREQ=MONTHLY;INTERVAL=1";
+  } else if (recurrenceType === "custom-weekly" && selectedDays.length > 0) {
+    rruleValue = `FREQ=WEEKLY;INTERVAL=1;BYDAY=${selectedDays.join(",")}`;
+  }
+
+  const days = [
+    { key: "MO", label: "Mon" },
+    { key: "TU", label: "Tue" },
+    { key: "WE", label: "Wed" },
+    { key: "TH", label: "Thu" },
+    { key: "FR", label: "Fri" },
+    { key: "SA", label: "Sat" },
+    { key: "SU", label: "Sun" },
+  ];
+
+  return (
+    <Section title="Recurrence">
+      <input type="hidden" name="recurrenceRule" value={rruleValue} />
+
+      <Field label="Repeat">
+        <div className="flex items-center gap-2">
+          <Repeat className="w-4 h-4 text-slate-400" />
+          <select
+            value={recurrenceType}
+            onChange={(e) => {
+              setRecurrenceType(e.target.value);
+              setSelectedDays([]);
+            }}
+            className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
+          >
+            <option value="none">Does not repeat</option>
+            <option value="daily">Every day</option>
+            <option value="weekdays">Every weekday (Mon-Fri)</option>
+            <option value="weekly">Every week</option>
+            <option value="biweekly">Every 2 weeks</option>
+            <option value="monthly">Every month</option>
+            <option value="custom-weekly">Custom (select days)...</option>
+          </select>
+        </div>
+      </Field>
+
+      {recurrenceType === "custom-weekly" && (
+        <Field label="Repeat on">
+          <div className="flex gap-2">
+            {days.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggleDay(key)}
+                className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${
+                  selectedDays.includes(key)
+                    ? "bg-primary text-white"
+                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
+
+      {recurrenceType !== "none" && (
+        <Field label="Repeat until" required>
+          <input
+            name="recurrenceEndDate"
+            type="date"
+            required
+            className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
+          />
+        </Field>
+      )}
+    </Section>
   );
 }
 
