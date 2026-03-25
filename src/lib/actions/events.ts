@@ -314,3 +314,45 @@ export async function deleteEvent(eventId: string, orgSlug: string) {
 
   return { success: true };
 }
+
+export async function adminUpdateEventStatus(
+  eventId: string,
+  orgSlug: string,
+  status: "APPROVED" | "PENDING" | "DENIED" | "CANCELLED"
+) {
+  const session = await getSession();
+  const userId = session?.user ? (session.user as { id: string }).id : null;
+  if (!userId) return { error: "Not authenticated" };
+
+  await prisma.$transaction([
+    prisma.event.update({
+      where: { id: eventId },
+      data: {
+        status,
+        approved: status === "APPROVED",
+      },
+    }),
+    prisma.approvalAction.create({
+      data: {
+        eventId,
+        userId,
+        action: status === "APPROVED" ? "APPROVED" : status === "DENIED" ? "DENIED" : "CHANGED",
+        comment: `Status changed to ${status}`,
+      },
+    }),
+    prisma.eventActivity.create({
+      data: {
+        eventId,
+        action: `STATUS_CHANGED_TO_${status}`,
+        actorEmail: session?.user?.email || "",
+      },
+    }),
+  ]);
+
+  revalidatePath(`/${orgSlug}`);
+  revalidatePath(`/${orgSlug}/admin/approvals`);
+  revalidatePath(`/${orgSlug}/my-events`);
+  revalidatePath(`/${orgSlug}/events/${eventId}`);
+
+  return { success: true };
+}

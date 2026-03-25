@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { MapPin, Users, Check, X } from "lucide-react";
+import { MapPin, Users, Clock, Layers, Shield } from "lucide-react";
 
 export default async function RoomInfoPage({
   params,
@@ -17,6 +17,11 @@ export default async function RoomInfoPage({
   const rooms = await prisma.room.findMany({
     where: { organizationId: org.id, active: true },
     orderBy: { sortOrder: "asc" },
+    include: {
+      configurations: {
+        include: { configurationType: true },
+      },
+    },
   });
 
   return (
@@ -31,37 +36,80 @@ export default async function RoomInfoPage({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {rooms.map((room) => (
           <div
             key={room.id}
-            className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow"
+            className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
           >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="inline-flex items-center justify-center w-10 h-10 bg-primary/10 text-primary rounded-lg text-sm font-bold">
-                {room.iconText || room.name.charAt(0)}
-              </span>
-              <div>
-                <h3 className="font-semibold text-slate-900">{room.name}</h3>
-                {room.managersOnly && (
-                  <span className="text-xs text-amber-600 font-medium">
-                    Managers only
+            {/* Header */}
+            <div className="p-5 pb-3">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="inline-flex items-center justify-center w-12 h-12 bg-primary/10 text-primary rounded-xl text-lg font-bold">
+                  {room.iconText || room.name.charAt(0)}
+                </span>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-lg">{room.name}</h3>
+                  <div className="flex items-center gap-3 text-xs text-slate-400">
+                    {room.capacity && (
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        Capacity: {room.capacity}
+                      </span>
+                    )}
+                    {room.managersOnly && (
+                      <span className="flex items-center gap-1 text-amber-500">
+                        <Shield className="w-3 h-3" />
+                        Managers only
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {room.notes && (
+                <p className="text-sm text-slate-500 mb-3">{room.notes}</p>
+              )}
+
+              {/* Stats */}
+              <div className="flex items-center gap-4 text-xs text-slate-400">
+                <span className="flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  Max {room.concurrentEventLimit} concurrent
+                </span>
+                {room.bufferMinutes > 0 && (
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {room.bufferMinutes}min buffer
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="space-y-2 text-sm">
-              <div className="flex items-center gap-2 text-slate-500">
-                <Users className="w-4 h-4" />
-                <span>
-                  Max concurrent events: {room.concurrentEventLimit}
-                </span>
+            {/* Configurations */}
+            {room.configurations.length > 0 && (
+              <div className="border-t border-slate-100 px-5 py-3 bg-slate-50/50">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1">
+                  <Layers className="w-3 h-3" />
+                  Available Configurations
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {room.configurations.map((config) => (
+                    <span
+                      key={config.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-600"
+                    >
+                      {config.name}
+                      {config.configurationType && (
+                        <span className="text-slate-400">
+                          · {config.configurationType.name}
+                        </span>
+                      )}
+                    </span>
+                  ))}
+                </div>
               </div>
-              {room.notes && (
-                <p className="text-slate-500 text-sm mt-2">{room.notes}</p>
-              )}
-            </div>
+            )}
           </div>
         ))}
       </div>

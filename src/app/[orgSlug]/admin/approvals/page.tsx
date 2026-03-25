@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { Shield, Clock, CheckCircle, XCircle, Search } from "lucide-react";
 import { ApprovalButtons } from "./approval-buttons";
+import { AdminStatusDropdown } from "./admin-status-dropdown";
 
 export default async function ApprovalsPage({
   params,
@@ -171,9 +172,18 @@ export default async function ApprovalsPage({
                   )}
                 </div>
 
-                {event.status === "PENDING" && (
-                  <ApprovalButtons eventId={event.id} orgSlug={orgSlug} />
-                )}
+                <div className="space-y-2">
+                  {event.status === "PENDING" && (
+                    <ApprovalButtons eventId={event.id} orgSlug={orgSlug} />
+                  )}
+                  {event.status !== "PENDING" && (
+                    <AdminStatusDropdown
+                      eventId={event.id}
+                      orgSlug={orgSlug}
+                      currentStatus={event.status}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           ))}

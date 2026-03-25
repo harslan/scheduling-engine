@@ -68,7 +68,22 @@ export default async function EventDetailPage({
   if (event.organization.slug !== orgSlug) notFound();
 
   const isOwner = currentUserId ? (event.submitterId === currentUserId || event.contactEmail === currentUserEmail) : false;
-  const canEdit = isOwner && event.organization.allowsEventChanges && event.status !== "CANCELLED";
+
+  // Check if current user is admin/manager
+  let isAdminOrManager = false;
+  if (currentUserId) {
+    const membership = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: event.organizationId,
+          userId: currentUserId,
+        },
+      },
+    });
+    isAdminOrManager = membership?.role === "ADMIN" || membership?.role === "MANAGER";
+  }
+
+  const canEdit = (isOwner && event.organization.allowsEventChanges && event.status !== "CANCELLED") || isAdminOrManager;
 
   const statusStyles: Record<string, string> = {
     APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
