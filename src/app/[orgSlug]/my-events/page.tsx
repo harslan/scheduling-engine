@@ -1,20 +1,23 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
-import { Calendar, Plus, Search } from "lucide-react";
+import { Calendar, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { getCurrentUser } from "@/lib/session";
+
+const PAGE_SIZE = 25;
 
 export default async function MyEventsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
   const { orgSlug } = await params;
-  const { status: statusFilter, q: searchQuery } = await searchParams;
+  const { status: statusFilter, q: searchQuery, page: pageStr } = await searchParams;
   const user = await getCurrentUser();
+  const currentPage = Math.max(1, parseInt(pageStr || "1", 10) || 1);
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
@@ -39,15 +42,29 @@ export default async function MyEventsPage({
     where.title = { contains: searchQuery, mode: "insensitive" };
   }
 
-  const events = await prisma.event.findMany({
-    where,
-    include: { room: true, eventType: true },
-    orderBy: { startDateTime: "desc" },
-    take: 100,
-  });
+  const [totalCount, events] = await Promise.all([
+    prisma.event.count({ where }),
+    prisma.event.findMany({
+      where,
+      include: { room: true, eventType: true },
+      orderBy: { startDateTime: "desc" },
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+  ]);
 
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const statuses = ["ALL", "PENDING", "APPROVED", "DENIED", "CANCELLED"];
   const activeStatus = statusFilter || "ALL";
+
+  function buildUrl(overrides: { page?: number; status?: string }) {
+    const s = overrides.status ?? activeStatus;
+    const p = overrides.page ?? currentPage;
+    const parts = [`/${orgSlug}/my-events?status=${s}`];
+    if (searchQuery) parts.push(`q=${encodeURIComponent(searchQuery)}`);
+    if (p > 1) parts.push(`page=${p}`);
+    return parts.join("&");
+  }
 
   return (
     <div>
@@ -65,19 +82,20 @@ export default async function MyEventsPage({
           className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          Submit {org.eventSingularTerm}
+          <span className="hidden sm:inline">Submit {org.eventSingularTerm}</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
         {/* Status tabs */}
-        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1 overflow-x-auto">
           {statuses.map((s) => (
             <Link
               key={s}
-              href={`/${orgSlug}/my-events?status=${s}${searchQuery ? `&q=${searchQuery}` : ""}`}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+              href={buildUrl({ status: s, page: 1 })}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap ${
                 activeStatus === s
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-700"
@@ -121,59 +139,120 @@ export default async function MyEventsPage({
         </div>
       ) : (
         <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  {org.eventSingularTerm}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  {org.roomTerm}
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Date
-                </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => (
-                <tr
-                  key={event.id}
-                  className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/${orgSlug}/events/${event.id}`}
-                      className="font-medium text-slate-900 hover:text-primary transition-colors"
-                    >
-                      {event.title || "Untitled"}
-                    </Link>
-                    {event.eventType && (
-                      <p className="text-xs text-slate-400 mt-0.5">
-                        {event.eventType.name}
-                      </p>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {event.room?.name || "—"}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">
-                    {event.startDateTime
-                      ? format(event.startDateTime, "MMM d, yyyy h:mm a")
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={event.status} />
-                  </td>
+          {/* Desktop table */}
+          <div className="hidden md:block">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {org.eventSingularTerm}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    {org.roomTerm}
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">
+                    Status
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-          <div className="px-4 py-2 bg-slate-50 border-t border-slate-200 text-xs text-slate-400">
-            Showing {events.length} event{events.length !== 1 ? "s" : ""}
+              </thead>
+              <tbody>
+                {events.map((event) => (
+                  <tr
+                    key={event.id}
+                    className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/${orgSlug}/events/${event.id}`}
+                        className="font-medium text-slate-900 hover:text-primary transition-colors"
+                      >
+                        {event.title || "Untitled"}
+                      </Link>
+                      {event.eventType && (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {event.eventType.name}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {event.room?.name || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {event.startDateTime
+                        ? format(event.startDateTime, "MMM d, yyyy h:mm a")
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={event.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {events.map((event) => (
+              <Link
+                key={event.id}
+                href={`/${orgSlug}/events/${event.id}`}
+                className="block px-4 py-3 hover:bg-slate-50/50 transition-colors"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 truncate">
+                      {event.title || "Untitled"}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      {event.room?.name || "No room"}
+                      {event.startDateTime &&
+                        ` · ${format(event.startDateTime, "MMM d, h:mm a")}`}
+                    </p>
+                  </div>
+                  <StatusBadge status={event.status} />
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* Footer with pagination */}
+          <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+            <p className="text-xs text-slate-400">
+              {totalCount} event{totalCount !== 1 ? "s" : ""}
+              {totalPages > 1 && ` · Page ${currentPage} of ${totalPages}`}
+            </p>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                {currentPage > 1 ? (
+                  <Link
+                    href={buildUrl({ page: currentPage - 1 })}
+                    className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <span className="p-1.5 text-slate-300">
+                    <ChevronLeft className="w-4 h-4" />
+                  </span>
+                )}
+                {currentPage < totalPages ? (
+                  <Link
+                    href={buildUrl({ page: currentPage + 1 })}
+                    className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200 transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <span className="p-1.5 text-slate-300">
+                    <ChevronRight className="w-4 h-4" />
+                  </span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -192,7 +271,7 @@ function StatusBadge({ status }: { status: string }) {
 
   return (
     <span
-      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+      className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium border shrink-0 ${
         styles[status] || styles.PENDING
       }`}
     >

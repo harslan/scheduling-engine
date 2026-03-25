@@ -50,22 +50,24 @@ export default async function OrgLayout({
   return (
     <div className="h-full flex flex-col">
       {/* Top bar */}
-      <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
+      <header className="bg-white border-b border-slate-200 px-4 lg:px-6 py-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+          {/* Spacer for mobile hamburger button */}
+          <div className="w-8 lg:hidden" />
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
             <Calendar className="w-4 h-4 text-white" />
           </div>
           <Link
             href={`/${orgSlug}`}
-            className="text-lg font-bold text-slate-900 hover:text-primary transition-colors"
+            className="text-lg font-bold text-slate-900 hover:text-primary transition-colors truncate"
           >
             {org.appDisplayName || org.name}
           </Link>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 lg:gap-4 shrink-0">
           {isAuthenticated ? (
             <>
-              <div className="text-right">
+              <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-slate-700">{userName}</p>
                 {userName !== userEmail && (
                   <p className="text-xs text-slate-400">{userEmail}</p>
@@ -98,7 +100,7 @@ export default async function OrgLayout({
         />
 
         {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
       </div>
     </div>
   );

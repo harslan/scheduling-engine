@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
   Calendar,
   CalendarPlus,
@@ -18,7 +19,21 @@ import {
   BarChart3,
   Layers,
   Tag,
+  Menu,
+  X,
 } from "lucide-react";
+
+export function MobileMenuButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="lg:hidden p-2 -ml-2 text-slate-600 hover:text-primary transition-colors"
+      aria-label="Toggle menu"
+    >
+      <Menu className="w-5 h-5" />
+    </button>
+  );
+}
 
 export function Sidebar({
   orgSlug,
@@ -37,8 +52,16 @@ export function Sidebar({
   isAdmin: boolean;
   isAuthenticated: boolean;
 }) {
-  return (
-    <nav className="w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile menu on navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  const sidebarContent = (
+    <>
       <div className="px-4 mb-6">
         <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">
           Calendar
@@ -167,7 +190,51 @@ export function Sidebar({
           </p>
         </div>
       </div>
-    </nav>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile hamburger button - rendered in the header area */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        className="lg:hidden fixed top-3 left-4 z-40 p-2 text-slate-600 hover:text-primary transition-colors"
+        aria-label="Open menu"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/30 z-40"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Mobile sidebar drawer */}
+      <nav
+        className={`lg:hidden fixed top-0 left-0 h-full w-64 bg-white border-r border-slate-200 py-4 overflow-y-auto z-50 transform transition-transform duration-200 ${
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex justify-end px-4 mb-2">
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="p-1 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {sidebarContent}
+      </nav>
+
+      {/* Desktop sidebar - always visible */}
+      <nav className="hidden lg:block w-56 bg-white border-r border-slate-200 py-4 overflow-y-auto shrink-0">
+        {sidebarContent}
+      </nav>
+    </>
   );
 }
 

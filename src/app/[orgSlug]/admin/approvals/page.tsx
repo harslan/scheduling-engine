@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import Link from "next/link";
-import { Shield, Clock, CheckCircle, XCircle, Search } from "lucide-react";
+import { Shield, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ApprovalButtons } from "./approval-buttons";
 import { AdminStatusDropdown } from "./admin-status-dropdown";
 
@@ -11,12 +11,14 @@ export default async function ApprovalsPage({
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ filter?: string; q?: string }>;
+  searchParams: Promise<{ filter?: string; q?: string; page?: string }>;
 }) {
   const { orgSlug } = await params;
   const sp = await searchParams;
   const filter = sp.filter || "pending";
   const searchQuery = sp.q || "";
+  const PAGE_SIZE = 25;
+  const currentPage = Math.max(1, parseInt(sp.page || "1", 10) || 1);
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
@@ -36,25 +38,41 @@ export default async function ApprovalsPage({
     ? { title: { contains: searchQuery, mode: "insensitive" as const } }
     : {};
 
-  const events = await prisma.event.findMany({
-    where: {
-      organizationId: org.id,
-      deleted: false,
-      ...statusFilter,
-      ...searchFilter,
-    },
-    include: {
-      room: true,
-      eventType: true,
-      submitter: { select: { name: true, email: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 100,
-  });
+  const eventWhere = {
+    organizationId: org.id,
+    deleted: false,
+    ...statusFilter,
+    ...searchFilter,
+  };
 
-  const pendingCount = await prisma.event.count({
-    where: { organizationId: org.id, deleted: false, status: "PENDING" },
-  });
+  const [totalCount, events, pendingCount] = await Promise.all([
+    prisma.event.count({ where: eventWhere }),
+    prisma.event.findMany({
+      where: eventWhere,
+      include: {
+        room: true,
+        eventType: true,
+        submitter: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+      skip: (currentPage - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    prisma.event.count({
+      where: { organizationId: org.id, deleted: false, status: "PENDING" },
+    }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+
+  function buildUrl(overrides: { page?: number; filter?: string }) {
+    const f = overrides.filter ?? filter;
+    const p = overrides.page ?? currentPage;
+    const parts = [`/${orgSlug}/admin/approvals?filter=${f}`];
+    if (searchQuery) parts.push(`q=${encodeURIComponent(searchQuery)}`);
+    if (p > 1) parts.push(`page=${p}`);
+    return parts.join("&");
+  }
 
   return (
     <div>
@@ -80,7 +98,7 @@ export default async function ApprovalsPage({
           ].map(({ key, label, icon: Icon }) => (
             <Link
               key={key}
-              href={`/${orgSlug}/admin/approvals?filter=${key}${searchQuery ? `&q=${searchQuery}` : ""}`}
+              href={buildUrl({ filter: key, page: 1 })}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 filter === key
                   ? "bg-white text-slate-900 shadow-sm"
@@ -187,6 +205,41 @@ export default async function ApprovalsPage({
               </div>
             </div>
           ))}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mt-3">
+              <p className="text-xs text-slate-400">
+                {totalCount} event{totalCount !== 1 ? "s" : ""} · Page {currentPage} of {totalPages}
+              </p>
+              <div className="flex items-center gap-1">
+                {currentPage > 1 ? (
+                  <Link
+                    href={buildUrl({ page: currentPage - 1 })}
+                    className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <span className="p-1.5 text-slate-300">
+                    <ChevronLeft className="w-4 h-4" />
+                  </span>
+                )}
+                {currentPage < totalPages ? (
+                  <Link
+                    href={buildUrl({ page: currentPage + 1 })}
+                    className="p-1.5 rounded-md text-slate-500 hover:bg-slate-200 transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
+                ) : (
+                  <span className="p-1.5 text-slate-300">
+                    <ChevronRight className="w-4 h-4" />
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
