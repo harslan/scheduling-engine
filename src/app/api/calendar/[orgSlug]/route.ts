@@ -2,7 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
 function formatICalDate(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}Z/, "Z");
 }
 
 function escapeICalText(text: string): string {

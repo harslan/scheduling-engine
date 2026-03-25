@@ -25,6 +25,7 @@ interface OrgSettings {
   roomClosingTime: string;
   roomTerm: string;
   eventSingularTerm: string;
+  eventPluralTerm: string;
 }
 
 interface Props {
@@ -91,19 +92,19 @@ export function SubmitEventForm({
       <div className="bg-white border border-slate-200 rounded-xl p-12 text-center shadow-sm">
         <CheckCircle className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
         <h2 className="text-xl font-bold text-slate-900 mb-2">
-          Event Submitted!
+          {orgSettings.eventSingularTerm} Submitted!
         </h2>
         <p className="text-slate-500 mb-6">
           {requiresApproval
-            ? "Your event has been submitted for approval. You'll receive an email when it's reviewed."
-            : "Your event has been approved and added to the calendar."}
+            ? `Your ${orgSettings.eventSingularTerm.toLowerCase()} has been submitted for approval. You'll receive an email when it's reviewed.`
+            : `Your ${orgSettings.eventSingularTerm.toLowerCase()} has been approved and added to the calendar.`}
         </p>
         <div className="flex items-center justify-center gap-3">
           <Link
             href={`/${orgSlug}/my-events`}
             className="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-lg font-medium hover:bg-primary/90 transition-colors"
           >
-            View My Events <ArrowRight className="w-4 h-4" />
+            View My {orgSettings.eventPluralTerm} <ArrowRight className="w-4 h-4" />
           </Link>
           <Link
             href={`/${orgSlug}`}
@@ -126,13 +127,13 @@ export function SubmitEventForm({
 
       {requiresApproval && (
         <div className="bg-amber-50 border border-amber-200 border-l-4 border-l-amber-500 rounded-lg px-4 py-3 text-sm text-amber-800">
-          This organization requires approval for event submissions.
+          This organization requires approval for {orgSettings.eventSingularTerm.toLowerCase()} submissions.
         </div>
       )}
 
       {/* Event Details */}
-      <Section title="Event Details">
-        <Field label="Event Title" required>
+      <Section title={`${orgSettings.eventSingularTerm} Details`}>
+        <Field label={`${orgSettings.eventSingularTerm} Title`} required>
           <input
             name="title"
             type="text"
@@ -143,7 +144,7 @@ export function SubmitEventForm({
         </Field>
 
         {eventTypes.length > 0 && (
-          <Field label="Event Type">
+          <Field label={`${orgSettings.eventSingularTerm} Type`}>
             <select
               name="eventTypeId"
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
@@ -217,7 +218,7 @@ export function SubmitEventForm({
 
       {/* Room */}
       {rooms.length > 0 && (
-        <RoomSection rooms={rooms} />
+        <RoomSection rooms={rooms} roomTerm={orgSettings.roomTerm} />
       )}
 
       {/* Contact */}
@@ -396,22 +397,22 @@ function RecurrenceSection() {
   );
 }
 
-function RoomSection({ rooms }: { rooms: RoomWithConfigs[] }) {
+function RoomSection({ rooms, roomTerm }: { rooms: RoomWithConfigs[]; roomTerm: string }) {
   const [selectedRoomId, setSelectedRoomId] = useState("");
 
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
   const hasConfigs = selectedRoom && selectedRoom.configurations.length > 0;
 
   return (
-    <Section title="Room">
-      <Field label="Select Room">
+    <Section title={roomTerm}>
+      <Field label={`Select ${roomTerm}`}>
         <select
           name="roomId"
           value={selectedRoomId}
           onChange={(e) => setSelectedRoomId(e.target.value)}
           className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
         >
-          <option value="">Choose a room...</option>
+          <option value="">{`Choose a ${roomTerm.toLowerCase()}...`}</option>
           {rooms.map((r) => (
             <option key={r.id} value={r.id}>
               {r.name}

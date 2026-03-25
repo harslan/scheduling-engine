@@ -19,6 +19,8 @@ import {
   Settings,
 } from "lucide-react";
 
+export const revalidate = 0;
+
 export default async function AdminDashboardPage({
   params,
 }: {
@@ -132,7 +134,7 @@ export default async function AdminDashboardPage({
       {/* Key metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard
-          label="Total Events"
+          label={`Total ${org.eventPluralTerm}`}
           value={totalEvents}
           icon={<Calendar className="w-5 h-5" />}
           color="blue"
@@ -144,7 +146,7 @@ export default async function AdminDashboardPage({
           color="green"
         />
         <StatCard
-          label="Active Rooms"
+          label={`Active ${org.roomTerm}s`}
           value={activeRoomCount}
           subtitle={`of ${roomCount} total`}
           icon={<Building2 className="w-5 h-5" />}
@@ -161,7 +163,7 @@ export default async function AdminDashboardPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         {/* Status breakdown */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 lg:col-span-1">
-          <h3 className="font-semibold text-slate-900 mb-4">Event Status</h3>
+          <h3 className="font-semibold text-slate-900 mb-4">{org.eventSingularTerm} Status</h3>
           <div className="space-y-3">
             <StatusRow
               label="Approved"
@@ -219,7 +221,7 @@ export default async function AdminDashboardPage({
             <div className="pt-2 border-t border-slate-100">
               <div className="flex items-center gap-2 text-sm text-slate-500">
                 <TrendingUp className="w-4 h-4 text-green-500" />
-                {last7DaysEvents} new event{last7DaysEvents !== 1 ? "s" : ""}{" "}
+                {last7DaysEvents} new {last7DaysEvents !== 1 ? org.eventPluralTerm.toLowerCase() : org.eventSingularTerm.toLowerCase()}{" "}
                 this week
               </div>
             </div>
@@ -276,26 +278,26 @@ export default async function AdminDashboardPage({
           href={`/${orgSlug}/admin/approvals`}
           icon={<Shield className="w-5 h-5" />}
           title="Approvals"
-          description="Review and manage pending event requests"
+          description={`Review and manage pending ${org.eventSingularTerm.toLowerCase()} requests`}
           badge={pendingCount > 0 ? pendingCount : undefined}
         />
         <AdminCard
           href={`/${orgSlug}/admin/rooms`}
           icon={<Building2 className="w-5 h-5" />}
           title={`${org.roomTerm}s`}
-          description="Manage rooms, configurations, and capacity"
+          description={`Manage ${org.roomTerm.toLowerCase()}s, configurations, and capacity`}
         />
         <AdminCard
           href={`/${orgSlug}/admin/event-types`}
           icon={<Tag className="w-5 h-5" />}
-          title="Event Types"
-          description="Create and manage event categories"
+          title={`${org.eventSingularTerm} Types`}
+          description={`Create and manage ${org.eventSingularTerm.toLowerCase()} categories`}
         />
         <AdminCard
           href={`/${orgSlug}/admin/configurations`}
           icon={<Layers className="w-5 h-5" />}
           title="Configurations"
-          description="Room setup styles (Theater, Classroom, etc.)"
+          description={`${org.roomTerm} setup styles (Theater, Classroom, etc.)`}
         />
         <AdminCard
           href={`/${orgSlug}/admin/users`}

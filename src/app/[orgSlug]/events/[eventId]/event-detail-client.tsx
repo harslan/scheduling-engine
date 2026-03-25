@@ -24,11 +24,13 @@ export function EditButton({
   rooms,
   eventTypes,
   orgSlug,
+  orgTerms,
 }: {
   event: EventData;
   rooms: { id: string; name: string }[];
   eventTypes: { id: string; name: string }[];
   orgSlug: string;
+  orgTerms: { roomTerm: string; eventSingularTerm: string };
 }) {
   const [editing, setEditing] = useState(false);
   const router = useRouter();
@@ -65,13 +67,14 @@ export function EditButton({
         aria-label="Edit event"
       >
         <h2 className="text-xs font-bold uppercase tracking-widest text-primary mb-4 border-l-3 border-primary pl-3">
-          Edit Event
+          Edit {orgTerms.eventSingularTerm}
         </h2>
         <EditEventForm
           event={event}
           rooms={rooms}
           eventTypes={eventTypes}
           orgSlug={orgSlug}
+          orgTerms={orgTerms}
           onCancel={() => setEditing(false)}
           onSaved={() => {
             setEditing(false);

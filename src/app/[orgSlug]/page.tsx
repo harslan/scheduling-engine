@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList, Grid3X3, CalendarX } from "lucide-react";
 import Link from "next/link";
 import sanitizeHtml from "sanitize-html";
+import { ScrollToNow } from "./scroll-to-now";
 import {
   startOfWeek,
   endOfWeek,
@@ -271,6 +272,7 @@ export default async function CalendarPage({
           events={events}
           roomColorMap={roomColorMap}
           now={now}
+          org={org}
         />
       )}
       {view === "week" && (
@@ -353,6 +355,7 @@ function MonthView({
   events,
   roomColorMap,
   now,
+  org,
 }: {
   orgSlug: string;
   rangeStart: Date;
@@ -360,6 +363,7 @@ function MonthView({
   events: EventWithRoom[];
   roomColorMap: Map<string, number>;
   now: Date;
+  org: { roomTerm: string };
 }) {
   const month = rangeStart.getMonth();
   const year = rangeStart.getFullYear();
@@ -428,16 +432,19 @@ function MonthView({
                           key={event.id}
                           href={`/${orgSlug}/events/${event.id}`}
                           className={`block text-xs px-1.5 py-0.5 rounded border-l-2 truncate hover:opacity-80 transition-opacity ${color.bg} ${color.border} ${color.text}`}
-                          title={`${event.title} — ${event.room?.name || "No room"}`}
+                          title={`${event.title} — ${event.room?.name || `No ${org.roomTerm.toLowerCase()}`}`}
                         >
                           {event.title}
                         </Link>
                       );
                     })}
                     {dayEvents.length > 3 && (
-                      <div className="text-xs text-slate-400 px-1.5">
+                      <Link
+                        href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
+                        className="text-xs text-primary hover:underline px-1.5"
+                      >
                         +{dayEvents.length - 3} more
-                      </div>
+                      </Link>
                     )}
                   </div>
                 </>
@@ -465,9 +472,10 @@ function WeekView({
   rangeStart: Date;
   events: EventWithRoom[];
   roomColorMap: Map<string, number>;
-  org: { roomTerm: string };
+  org: { roomTerm: string; eventSingularTerm: string; eventPluralTerm: string };
 }) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i));
+  const weekHasToday = weekDays.some((d) => isDateToday(d));
 
   return (
     <>
@@ -492,11 +500,11 @@ function WeekView({
                   {format(day, "EEEE")}
                 </span>
                 {dayEvents.length > 0 && (
-                  <span className="ml-auto text-xs font-medium text-slate-400">{dayEvents.length} event{dayEvents.length !== 1 ? "s" : ""}</span>
+                  <span className="ml-auto text-xs font-medium text-slate-400">{dayEvents.length} {dayEvents.length !== 1 ? org.eventPluralTerm.toLowerCase() : org.eventSingularTerm.toLowerCase()}</span>
                 )}
               </Link>
               {dayEvents.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-slate-400">No events</div>
+                <div className="px-4 py-3 text-sm text-slate-400">No {org.eventPluralTerm.toLowerCase()}</div>
               ) : (
                 <div className="divide-y divide-slate-100">
                   {dayEvents.map((event) => {
@@ -546,7 +554,7 @@ function WeekView({
             );
           })}
         </div>
-        <div className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
+        <ScrollToNow isToday={weekHasToday} className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
           {HOURS.map((hour) => (
             <div key={hour} className="contents">
               <div className="h-16 border-b border-slate-100 flex items-start justify-end pr-2 pt-0.5">
@@ -577,7 +585,7 @@ function WeekView({
                           href={`/${orgSlug}/events/${event.id}`}
                           className={`absolute left-0.5 right-0.5 rounded-md border-l-3 px-1.5 py-0.5 overflow-hidden hover:opacity-80 transition-opacity z-10 ${color.bg} ${color.border} ${color.text}`}
                           style={{ height: `${heightRem}rem` }}
-                          title={`${event.title} — ${event.room?.name || "No room"}`}
+                          title={`${event.title} — ${event.room?.name || `No ${org.roomTerm.toLowerCase()}`}`}
                         >
                           <div className="text-xs font-medium truncate">{event.title}</div>
                           <div className="text-[10px] opacity-75 truncate">
@@ -592,7 +600,7 @@ function WeekView({
               })}
             </div>
           ))}
-        </div>
+        </ScrollToNow>
       </div>
     </>
   );
@@ -613,7 +621,7 @@ function DayView({
   refDate: Date;
   events: EventWithRoom[];
   roomColorMap: Map<string, number>;
-  org: { roomTerm: string };
+  org: { roomTerm: string; eventPluralTerm: string };
 }) {
   const dayEvents = events
     .filter((e) => e.startDateTime && isSameDay(e.startDateTime, refDate))
@@ -623,7 +631,7 @@ function DayView({
     return (
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center py-16 px-4">
         <CalendarX className="w-12 h-12 text-slate-300 mb-3" />
-        <p className="text-slate-500 text-sm">No events scheduled for this day</p>
+        <p className="text-slate-500 text-sm">No {org.eventPluralTerm.toLowerCase()} scheduled for this day</p>
       </div>
     );
   }
@@ -659,7 +667,7 @@ function DayView({
 
       {/* Desktop: time grid */}
       <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
+        <ScrollToNow isToday={isDateToday(refDate)} className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
           {HOURS.map((hour) => {
             const hourEvents = dayEvents.filter((e) => e.startDateTime?.getHours() === hour);
 
@@ -699,7 +707,7 @@ function DayView({
               </div>
             );
           })}
-        </div>
+        </ScrollToNow>
       </div>
     </>
   );

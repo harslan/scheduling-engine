@@ -78,6 +78,7 @@ export default async function SubmitEventPage({
           roomClosingTime: org.roomClosingTime,
           roomTerm: org.roomTerm,
           eventSingularTerm: org.eventSingularTerm,
+          eventPluralTerm: org.eventPluralTerm,
         }}
       />
     </div>

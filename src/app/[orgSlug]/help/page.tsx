@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import {
   CalendarPlus,
@@ -21,6 +22,11 @@ export default async function HelpPage({
     where: { slug: orgSlug },
   });
   if (!org) notFound();
+
+  const headersList = await headers();
+  const host = headersList.get("host") || "localhost:3000";
+  const protocol = headersList.get("x-forwarded-proto") || "https";
+  const baseUrl = `${protocol}://${host}`;
 
   return (
     <div className="max-w-3xl">
@@ -103,7 +109,7 @@ export default async function HelpPage({
             Subscribe to the calendar in Outlook, Google Calendar, or Apple Calendar using this URL:
           </p>
           <code className="block mt-2 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 text-sm text-slate-700 break-all">
-            {typeof window !== "undefined" ? window.location.origin : ""}/api/calendar/{orgSlug}
+            {baseUrl}/api/calendar/{orgSlug}
           </code>
           <p className="mt-2 text-sm text-slate-500">
             Copy this URL and add it as a calendar subscription in your calendar app.

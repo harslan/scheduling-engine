@@ -168,7 +168,7 @@ export function Sidebar({
               href={`/${orgSlug}/admin/event-types`}
               icon={<Tag className="w-4 h-4" />}
             >
-              Event Types
+              {org.eventSingularTerm} Types
             </NavLink>
             <NavLink
               href={`/${orgSlug}/admin/configurations`}

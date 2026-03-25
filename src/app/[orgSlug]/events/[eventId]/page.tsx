@@ -143,6 +143,7 @@ export default async function EventDetailPage({
               rooms={event.organization.rooms.map((r) => ({ id: r.id, name: r.name }))}
               eventTypes={event.organization.eventTypes.map((t) => ({ id: t.id, name: t.name }))}
               orgSlug={orgSlug}
+              orgTerms={{ roomTerm: event.organization.roomTerm, eventSingularTerm: event.organization.eventSingularTerm }}
             />
           )}
           {isOwner && event.status !== "CANCELLED" && (

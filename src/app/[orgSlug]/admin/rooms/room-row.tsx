@@ -37,11 +37,13 @@ export function RoomRow({
   room,
   configTypes,
   orgSlug,
+  roomTerm,
   mobileMode,
 }: {
   room: RoomData;
   configTypes: { id: string; name: string }[];
   orgSlug: string;
+  roomTerm: string;
   mobileMode?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
@@ -114,7 +116,7 @@ export function RoomRow({
         {confirmingDelete ? (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-red-600 font-medium">
-              {room.eventCount > 0 ? "Room has events — will be deactivated. Continue?" : "Delete this room?"}
+              {room.eventCount > 0 ? `${roomTerm} has events — will be deactivated. Continue?` : `Delete this ${roomTerm.toLowerCase()}?`}
             </span>
             <button
               onClick={handleDelete}

@@ -209,7 +209,7 @@ export default async function MyEventsPage({
                       {event.title || "Untitled"}
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      {event.room?.name || "No room"}
+                      {event.room?.name || `No ${org.roomTerm.toLowerCase()}`}
                       {event.startDateTime &&
                         ` · ${format(event.startDateTime, "MMM d, h:mm a")}`}
                     </p>

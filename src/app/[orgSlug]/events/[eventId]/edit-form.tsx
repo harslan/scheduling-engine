@@ -21,6 +21,7 @@ interface Props {
   rooms: { id: string; name: string }[];
   eventTypes: { id: string; name: string }[];
   orgSlug: string;
+  orgTerms: { roomTerm: string; eventSingularTerm: string };
   onCancel: () => void;
   onSaved: () => void;
 }
@@ -30,6 +31,7 @@ export function EditEventForm({
   rooms,
   eventTypes,
   orgSlug,
+  orgTerms,
   onCancel,
   onSaved,
 }: Props) {
@@ -74,7 +76,7 @@ export function EditEventForm({
 
         {eventTypes.length > 0 && (
           <div>
-            <label htmlFor="edit-eventType" className="block text-sm font-medium text-slate-700 mb-1">Event Type</label>
+            <label htmlFor="edit-eventType" className="block text-sm font-medium text-slate-700 mb-1">{orgTerms.eventSingularTerm} Type</label>
             <select
               id="edit-eventType"
               name="eventTypeId"
@@ -91,7 +93,7 @@ export function EditEventForm({
 
         {rooms.length > 0 && (
           <div>
-            <label htmlFor="edit-room" className="block text-sm font-medium text-slate-700 mb-1">Room</label>
+            <label htmlFor="edit-room" className="block text-sm font-medium text-slate-700 mb-1">{orgTerms.roomTerm}</label>
             <select
               id="edit-room"
               name="roomId"

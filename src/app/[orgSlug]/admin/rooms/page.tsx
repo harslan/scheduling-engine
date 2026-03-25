@@ -79,7 +79,7 @@ export default async function AdminRoomsPage({
       <div className="md:hidden space-y-3">
         {rooms.length === 0 && (
           <div className="bg-white border border-slate-200 rounded-xl py-12 text-center text-slate-400">
-            No rooms configured. Add one above.
+            No {org.roomTerm.toLowerCase()}s configured. Add one above.
           </div>
         )}
         {rooms.map((room) => {
@@ -114,7 +114,7 @@ export default async function AdminRoomsPage({
                   <div>
                     <p className="font-medium text-slate-900">{room.name}</p>
                     <div className="flex items-center gap-2 mt-0.5 text-xs text-slate-500">
-                      <span>{room._count.events} events</span>
+                      <span>{room._count.events} {org.eventPluralTerm.toLowerCase()}</span>
                       {room.bufferMinutes > 0 && <span>· {room.bufferMinutes}m buffer</span>}
                       {room.managersOnly && <span className="text-amber-600">· Managers only</span>}
                     </div>
@@ -130,6 +130,7 @@ export default async function AdminRoomsPage({
                   room={roomData}
                   configTypes={configTypes.map((ct) => ({ id: ct.id, name: ct.name }))}
                   orgSlug={orgSlug}
+                  roomTerm={org.roomTerm}
                   mobileMode
                 />
               </div>
@@ -180,13 +181,14 @@ export default async function AdminRoomsPage({
                 }}
                 configTypes={configTypes.map((ct) => ({ id: ct.id, name: ct.name }))}
                 orgSlug={orgSlug}
+                roomTerm={org.roomTerm}
               />
             ))}
           </tbody>
         </table>
         {rooms.length === 0 && (
           <div className="py-12 text-center text-slate-400">
-            No rooms configured. Add one above.
+            No {org.roomTerm.toLowerCase()}s configured. Add one above.
           </div>
         )}
       </div>
