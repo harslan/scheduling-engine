@@ -35,9 +35,10 @@ export async function resolveContact(
   }
 
   // 2. Find or create account for the event organization
+  const accountName = eventOrganization || contactName;
   const accountUniqueId = await findOrCreateAccount(
     organizationId,
-    eventOrganization || contactName,
+    accountName,
     client,
     options?.ownerUsername
   );
@@ -49,7 +50,7 @@ export async function resolveContact(
     organizationId,
     nameParts,
     contactEmail,
-    accountUniqueId,
+    accountName,
     client,
     options?.contactPhone,
     options?.ownerUsername
@@ -177,7 +178,7 @@ async function createContact(
   organizationId: string,
   nameParts: { firstName: string; lastName: string },
   email: string,
-  accountUniqueId: string,
+  accountName: string,
   client: ReserveGatewayClient,
   phone?: string,
   ownerUsername?: string
@@ -193,7 +194,7 @@ async function createContact(
       "contact.workPhone",
       "contact.owner.username",
     ],
-    data: [["", nameParts.firstName, nameParts.lastName, email, phone ?? "", ownerUsername ?? ""]],
+    data: [[accountName, nameParts.firstName, nameParts.lastName, email, phone ?? "", ownerUsername ?? ""]],
   };
 
   try {
@@ -207,14 +208,14 @@ async function createContact(
         organizationId,
         reserveUniqueId: uniqueId,
         name: `${nameParts.firstName} ${nameParts.lastName}`.trim(),
-        accountName: "",
+        accountName,
         reserveData: {
           uniqueId,
           firstName: nameParts.firstName,
           lastName: nameParts.lastName,
           fullName: `${nameParts.firstName} ${nameParts.lastName}`.trim(),
           email,
-          account: { uniqueId: accountUniqueId },
+          account: { name: accountName },
         },
       },
     });

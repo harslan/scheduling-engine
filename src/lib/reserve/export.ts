@@ -169,6 +169,12 @@ export async function exportEventsToReserve(
         continue;
       }
 
+      // Validate room mapping — Reserve requires a location for each function
+      if (!event.roomId || !roomLocationMap.get(event.roomId)) {
+        errors.push(`Event "${event.title}": No Reserve location mapped for room`);
+        continue;
+      }
+
       // Build event header — exact dotted field paths per .NET reference
       const eventHeader = [
         "function.event.site",
