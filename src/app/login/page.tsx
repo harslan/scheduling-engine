@@ -48,13 +48,6 @@ function LoginForm() {
     }
   }
 
-  function fillCredentials(email: string, password: string) {
-    const emailInput = document.querySelector<HTMLInputElement>('input[name="email"]');
-    const passwordInput = document.querySelector<HTMLInputElement>('input[name="password"]');
-    if (emailInput) emailInput.value = email;
-    if (passwordInput) passwordInput.value = password;
-  }
-
   return (
     <div className="min-h-full flex">
       {/* Left panel — brand/feature showcase */}
@@ -224,49 +217,6 @@ function LoginForm() {
               </button>
             </form>
 
-            {/* Divider */}
-            <div className="relative my-8">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-gradient-to-br from-slate-50 via-white to-blue-50/30 px-3 text-xs text-slate-400 uppercase tracking-wider font-medium">
-                  Demo access
-                </span>
-              </div>
-            </div>
-
-            {/* Demo credentials as quick-fill buttons */}
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => fillCredentials("admin@scheduling.dev", "admin123")}
-                className="group flex flex-col items-start gap-1 bg-white border border-slate-200 rounded-lg px-4 py-3 text-left hover:border-primary/30 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <div className="w-6 h-6 rounded-md bg-amber-50 border border-amber-200 flex items-center justify-center">
-                    <Shield className="w-3 h-3 text-amber-600" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-900">Admin</span>
-                  <ArrowRight className="w-3 h-3 text-slate-300 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-[11px] text-slate-400 font-mono">admin@scheduling.dev</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => fillCredentials("demo@incae.edu", "demo123")}
-                className="group flex flex-col items-start gap-1 bg-white border border-slate-200 rounded-lg px-4 py-3 text-left hover:border-primary/30 hover:shadow-sm transition-all"
-              >
-                <div className="flex items-center gap-2 w-full">
-                  <div className="w-6 h-6 rounded-md bg-blue-50 border border-blue-200 flex items-center justify-center">
-                    <Users className="w-3 h-3 text-blue-600" />
-                  </div>
-                  <span className="text-xs font-semibold text-slate-900">User</span>
-                  <ArrowRight className="w-3 h-3 text-slate-300 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-                </div>
-                <span className="text-[11px] text-slate-400 font-mono">demo@incae.edu</span>
-              </button>
-            </div>
           </div>
         </div>
 
