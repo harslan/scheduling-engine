@@ -30,15 +30,16 @@ export function EventTypeRow({
   const [error, setError] = useState("");
 
   async function handleDelete() {
-    if (!confirm(
-      eventType.eventCount > 0
-        ? "This event type has events and cannot be deleted."
-        : "Delete this event type?"
-    )) return;
+    if (eventType.eventCount > 0) {
+      setError("This event type has events and cannot be deleted.");
+      return;
+    }
+    if (!confirm("Delete this event type? This cannot be undone.")) return;
 
     setLoading(true);
+    setError("");
     const result = await deleteEventType(eventType.id);
-    if (result.error) alert(result.error);
+    if (result.error) setError(result.error);
     setLoading(false);
   }
 

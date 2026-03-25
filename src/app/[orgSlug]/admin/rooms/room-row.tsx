@@ -343,21 +343,28 @@ function ConfigRow({
 }) {
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
+    setError("");
     const formData = new FormData(e.currentTarget);
     const result = await updateRoomConfiguration(config.id, formData);
-    if (!result.error) setEditing(false);
+    if (result.error) {
+      setError(result.error);
+    } else {
+      setEditing(false);
+    }
     setLoading(false);
   }
 
   async function handleDelete() {
-    if (!confirm("Delete this configuration?")) return;
+    if (!confirm("Delete this configuration? This cannot be undone.")) return;
     setLoading(true);
+    setError("");
     const result = await deleteRoomConfiguration(config.id);
-    if (result.error) alert(result.error);
+    if (result.error) setError(result.error);
     setLoading(false);
   }
 
@@ -398,6 +405,12 @@ function ConfigRow({
   }
 
   return (
+    <div>
+      {error && (
+        <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1 mb-1">
+          {error}
+        </div>
+      )}
     <div className="flex items-center gap-3 py-1.5 group">
       <span className="text-sm text-slate-700">{config.name}</span>
       {config.configurationTypeName && (
@@ -428,6 +441,7 @@ function ConfigRow({
           <Trash2 className="w-3 h-3" />
         </button>
       </div>
+    </div>
     </div>
   );
 }

@@ -27,20 +27,16 @@ export function ConfigTypeRow({
   const [error, setError] = useState("");
 
   async function handleDelete() {
-    if (
-      !confirm(
-        configType.configCount > 0 || configType.eventCount > 0
-          ? "This type is in use and cannot be deleted."
-          : "Delete this configuration type?"
-      )
-    )
+    if (configType.configCount > 0 || configType.eventCount > 0) {
+      setError("This type is in use by configurations or events and cannot be deleted.");
       return;
+    }
+    if (!confirm("Delete this configuration type? This cannot be undone.")) return;
 
     setLoading(true);
+    setError("");
     const result = await deleteConfigurationType(configType.id);
-    if (result.error) {
-      alert(result.error);
-    }
+    if (result.error) setError(result.error);
     setLoading(false);
   }
 

@@ -301,36 +301,38 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ========== BUILT WITH ========== */}
+      {/* ========== WHY CHOOSE US ========== */}
       <section className="bg-white border-t border-slate-100">
         <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-12">
+          <div className="text-center mb-14">
             <h2 className="text-3xl font-bold text-slate-900">
-              Built with the modern stack
+              Built for organizations that care about their space
             </h2>
-            <p className="mt-3 text-lg text-slate-500">
-              Enterprise-grade technology, zero vendor lock-in
+            <p className="mt-3 text-lg text-slate-500 max-w-2xl mx-auto">
+              Whether you manage 5 rooms or 500, Scheduling Engine scales with you
             </p>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {[
-              { name: "Next.js 16", color: "bg-slate-900 text-white" },
-              { name: "React 19", color: "bg-sky-50 text-sky-700 border border-sky-200" },
-              { name: "TypeScript", color: "bg-blue-50 text-blue-700 border border-blue-200" },
-              { name: "Prisma", color: "bg-indigo-50 text-indigo-700 border border-indigo-200" },
-              { name: "Tailwind CSS", color: "bg-cyan-50 text-cyan-700 border border-cyan-200" },
-              { name: "Claude AI", color: "bg-amber-50 text-amber-700 border border-amber-200" },
-              { name: "Vercel", color: "bg-slate-50 text-slate-700 border border-slate-200" },
-              { name: "PostgreSQL", color: "bg-blue-50 text-blue-800 border border-blue-200" },
-              { name: "NextAuth.js", color: "bg-purple-50 text-purple-700 border border-purple-200" },
-            ].map((tech) => (
-              <span
-                key={tech.name}
-                className={`tech-badge inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold ${tech.color}`}
-              >
-                {tech.name}
-              </span>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <TrustCard
+              icon={<Shield className="w-5 h-5" />}
+              title="Secure by default"
+              description="Role-based access, server-side authorization on every action, encrypted connections"
+            />
+            <TrustCard
+              icon={<Zap className="w-5 h-5" />}
+              title="Always available"
+              description="Serverless architecture with auto-scaling. No downtime, no maintenance windows"
+            />
+            <TrustCard
+              icon={<Users className="w-5 h-5" />}
+              title="Multi-organization"
+              description="One deployment serves unlimited organizations, each with independent settings"
+            />
+            <TrustCard
+              icon={<Globe className="w-5 h-5" />}
+              title="Works everywhere"
+              description="Responsive design, iCal sync, email notifications. Access from any device"
+            />
           </div>
         </div>
       </section>
@@ -441,6 +443,26 @@ function FeatureCard({
         {title}
       </h3>
       <p className="text-slate-500 leading-relaxed text-[15px]">{description}</p>
+    </div>
+  );
+}
+
+function TrustCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="text-center p-6">
+      <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto mb-4">
+        {icon}
+      </div>
+      <h3 className="font-bold text-slate-900 mb-2">{title}</h3>
+      <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
     </div>
   );
 }

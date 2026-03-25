@@ -183,26 +183,38 @@ export function ChatInterface({
   );
 }
 
+function InlineText({ text }: { text: string }) {
+  // Parse **bold** into React elements safely (no innerHTML)
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return (
+            <strong key={i} className="font-semibold">
+              {part.slice(2, -2)}
+            </strong>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
+
 function MessageContent({ content }: { content: string }) {
-  // Simple markdown-like rendering for bold, lists, etc.
   const lines = content.split("\n");
   return (
     <div className="space-y-1">
       {lines.map((line, i) => {
         if (!line.trim()) return <br key={i} />;
 
-        // Bold
-        const formatted = line.replace(
-          /\*\*(.*?)\*\*/g,
-          '<strong class="font-semibold">$1</strong>'
-        );
-
         // List items
         if (line.trim().startsWith("- ") || line.trim().startsWith("• ")) {
           return (
             <div key={i} className="flex gap-2">
               <span className="shrink-0">•</span>
-              <span dangerouslySetInnerHTML={{ __html: formatted.replace(/^[-•]\s*/, "") }} />
+              <span><InlineText text={line.replace(/^[\s]*[-•]\s*/, "")} /></span>
             </div>
           );
         }
@@ -213,12 +225,12 @@ function MessageContent({ content }: { content: string }) {
           return (
             <div key={i} className="flex gap-2">
               <span className="shrink-0 font-medium">{numMatch[1]}.</span>
-              <span dangerouslySetInnerHTML={{ __html: formatted.replace(/^\d+\.\s*/, "") }} />
+              <span><InlineText text={line.replace(/^\d+\.\s*/, "")} /></span>
             </div>
           );
         }
 
-        return <p key={i} dangerouslySetInnerHTML={{ __html: formatted }} />;
+        return <p key={i}><InlineText text={line} /></p>;
       })}
     </div>
   );
