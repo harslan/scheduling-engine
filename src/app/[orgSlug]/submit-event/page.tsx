@@ -58,7 +58,7 @@ export default async function SubmitEventPage({
       <SubmitEventForm
         organizationId={org.id}
         orgSlug={orgSlug}
-        rooms={org.rooms.map((r) => ({
+        rooms={org.allowsRoomSelection ? org.rooms.map((r) => ({
           id: r.id,
           name: r.name,
           configurations: r.configurations.map((c) => ({
@@ -66,11 +66,19 @@ export default async function SubmitEventPage({
             name: c.name,
             typeName: c.configurationType?.name || null,
           })),
-        }))}
+        })) : []}
         eventTypes={org.eventTypes.map((t) => ({ id: t.id, name: t.name }))}
         requiresApproval={org.requiresApproval}
         defaultContactName={userName}
         defaultContactEmail={userEmail}
+        orgSettings={{
+          collectsAttendeeCount: org.collectsAttendeeCount,
+          collectsContactPhone: org.collectsContactPhone,
+          roomOpeningTime: org.roomOpeningTime,
+          roomClosingTime: org.roomClosingTime,
+          roomTerm: org.roomTerm,
+          eventSingularTerm: org.eventSingularTerm,
+        }}
       />
     </div>
   );

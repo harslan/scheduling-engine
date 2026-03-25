@@ -12,6 +12,11 @@ import {
   AlertCircle,
   TrendingUp,
   ArrowRight,
+  Tag,
+  Layers,
+  BarChart3,
+  FileSpreadsheet,
+  Settings,
 } from "lucide-react";
 
 export default async function AdminDashboardPage({
@@ -277,20 +282,44 @@ export default async function AdminDashboardPage({
         <AdminCard
           href={`/${orgSlug}/admin/rooms`}
           icon={<Building2 className="w-5 h-5" />}
-          title="Rooms"
-          description="Manage rooms and configurations"
+          title={`${org.roomTerm}s`}
+          description="Manage rooms, configurations, and capacity"
+        />
+        <AdminCard
+          href={`/${orgSlug}/admin/event-types`}
+          icon={<Tag className="w-5 h-5" />}
+          title="Event Types"
+          description="Create and manage event categories"
+        />
+        <AdminCard
+          href={`/${orgSlug}/admin/configurations`}
+          icon={<Layers className="w-5 h-5" />}
+          title="Configurations"
+          description="Room setup styles (Theater, Classroom, etc.)"
         />
         <AdminCard
           href={`/${orgSlug}/admin/users`}
           icon={<Users className="w-5 h-5" />}
           title="Users"
-          description="Manage users and role assignments"
+          description="Manage members and role assignments"
+        />
+        <AdminCard
+          href={`/${orgSlug}/admin/reports`}
+          icon={<BarChart3 className="w-5 h-5" />}
+          title="Reports"
+          description="Usage analytics and trend data"
+        />
+        <AdminCard
+          href={`/${orgSlug}/admin/import`}
+          icon={<FileSpreadsheet className="w-5 h-5" />}
+          title="Import / Export"
+          description="CSV import and event data export"
         />
         <AdminCard
           href={`/${orgSlug}/admin/organization`}
-          icon={<Building2 className="w-5 h-5" />}
+          icon={<Settings className="w-5 h-5" />}
           title="Organization"
-          description="Name, display settings, and feature flags"
+          description="Name, branding, features, and scheduling rules"
         />
       </div>
     </div>

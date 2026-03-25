@@ -17,6 +17,15 @@ interface RoomWithConfigs {
   configurations: RoomConfig[];
 }
 
+interface OrgSettings {
+  collectsAttendeeCount: boolean;
+  collectsContactPhone: boolean;
+  roomOpeningTime: string;
+  roomClosingTime: string;
+  roomTerm: string;
+  eventSingularTerm: string;
+}
+
 interface Props {
   organizationId: string;
   orgSlug: string;
@@ -25,6 +34,7 @@ interface Props {
   requiresApproval: boolean;
   defaultContactName?: string;
   defaultContactEmail?: string;
+  orgSettings: OrgSettings;
 }
 
 export function SubmitEventForm({
@@ -35,6 +45,7 @@ export function SubmitEventForm({
   requiresApproval,
   defaultContactName,
   defaultContactEmail,
+  orgSettings,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState("");
@@ -147,15 +158,17 @@ export function SubmitEventForm({
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Expected Attendees">
-            <input
-              name="expectedAttendeeCount"
-              type="number"
-              min="1"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
-              placeholder="Number of attendees"
-            />
-          </Field>
+          {orgSettings.collectsAttendeeCount && (
+            <Field label="Expected Attendees">
+              <input
+                name="expectedAttendeeCount"
+                type="number"
+                min="1"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
+                placeholder="Number of attendees"
+              />
+            </Field>
+          )}
           <Field label="Website URL">
             <input
               name="websiteUrl"
@@ -199,6 +212,16 @@ export function SubmitEventForm({
             />
           </Field>
         </div>
+        {orgSettings.collectsContactPhone && (
+          <Field label="Contact Phone">
+            <input
+              name="contactPhone"
+              type="tel"
+              className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
+              placeholder="(555) 123-4567"
+            />
+          </Field>
+        )}
         <Field label="Additional Notes">
           <textarea
             name="notes"

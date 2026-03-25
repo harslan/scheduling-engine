@@ -312,9 +312,24 @@ type EventWithRoom = {
   endDateTime: Date | null;
   roomId: string | null;
   room: { id: string; name: string } | null;
-  eventType: { id: string; name: string } | null;
+  eventType: { id: string; name: string; colorIndex: number | null } | null;
   isInstance?: boolean;
 };
+
+function getEventColorIdx(
+  event: EventWithRoom,
+  roomColorMap: Map<string, number>
+): number {
+  // Prefer event type color if set
+  if (event.eventType?.colorIndex != null) {
+    return event.eventType.colorIndex % ROOM_COLORS.length;
+  }
+  // Fall back to room color
+  if (event.roomId) {
+    return roomColorMap.get(event.roomId) ?? 0;
+  }
+  return 0;
+}
 
 function MonthView({
   orgSlug,
@@ -391,9 +406,7 @@ function MonthView({
                   </Link>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, 3).map((event) => {
-                      const colorIdx = event.roomId
-                        ? roomColorMap.get(event.roomId) ?? 0
-                        : 0;
+                      const colorIdx = getEventColorIdx(event, roomColorMap);
                       const color = ROOM_COLORS[colorIdx];
                       return (
                         <Link
@@ -498,9 +511,7 @@ function WeekView({
                   }`}
                 >
                   {isFirstHourEvents.map((event) => {
-                    const colorIdx = event.roomId
-                      ? roomColorMap.get(event.roomId) ?? 0
-                      : 0;
+                    const colorIdx = getEventColorIdx(event, roomColorMap);
                     const color = ROOM_COLORS[colorIdx];
                     const durationHours = event.endDateTime && event.startDateTime
                       ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000
@@ -574,9 +585,7 @@ function DayView({
               </div>
               <div className="h-20 border-b border-slate-100 relative p-0.5">
                 {hourEvents.map((event) => {
-                  const colorIdx = event.roomId
-                    ? roomColorMap.get(event.roomId) ?? 0
-                    : 0;
+                  const colorIdx = getEventColorIdx(event, roomColorMap);
                   const color = ROOM_COLORS[colorIdx];
                   const durationHours = event.endDateTime && event.startDateTime
                     ? (event.endDateTime.getTime() - event.startDateTime.getTime()) / 3600000

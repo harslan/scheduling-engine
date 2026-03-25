@@ -62,6 +62,47 @@ export async function submitEvent(formData: FormData) {
 
   if (!org) return { error: "Organization not found" };
 
+  // Scheduling constraint: max event length
+  const durationMinutes = (endDt.getTime() - startDt.getTime()) / (1000 * 60);
+  if (org.maxEventLengthMinutes && durationMinutes > org.maxEventLengthMinutes) {
+    const hours = Math.floor(org.maxEventLengthMinutes / 60);
+    const mins = org.maxEventLengthMinutes % 60;
+    return {
+      error: `Event duration exceeds the maximum of ${hours > 0 ? `${hours}h` : ""}${mins > 0 ? ` ${mins}m` : ""}. Please shorten your event.`,
+    };
+  }
+
+  // Scheduling constraint: opening/closing times
+  if (org.roomOpeningTime && org.roomClosingTime) {
+    const [openH, openM] = org.roomOpeningTime.split(":").map(Number);
+    const [closeH, closeM] = org.roomClosingTime.split(":").map(Number);
+    const startMinutes = startDt.getHours() * 60 + startDt.getMinutes();
+    const endMinutes = endDt.getHours() * 60 + endDt.getMinutes();
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+
+    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+      return {
+        error: `Events must be scheduled between ${org.roomOpeningTime} and ${org.roomClosingTime}.`,
+      };
+    }
+  }
+
+  // Scheduling constraint: cutoff days
+  if (org.schedulingCutoffDays) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diffDays = Math.ceil((startDt.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays < 0) {
+      return { error: "Cannot schedule events in the past." };
+    }
+    if (diffDays < org.schedulingCutoffDays) {
+      return {
+        error: `Events must be scheduled at least ${org.schedulingCutoffDays} day(s) in advance.`,
+      };
+    }
+  }
+
   // Room conflict detection
   if (data.roomId) {
     const room = await prisma.room.findUnique({
