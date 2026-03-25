@@ -10,6 +10,7 @@ import {
   Building2,
   LogOut,
   Shield,
+  Sparkles,
 } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
@@ -102,6 +103,12 @@ export default async function OrgLayout({
               icon={<List className="w-4 h-4" />}
             >
               My {org.eventPluralTerm}
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/chat`}
+              icon={<Sparkles className="w-4 h-4" />}
+            >
+              AI Assistant
             </NavLink>
             <NavLink
               href={`/${orgSlug}/rooms`}
