@@ -85,66 +85,6 @@
   border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-/* Feature card gradient border on hover */
-.feature-card {
-  position: relative;
-  background: white;
-  border: 1px solid #e2e8f0;
-  transition: all 0.3s ease;
-}
-.feature-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, #0B7DE6, #6366f1, #0ea5e9);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-.feature-card:hover::before {
-  opacity: 1;
-}
-.feature-card:hover {
-  border-color: transparent;
-  box-shadow: 0 20px 60px rgba(11, 125, 230, 0.12), 0 8px 20px rgba(0,0,0,0.04);
-  transform: translateY(-4px);
-}
-
-/* Step connector line */
-.step-connector {
-  position: relative;
-}
-.step-connector::after {
-  content: '';
-  position: absolute;
-  top: 28px;
-  left: calc(50% + 32px);
-  width: calc(100% - 64px);
-  height: 2px;
-  background: linear-gradient(90deg, #0B7DE6, #6366f1);
-  opacity: 0.3;
-}
-.step-connector:last-child::after {
-  display: none;
-}
-
-/* Stats counter glow */
-.stat-glow {
-  text-shadow: 0 0 40px rgba(11, 125, 230, 0.3);
-}
-
-/* Tech badge */
-.tech-badge {
-  transition: all 0.2s ease;
-}
-.tech-badge:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
 /* Reduced motion: disable all animations for users who prefer it */
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
@@ -159,12 +99,6 @@
   .animate-gradient-shift {
     animation: none !important;
     opacity: 1 !important;
-  }
-  .feature-card:hover {
-    transform: none;
-  }
-  .tech-badge:hover {
-    transform: none;
   }
   * {
     transition-duration: 0.01ms !important;

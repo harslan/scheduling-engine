@@ -3,20 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
 import {
   Calendar,
-  Building2,
-  Shield,
-  MessageSquare,
-  Globe,
   ArrowRight,
   Sparkles,
-  Clock,
-  Users,
-  BarChart3,
-  Lock,
-  Layers,
   ChevronRight,
-  CheckCircle2,
+  Check,
+  Mail,
 } from "lucide-react";
+import { Fragment } from "react";
 
 const getLandingStats = unstable_cache(
   async () => {
@@ -29,6 +22,35 @@ const getLandingStats = unstable_cache(
   ["landing-orgs"],
   { revalidate: 300 }
 );
+
+/* ===== Calendar mockup data ===== */
+
+const CALENDAR_DAYS = ["Mon 23", "Tue 24", "Wed 25", "Thu 26", "Fri 27"];
+const CALENDAR_TIMES = ["9 AM", "10 AM", "11 AM", "12 PM", "1 PM", "2 PM", "3 PM"];
+
+type CalendarEvent = {
+  row: number;
+  col: number;
+  span: number;
+  label: string;
+  room: string;
+  variant: "primary" | "emerald" | "amber";
+};
+
+const CALENDAR_EVENTS: CalendarEvent[] = [
+  { row: 0, col: 0, span: 1, label: "Team Standup", room: "Room A", variant: "primary" },
+  { row: 1, col: 1, span: 2, label: "Design Review", room: "Room B", variant: "emerald" },
+  { row: 3, col: 2, span: 1, label: "Pending Review", room: "Room C", variant: "amber" },
+  { row: 2, col: 4, span: 1, label: "1:1 Meeting", room: "Room B", variant: "emerald" },
+  { row: 4, col: 3, span: 2, label: "Sprint Planning", room: "Room A", variant: "primary" },
+  { row: 5, col: 0, span: 1, label: "All Hands", room: "Room C", variant: "primary" },
+];
+
+const EVENT_STYLES = {
+  primary: { bg: "bg-primary/15", border: "border-primary", text: "text-primary", sub: "text-primary/60" },
+  emerald: { bg: "bg-emerald-500/15", border: "border-emerald-500", text: "text-emerald-700", sub: "text-emerald-600/60" },
+  amber: { bg: "bg-amber-500/15", border: "border-amber-500", text: "text-amber-700", sub: "text-amber-600/60" },
+};
 
 export default async function Home() {
   const { orgs } = await getLandingStats();
@@ -71,11 +93,8 @@ export default async function Home() {
       {/* ========== HERO ========== */}
       <section className="relative hero-mesh">
         <div className="absolute inset-0 hero-grid opacity-40" />
-        <div className="absolute top-20 left-[10%] w-72 h-72 bg-primary/5 rounded-full blur-3xl animate-float" />
-        <div className="absolute top-40 right-[10%] w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl animate-float-delay" />
-        <div className="absolute bottom-10 left-[30%] w-64 h-64 bg-sky-500/5 rounded-full blur-3xl animate-float-slow" />
 
-        <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-32 lg:pt-32 lg:pb-40">
+        <div className="relative max-w-7xl mx-auto px-6 pt-24 pb-16 lg:pt-32 lg:pb-20">
           <div className="text-center max-w-4xl mx-auto">
             {/* Badge */}
             <div className="animate-fade-in-up inline-flex items-center gap-2.5 bg-white/80 backdrop-blur-sm text-primary text-sm font-semibold px-5 py-2 rounded-full border border-primary/15 shadow-sm mb-10">
@@ -123,40 +142,59 @@ export default async function Home() {
             </div>
           </div>
 
-          {/* Floating UI preview cards */}
-          <div className="hidden lg:block">
-            <div className="absolute left-[5%] top-[45%] animate-float-slow">
-              <div className="glass-card rounded-2xl p-4 shadow-xl shadow-slate-200/50 w-56">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-700">Booking Approved</p>
-                    <p className="text-[10px] text-slate-400">Just now</p>
-                  </div>
+          {/* Product Preview — Browser chrome + weekly calendar */}
+          <div className="animate-fade-in-up-delay-4 mt-16 max-w-4xl mx-auto hidden sm:block">
+            <div className="rounded-xl overflow-hidden shadow-2xl shadow-slate-300/50 border border-slate-200/80 bg-white">
+              {/* Browser toolbar */}
+              <div className="bg-slate-100 border-b border-slate-200 px-4 py-2.5 flex items-center gap-3">
+                <div className="flex gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-slate-300" />
+                  <div className="w-3 h-3 rounded-full bg-slate-300" />
+                  <div className="w-3 h-3 rounded-full bg-slate-300" />
                 </div>
-                <div className="h-1.5 bg-emerald-100 rounded-full">
-                  <div className="h-full w-full bg-emerald-500 rounded-full" />
+                <div className="flex-1 bg-white rounded-md px-3 py-1 text-xs text-slate-400 border border-slate-200">
+                  scheduling-engine.app/acme-corp
                 </div>
               </div>
-            </div>
 
-            <div className="absolute right-[5%] top-[35%] animate-float">
-              <div className="glass-card rounded-2xl p-4 shadow-xl shadow-slate-200/50 w-60">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-700">AI Assistant</p>
-                    <p className="text-[10px] text-slate-400">Finding availability...</p>
+              {/* Calendar mockup */}
+              <div className="p-3 sm:p-4">
+                {/* Calendar header */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="text-xs sm:text-sm font-semibold text-slate-700">March 2026</div>
+                  <div className="flex gap-1">
+                    <span className="text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded">Month</span>
+                    <span className="text-[10px] font-medium text-white bg-primary px-2 py-0.5 rounded">Week</span>
+                    <span className="text-[10px] font-medium text-slate-400 px-2 py-0.5 rounded">Day</span>
                   </div>
                 </div>
-                <div className="bg-slate-50 rounded-lg p-2.5">
-                  <p className="text-[11px] text-slate-600 leading-relaxed">
-                    &ldquo;Book Conference Room A for tomorrow at 2 PM&rdquo;
-                  </p>
+
+                {/* Week grid */}
+                <div className="grid grid-cols-[40px_repeat(5,1fr)] sm:grid-cols-[48px_repeat(5,1fr)] gap-px bg-slate-100 rounded-lg overflow-hidden text-[10px]">
+                  {/* Day headers */}
+                  <div className="bg-white p-1.5" />
+                  {CALENDAR_DAYS.map((day) => (
+                    <div key={day} className="bg-slate-50 p-1.5 text-center font-medium text-slate-500">
+                      {day}
+                    </div>
+                  ))}
+
+                  {/* Time rows */}
+                  {CALENDAR_TIMES.map((time, rowIdx) => (
+                    <Fragment key={time}>
+                      <div className="bg-white p-1.5 text-right text-slate-400 pr-2">
+                        {time}
+                      </div>
+                      {CALENDAR_DAYS.map((_, colIdx) => {
+                        const event = CALENDAR_EVENTS.find((e) => e.row === rowIdx && e.col === colIdx);
+                        return (
+                          <div key={colIdx} className="bg-white p-0.5 min-h-[28px] relative">
+                            {event && <CalendarEventBlock event={event} />}
+                          </div>
+                        );
+                      })}
+                    </Fragment>
+                  ))}
                 </div>
               </div>
             </div>
@@ -170,149 +208,197 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ========== CAPABILITIES ========== */}
+      {/* ========== DIFFERENTIATORS ========== */}
       <section className="bg-white">
-        <div className="max-w-7xl mx-auto px-6 pt-20 pb-24">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-4 bg-primary/5 px-4 py-1.5 rounded-full">
-              <Layers className="w-4 h-4" />
-              Core Capabilities
+        <div className="max-w-6xl mx-auto px-6">
+
+          {/* — AI-Powered Booking — */}
+          <div className="py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight mb-5">
+                Book with a conversation
+              </h2>
+              <p className="text-lg text-slate-500 leading-relaxed">
+                Describe what you need in plain language. The AI assistant checks availability,
+                picks the right room, and creates the booking — no forms, no searching.
+              </p>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-              One platform, complete control
-            </h2>
-            <p className="mt-5 text-xl text-slate-500 max-w-2xl mx-auto">
-              Purpose-built for organizations that need reliable, configurable room scheduling
-            </p>
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200/80">
+              {/* Chat mockup */}
+              <div className="space-y-3">
+                {/* User message */}
+                <div className="flex justify-end">
+                  <div className="bg-primary text-white text-sm rounded-2xl rounded-br-md px-4 py-2.5 max-w-[300px] shadow-sm">
+                    Book Conference Room A for tomorrow at 2 PM
+                  </div>
+                </div>
+                {/* AI response */}
+                <div className="flex justify-start">
+                  <div className="bg-white border border-slate-200 text-sm rounded-2xl rounded-bl-md px-4 py-3 max-w-[340px] shadow-sm">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mt-0.5 shrink-0">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-800">Booked Conference Room A</p>
+                        <p className="text-slate-500 mt-0.5">March 26, 2:00 – 3:00 PM</p>
+                        <p className="text-slate-400 text-xs mt-1.5">Confirmation sent to your email</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Follow-up */}
+                <div className="flex justify-end">
+                  <div className="bg-primary text-white text-sm rounded-2xl rounded-br-md px-4 py-2.5 max-w-[300px] shadow-sm">
+                    Make it recurring, every Tuesday
+                  </div>
+                </div>
+                <div className="flex justify-start">
+                  <div className="bg-white border border-slate-200 text-sm rounded-2xl rounded-bl-md px-4 py-3 max-w-[340px] shadow-sm">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-5 h-5 bg-emerald-100 rounded-full flex items-center justify-center mt-0.5 shrink-0">
+                        <Check className="w-3 h-3 text-emerald-600" />
+                      </div>
+                      <p className="font-medium text-slate-800 mt-0.5">Done — repeats every Tue, 2:00 – 3:00 PM</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            <FeatureCard
-              icon={<MessageSquare className="w-6 h-6" />}
-              title="AI-Powered Booking"
-              description="Describe what you need in plain language. The AI assistant finds available rooms and creates the booking."
-              gradient="from-blue-500 to-primary"
-            />
-            <FeatureCard
-              icon={<Calendar className="w-6 h-6" />}
-              title="Multi-View Calendar"
-              description="Year, month, week, and day views with real-time availability, conflict detection, and iCal subscription feeds."
-              gradient="from-sky-500 to-cyan-600"
-            />
-            <FeatureCard
-              icon={<Shield className="w-6 h-6" />}
-              title="Approval Workflows"
-              description="Route bookings through configurable approval chains. Email notifications, comments, and complete audit trails."
-              gradient="from-amber-500 to-orange-600"
-            />
-            <FeatureCard
-              icon={<Building2 className="w-6 h-6" />}
-              title="Multi-Organization"
-              description="Serve multiple organizations from a single deployment. Each with independent rooms, rules, and terminology."
-              gradient="from-violet-500 to-purple-600"
-            />
-            <FeatureCard
-              icon={<Lock className="w-6 h-6" />}
-              title="Role-Based Access Control"
-              description="Admin, Manager, and User roles with granular permissions. Server-side authorization enforced on every action."
-              gradient="from-slate-600 to-slate-800"
-            />
-            <FeatureCard
-              icon={<Clock className="w-6 h-6" />}
-              title="Scheduling Rules Engine"
-              description="Operating hours, buffer periods, duration limits, advance booking cutoffs, and concurrent event caps — all configurable per room."
-              gradient="from-teal-500 to-teal-700"
-            />
-            <FeatureCard
-              icon={<BarChart3 className="w-6 h-6" />}
-              title="Analytics & Reporting"
-              description="Room utilization rates, booking trends, and usage analytics. CSV export for integration with external tools."
-              gradient="from-emerald-500 to-green-600"
-            />
-            <FeatureCard
-              icon={<Globe className="w-6 h-6" />}
-              title="Calendar Integration"
-              description="iCal feeds for Outlook, Google Calendar, and Apple Calendar. Subscribe once, stay in sync automatically."
-              gradient="from-rose-500 to-pink-600"
-            />
-            <FeatureCard
-              icon={<Users className="w-6 h-6" />}
-              title="White-Label Ready"
-              description="Custom terminology, branding, and display names per organization. Your platform, your language."
-              gradient="from-indigo-500 to-indigo-700"
-            />
+          <div className="border-t border-slate-100" />
+
+          {/* — Approval Workflows — */}
+          <div className="py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="order-2 lg:order-1 bg-slate-50 rounded-2xl p-6 border border-slate-200/80">
+              {/* Approval flow mockup */}
+              <div className="space-y-0">
+                {[
+                  { label: "Submitted", sublabel: "Booking request created", dotBg: "bg-primary", textColor: "text-primary" },
+                  { label: "Under Review", sublabel: "Waiting for manager approval", dotBg: "bg-amber-500", textColor: "text-amber-600" },
+                  { label: "Approved", sublabel: "Confirmed & calendar synced", dotBg: "bg-emerald-500", textColor: "text-emerald-600" },
+                ].map((step, i) => (
+                  <div key={step.label} className="flex items-start gap-4">
+                    <div className="flex flex-col items-center">
+                      <div className={`w-8 h-8 ${step.dotBg} rounded-full flex items-center justify-center shadow-sm`}>
+                        <Check className="w-4 h-4 text-white" />
+                      </div>
+                      {i < 2 && <div className="w-0.5 h-12 bg-slate-200" />}
+                    </div>
+                    <div className="pt-1 pb-4">
+                      <p className={`font-semibold text-sm ${step.textColor}`}>{step.label}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{step.sublabel}</p>
+                      {i === 0 && (
+                        <div className="mt-2 inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-md px-2 py-1 text-[11px] text-slate-500 shadow-sm">
+                          <Mail className="w-3 h-3" />
+                          Notification sent to manager
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="order-1 lg:order-2">
+              <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight mb-5">
+                Every booking, accounted for
+              </h2>
+              <p className="text-lg text-slate-500 leading-relaxed">
+                Route bookings through configurable approval chains. Managers get notified instantly,
+                approve with one click, and every decision is logged in a complete audit trail.
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100" />
+
+          {/* — Multi-Org & White-Label — */}
+          <div className="py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div>
+              <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight mb-5">
+                Your platform, your language
+              </h2>
+              <p className="text-lg text-slate-500 leading-relaxed">
+                Run multiple organizations from one deployment. Each gets its own rooms, rules, branding,
+                and terminology — &ldquo;Rooms&rdquo; or &ldquo;Studios,&rdquo; &ldquo;Events&rdquo; or &ldquo;Sessions.&rdquo; Your call.
+              </p>
+            </div>
+            <div>
+              {/* Side-by-side org config cards */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200/80">
+                  <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center mb-3">
+                    <Calendar className="w-4 h-4 text-primary" />
+                  </div>
+                  <p className="font-bold text-slate-900 text-sm">Acme Corp</p>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Spaces</span>
+                      <span className="font-semibold text-slate-700 bg-white border border-slate-200 rounded px-1.5 py-0.5">Rooms</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Bookings</span>
+                      <span className="font-semibold text-slate-700 bg-white border border-slate-200 rounded px-1.5 py-0.5">Events</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Color</span>
+                      <div className="flex gap-1">
+                        <div className="w-3.5 h-3.5 rounded-full bg-primary border border-primary/20" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-slate-50 rounded-xl p-5 border border-slate-200/80">
+                  <div className="w-8 h-8 bg-violet-500/10 rounded-lg flex items-center justify-center mb-3">
+                    <Calendar className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <p className="font-bold text-slate-900 text-sm">Studio Co</p>
+                  <div className="mt-3 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Spaces</span>
+                      <span className="font-semibold text-slate-700 bg-white border border-slate-200 rounded px-1.5 py-0.5">Studios</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Bookings</span>
+                      <span className="font-semibold text-slate-700 bg-white border border-slate-200 rounded px-1.5 py-0.5">Sessions</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-400">Color</span>
+                      <div className="flex gap-1">
+                        <div className="w-3.5 h-3.5 rounded-full bg-violet-500 border border-violet-500/20" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ========== HOW IT WORKS ========== */}
-      <section className="relative bg-gradient-to-b from-slate-50 to-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-24">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 text-primary text-sm font-semibold mb-4 bg-primary/5 px-4 py-1.5 rounded-full">
-              <ArrowRight className="w-4 h-4" />
-              Three Steps
-            </div>
-            <h2 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight">
-              How it works
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-0">
-            <StepCard
-              step="1"
-              title="Request a booking"
-              description="Submit through the form or ask the AI assistant. Choose your room, time, and configuration."
-              icon={<MessageSquare className="w-5 h-5" />}
-            />
-            <StepCard
-              step="2"
-              title="Review & approve"
-              description="Managers are notified instantly. Approve or deny with one click from the admin dashboard."
-              icon={<Shield className="w-5 h-5" />}
-            />
-            <StepCard
-              step="3"
-              title="Confirmed & synced"
-              description="Approved bookings appear on the shared calendar and sync to Outlook, Google, and Apple Calendar via iCal."
-              icon={<Calendar className="w-5 h-5" />}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ========== TRUST ========== */}
-      <section className="bg-white border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl font-bold text-slate-900">
-              Built for reliability at any scale
-            </h2>
-            <p className="mt-3 text-lg text-slate-500 max-w-2xl mx-auto">
-              Enterprise-grade infrastructure with zero maintenance overhead
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <TrustCard
-              icon={<Shield className="w-5 h-5" />}
-              title="Secure by default"
-              description="Server-side authorization on every action. Role-based access control. Encrypted connections."
-            />
-            <TrustCard
-              icon={<CheckCircle2 className="w-5 h-5" />}
-              title="Always available"
-              description="Serverless architecture with automatic scaling. No maintenance windows, no capacity planning."
-            />
-            <TrustCard
-              icon={<Building2 className="w-5 h-5" />}
-              title="Multi-tenant isolation"
-              description="Each organization operates independently with its own data, rules, and configuration."
-            />
-            <TrustCard
-              icon={<Globe className="w-5 h-5" />}
-              title="Works everywhere"
-              description="Responsive on every device. iCal sync, email notifications, and CSV data portability."
-            />
+      {/* ========== EVERYTHING BUILT IN ========== */}
+      <section className="bg-slate-50 border-t border-slate-100">
+        <div className="max-w-4xl mx-auto px-6 py-20">
+          <h2 className="text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight text-center mb-12">
+            Everything built in
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-4">
+            {[
+              "Multi-view calendar",
+              "Role-based access control",
+              "iCal & calendar sync",
+              "Email notifications",
+              "Analytics & CSV export",
+              "Scheduling rules & buffers",
+              "Room configurations",
+              "Concurrent booking limits",
+            ].map((item) => (
+              <div key={item} className="flex items-center gap-2.5 py-1.5">
+                <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                <span className="text-sm font-medium text-slate-700">{item}</span>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -322,8 +408,6 @@ export default async function Home() {
         <section className="relative overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-blue-600 to-indigo-700" />
           <div className="absolute inset-0 hero-grid opacity-10" />
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-400/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4" />
 
           <div className="relative max-w-7xl mx-auto px-6 py-20 text-center">
             <h2 className="text-4xl lg:text-5xl font-extrabold text-white mb-4 tracking-tight">
@@ -382,75 +466,17 @@ export default async function Home() {
 
 /* ===== Components ===== */
 
-function FeatureCard({
-  icon,
-  title,
-  description,
-  gradient,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  gradient: string;
-}) {
-  return (
-    <div className="feature-card rounded-2xl p-7 group cursor-default">
-      <div
-        className={`w-12 h-12 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center text-white mb-5 shadow-lg group-hover:scale-110 transition-transform`}
-      >
-        {icon}
-      </div>
-      <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-primary transition-colors">
-        {title}
-      </h3>
-      <p className="text-slate-500 leading-relaxed text-[15px]">{description}</p>
-    </div>
-  );
-}
+function CalendarEventBlock({ event }: { event: CalendarEvent }) {
+  const s = EVENT_STYLES[event.variant];
+  const height = event.span > 1 ? `calc(${event.span * 100}% + ${(event.span - 1) * 1}px)` : undefined;
 
-function TrustCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}) {
   return (
-    <div className="text-center p-6">
-      <div className="w-11 h-11 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto mb-4">
-        {icon}
-      </div>
-      <h3 className="font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="text-sm text-slate-500 leading-relaxed">{description}</p>
-    </div>
-  );
-}
-
-function StepCard({
-  step,
-  title,
-  description,
-  icon,
-}: {
-  step: string;
-  title: string;
-  description: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="step-connector text-center lg:px-8">
-      <div className="relative inline-flex mb-6">
-        <div className="w-14 h-14 bg-gradient-to-br from-primary to-blue-600 text-white rounded-2xl flex items-center justify-center text-xl font-bold shadow-lg shadow-primary/20">
-          {step}
-        </div>
-        <div className="absolute -right-2 -top-2 w-8 h-8 bg-white border-2 border-primary/20 rounded-lg flex items-center justify-center text-primary">
-          {icon}
-        </div>
-      </div>
-      <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-      <p className="text-slate-500 leading-relaxed max-w-xs mx-auto">{description}</p>
+    <div
+      className={`absolute inset-x-0.5 top-0.5 ${s.bg} border-l-2 ${s.border} rounded-r-sm px-1 py-0.5 overflow-hidden`}
+      style={height ? { height, zIndex: 1 } : undefined}
+    >
+      <span className={`font-medium ${s.text} leading-tight block truncate`}>{event.label}</span>
+      <span className={`${s.sub} truncate block`}>{event.room}</span>
     </div>
   );
 }
