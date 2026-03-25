@@ -175,6 +175,14 @@ export default async function CalendarPage({
 
   return (
     <div>
+      {/* Message Board */}
+      {org.messageBoardHtml && (
+        <div
+          className="bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 mb-6 text-sm text-blue-800 prose prose-sm prose-blue max-w-none"
+          dangerouslySetInnerHTML={{ __html: org.messageBoardHtml }}
+        />
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
