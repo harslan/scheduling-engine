@@ -16,7 +16,8 @@ export async function resolveContact(
   contactName: string,
   contactEmail: string,
   eventOrganization: string,
-  client: ReserveGatewayClient
+  client: ReserveGatewayClient,
+  options?: { contactPhone?: string; ownerUsername?: string }
 ): Promise<ResolvedContact | null> {
   if (!contactName.trim()) return null;
 
@@ -37,7 +38,8 @@ export async function resolveContact(
   const accountUniqueId = await findOrCreateAccount(
     organizationId,
     eventOrganization || contactName,
-    client
+    client,
+    options?.ownerUsername
   );
 
   if (!accountUniqueId) return null;
@@ -48,7 +50,9 @@ export async function resolveContact(
     nameParts,
     contactEmail,
     accountUniqueId,
-    client
+    client,
+    options?.contactPhone,
+    options?.ownerUsername
   );
 
   if (!contactUniqueId) return null;
@@ -127,7 +131,8 @@ async function findContactByName(
 async function findOrCreateAccount(
   organizationId: string,
   accountName: string,
-  client: ReserveGatewayClient
+  client: ReserveGatewayClient,
+  ownerUsername?: string
 ): Promise<string | null> {
   if (!accountName.trim()) return null;
 
@@ -141,11 +146,10 @@ async function findOrCreateAccount(
 
   if (existing) return existing.reserveUniqueId;
 
-  // Create via gateway
-  const payload: ReservePutRequestData = {
-    header: ["account.name"],
-    data: [[accountName.trim()]],
-  };
+  // Create via gateway — matches .NET: ["account.name", "account.owner.username"]
+  const header = ["account.name", "account.owner.username"];
+  const data = [[accountName.trim(), ownerUsername ?? ""]];
+  const payload: ReservePutRequestData = { header, data };
 
   try {
     const result = await client.importAccount(payload);
@@ -174,11 +178,22 @@ async function createContact(
   nameParts: { firstName: string; lastName: string },
   email: string,
   accountUniqueId: string,
-  client: ReserveGatewayClient
+  client: ReserveGatewayClient,
+  phone?: string,
+  ownerUsername?: string
 ): Promise<string | null> {
+  // Matches .NET: ["contact.account.name", "contact.firstName", "contact.lastName",
+  //                "contact.email", "contact.workPhone", "contact.owner.username"]
   const payload: ReservePutRequestData = {
-    header: ["contact.account.name", "contact.firstName", "contact.lastName", "contact.email"],
-    data: [["", nameParts.firstName, nameParts.lastName, email]],
+    header: [
+      "contact.account.name",
+      "contact.firstName",
+      "contact.lastName",
+      "contact.email",
+      "contact.workPhone",
+      "contact.owner.username",
+    ],
+    data: [["", nameParts.firstName, nameParts.lastName, email, phone ?? "", ownerUsername ?? ""]],
   };
 
   try {

@@ -156,7 +156,11 @@ export async function exportEventsToReserve(
         event.contactName,
         event.contactEmail,
         event.eventOrganization,
-        client
+        client,
+        {
+          contactPhone: event.contactPhone || undefined,
+          ownerUsername: org.reserveOwnerUsername || undefined,
+        }
       );
 
       const contactUniqueId = contact?.contactUniqueId ?? org.reserveHoldContactId;
