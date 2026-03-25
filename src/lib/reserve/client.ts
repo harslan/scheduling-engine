@@ -84,7 +84,9 @@ export class ReserveGatewayClient {
     try {
       const url = new URL("/gateway/request", GATEWAY_BASE_URL);
       url.searchParams.set("requestName", "EnduraCodeAccountData");
+      url.searchParams.set("requestGuid", crypto.randomUUID().toUpperCase());
       url.searchParams.set("maxResults", "1");
+      url.searchParams.set("format", "hierarchical");
 
       const response = await fetch(url.toString(), {
         method: "GET",
@@ -121,13 +123,16 @@ export class ReserveGatewayClient {
     const allResults: unknown[] = [];
     let firstResult = options.firstResult ?? 0;
     const maxPerPage = options.maxResults ?? PAGE_SIZE;
+    let totalCount: number | null = null;
 
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
+    while (totalCount === null || firstResult < totalCount) {
       const url = new URL("/gateway/request", GATEWAY_BASE_URL);
       url.searchParams.set("requestName", requestName);
-      url.searchParams.set("firstResult", String(firstResult));
+      url.searchParams.set("requestGuid", crypto.randomUUID().toUpperCase());
       url.searchParams.set("maxResults", String(maxPerPage));
+      url.searchParams.set("firstResult", String(firstResult));
+      url.searchParams.set("orderByField", "uniqueId");
+      url.searchParams.set("format", "hierarchical");
 
       for (const [key, value] of Object.entries(extraParams)) {
         url.searchParams.set(key, value);
@@ -149,13 +154,14 @@ export class ReserveGatewayClient {
       }
 
       const body = await response.json();
-      const items = Array.isArray(body) ? body : body.data ?? [];
+
+      // Hierarchical format: { count: N, results: [...] }
+      const items: unknown[] = body.results ?? [];
+      totalCount = typeof body.count === "number" ? body.count : items.length;
 
       if (items.length === 0) break;
 
       allResults.push(...items);
-
-      if (items.length < maxPerPage) break;
       firstResult += items.length;
     }
 

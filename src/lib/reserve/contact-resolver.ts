@@ -226,4 +226,3 @@ async function createContact(
     return null;
   }
 }
-

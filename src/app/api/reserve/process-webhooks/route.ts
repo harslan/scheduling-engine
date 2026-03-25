@@ -99,6 +99,13 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       console.error(`Reserve: webhook processing failed for org ${orgId}`, error);
+
+      // Mark as processed even on failure to prevent infinite retries
+      await prisma.reserveWebhookEvent.updateMany({
+        where: { id: { in: events.map((e) => e.id) } },
+        data: { processedAt: new Date() },
+      });
+
       results.push({
         orgId,
         error: error instanceof Error ? error.message : "Unknown error",

@@ -24,6 +24,7 @@ export async function validateExportPreconditions(
   });
   if (!org) return ["Organization not found"];
 
+  // Matches .NET ReserveStatics.ReserveExportIsActive + reserveIntegrationGeneralSettingsProvided
   if (!org.reserveEnabled) errors.push("Reserve integration is not enabled");
   if (!org.reserveExportEnabled) errors.push("Reserve export is not enabled");
   if (!org.reserveGatewayUsername) errors.push("Gateway username is required");
@@ -33,24 +34,33 @@ export async function validateExportPreconditions(
   if (!org.reserveSalespersonUsername) errors.push("Salesperson username is required");
   if (!org.reserveLifecycleStage) errors.push("Lifecycle stage is required");
   if (!org.reserveEventIdFieldName) errors.push("Event ID field name is required");
+  if (!org.reserveEventNotesFieldName) errors.push("Event notes field name is required");
+  if (!org.reserveEventOrgFieldName) errors.push("Event organization field name is required");
+  if (!org.reserveHoldFunctionType) errors.push("Hold function type is required");
 
-  // Check that all active rooms have a Reserve location name
+  // ALL active rooms must have a Reserve location name
   const roomsWithoutLocation = await prisma.room.count({
     where: {
       organizationId,
       active: true,
-      reserveLocationName: "",
+      OR: [
+        { reserveLocationName: "" },
+        { reserveLocationName: null as unknown as string },
+      ],
     },
   });
   if (roomsWithoutLocation > 0) {
     errors.push(`${roomsWithoutLocation} active room(s) missing Reserve location name`);
   }
 
-  // Check that all config types have a Reserve setup style
+  // ALL config types must have a Reserve setup style
   const configTypesWithoutStyle = await prisma.roomConfigurationType.count({
     where: {
       organizationId,
-      reserveSetupStyle: "",
+      OR: [
+        { reserveSetupStyle: "" },
+        { reserveSetupStyle: null as unknown as string },
+      ],
     },
   });
   if (configTypesWithoutStyle > 0) {
@@ -59,11 +69,14 @@ export async function validateExportPreconditions(
     );
   }
 
-  // Check that all event types have a Reserve function type
+  // ALL event types must have a Reserve function type
   const eventTypesWithoutFunction = await prisma.eventType.count({
     where: {
       organizationId,
-      reserveFunctionType: "",
+      OR: [
+        { reserveFunctionType: "" },
+        { reserveFunctionType: null as unknown as string },
+      ],
     },
   });
   if (eventTypesWithoutFunction > 0) {
@@ -228,7 +241,7 @@ export async function exportEventsToReserve(
         org.reserveLifecycleStage,
       ];
 
-      // Build function rows - one per instance/room combination
+      // Build function rows — one per instance/room combination
       const functionRows: string[][] = [];
       for (const instance of instances) {
         const locationName =
@@ -239,6 +252,12 @@ export async function exportEventsToReserve(
             : "";
         const functionType = event.eventType?.reserveFunctionType ?? "";
 
+        // Per-instance attendance (matches .NET: instance.ExpectedAttendeeCount)
+        const instanceAttendance =
+          "expectedAttendeeCount" in instance
+            ? (instance as { expectedAttendeeCount?: number | null }).expectedAttendeeCount ?? 0
+            : event.expectedAttendeeCount ?? 0;
+
         functionRows.push([
           formatDateForReserve(new Date(instance.startDateTime)),
           formatTimeForReserve(new Date(instance.startDateTime)),
@@ -246,7 +265,7 @@ export async function exportEventsToReserve(
           locationName,
           setupStyle,
           functionType,
-          String(event.expectedAttendeeCount ?? 0),
+          String(instanceAttendance),
           "0",
           "0",
         ]);
