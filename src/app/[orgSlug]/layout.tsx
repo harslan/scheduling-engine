@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Calendar, ChevronRight } from "lucide-react";
+import { Calendar, ChevronRight, Shield } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { notFound } from "next/navigation";
@@ -110,6 +110,16 @@ export default async function OrgLayout({
         <div className="flex items-center gap-2 lg:gap-4 shrink-0">
           {isAuthenticated ? (
             <>
+              {isSystemAdmin && (
+                <Link
+                  href="/admin"
+                  className="hidden sm:flex items-center gap-1.5 text-xs font-medium text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100 px-2.5 py-1 rounded-lg transition-colors"
+                  title="System Administration"
+                >
+                  <Shield className="w-3 h-3" />
+                  System
+                </Link>
+              )}
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-slate-700">{userName}</p>
                 {userName !== userEmail && (
