@@ -27,6 +27,7 @@ import {
   Check,
   ArrowLeftRight,
   Monitor,
+  QrCode,
 } from "lucide-react";
 
 export function Sidebar({
@@ -205,6 +206,12 @@ export function Sidebar({
               icon={<ArrowLeftRight className="w-4 h-4" />}
             >
               Reserve
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/qr-codes`}
+              icon={<QrCode className="w-4 h-4" />}
+            >
+              QR Codes
             </NavLink>
             <NavLink
               href={`/${orgSlug}/admin/organization`}
