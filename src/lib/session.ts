@@ -2,6 +2,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "./auth";
 import { prisma } from "./prisma";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+
+async function loginRedirect(): Promise<never> {
+  const headersList = await headers();
+  const pathname = headersList.get("x-pathname") || "/";
+  redirect(`/login?callbackUrl=${encodeURIComponent(pathname)}`);
+}
 
 export async function getSession() {
   return getServerSession(authOptions);
@@ -10,7 +17,7 @@ export async function getSession() {
 export async function requireSession() {
   const session = await getSession();
   if (!session?.user) {
-    redirect("/login");
+    return await loginRedirect();
   }
   return session;
 }
@@ -21,7 +28,7 @@ export async function getCurrentUser() {
     where: { id: (session.user as { id: string }).id },
   });
   if (!user || !user.active) {
-    redirect("/login");
+    return await loginRedirect();
   }
   return user;
 }
@@ -42,7 +49,7 @@ export async function getOrgMembership(orgId: string) {
 export async function requireOrgRole(orgId: string, roles: string[]) {
   const { user, membership } = await getOrgMembership(orgId);
   if (!user.isSystemAdmin && (!membership || !roles.includes(membership.role))) {
-    redirect("/login");
+    return await loginRedirect();
   }
   return { user, membership };
 }

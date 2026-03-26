@@ -39,7 +39,10 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  return NextResponse.next();
+  // Pass current pathname to server components via header
+  const response = NextResponse.next();
+  response.headers.set("x-pathname", pathname);
+  return response;
 }
 
 export const config = {
