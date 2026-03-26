@@ -77,6 +77,15 @@ export function QRCodeGrid({
                 </p>
                 <p className="text-xs text-slate-300 mt-1">{orgName}</p>
               </div>
+
+              <div className="mt-2 pt-2 border-t border-slate-100 print:hidden">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1">
+                  Kiosk URL (for tablet)
+                </p>
+                <p className="text-[11px] text-slate-500 bg-slate-50 rounded px-2 py-1 font-mono break-all select-all">
+                  {baseUrl}/kiosk/{orgSlug}/{room.slug}
+                </p>
+              </div>
             </div>
           );
         })}

@@ -137,6 +137,11 @@ export async function GET(request: NextRequest) {
           }
         : null,
       todayEventCount: roomEvents.length,
+      todayEvents: roomEvents.map((e) => ({
+        title: e.title,
+        startsAt: e.startDateTime!.toISOString(),
+        endsAt: e.endDateTime!.toISOString(),
+      })),
     };
   });
 

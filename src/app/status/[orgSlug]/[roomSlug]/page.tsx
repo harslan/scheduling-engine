@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -9,10 +9,8 @@ import {
   ArrowRight,
   Users,
   CalendarPlus,
-  Loader2,
-  Check,
-  X,
 } from "lucide-react";
+import { QuickBookForm } from "@/components/quick-book-form";
 
 const REFRESH_INTERVAL_MS = 30_000;
 
@@ -49,95 +47,31 @@ export default function RoomDisplayPage() {
   const [data, setData] = useState<StatusData | null>(null);
   const [now, setNow] = useState(new Date());
   const [showBooking, setShowBooking] = useState(false);
-  const [bookingState, setBookingState] = useState<
-    "form" | "loading" | "success" | "error"
-  >("form");
-  const [bookingResult, setBookingResult] = useState<{
-    title?: string;
-    startTime?: string;
-    endTime?: string;
-    status?: string;
-    error?: string;
-  }>({});
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `/api/rooms/status?org=${params.orgSlug}&room=${params.roomSlug}`
+      );
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch {
+      // Silently retry on next interval
+    }
+  }, [params.orgSlug, params.roomSlug]);
 
   useEffect(() => {
-    let fetchTimer: ReturnType<typeof setInterval>;
-    let clockTimer: ReturnType<typeof setInterval>;
-
-    async function fetchStatus() {
-      try {
-        const res = await fetch(
-          `/api/rooms/status?org=${params.orgSlug}&room=${params.roomSlug}`
-        );
-        if (res.ok) {
-          const json = await res.json();
-          setData(json);
-        }
-      } catch {
-        // Silently retry on next interval
-      }
-    }
-
     fetchStatus();
-    fetchTimer = setInterval(fetchStatus, REFRESH_INTERVAL_MS);
-    clockTimer = setInterval(() => setNow(new Date()), 1000);
+    const fetchTimer = setInterval(fetchStatus, REFRESH_INTERVAL_MS);
+    const clockTimer = setInterval(() => setNow(new Date()), 1000);
 
     return () => {
       clearInterval(fetchTimer);
       clearInterval(clockTimer);
     };
-  }, [params.orgSlug, params.roomSlug]);
-
-  async function handleQuickBook(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setBookingState("loading");
-
-    const formData = new FormData(e.currentTarget);
-    const body = {
-      orgSlug: params.orgSlug,
-      roomSlug: params.roomSlug,
-      title: formData.get("title") as string,
-      contactName: formData.get("contactName") as string,
-      contactEmail: formData.get("contactEmail") as string,
-      durationMinutes: parseInt(formData.get("duration") as string),
-    };
-
-    try {
-      const res = await fetch("/api/rooms/quick-book", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const result = await res.json();
-
-      if (res.ok) {
-        setBookingState("success");
-        setBookingResult({
-          title: result.event.title,
-          startTime: new Date(result.event.startDateTime).toLocaleTimeString(
-            [],
-            { hour: "numeric", minute: "2-digit" }
-          ),
-          endTime: new Date(result.event.endDateTime).toLocaleTimeString([], {
-            hour: "numeric",
-            minute: "2-digit",
-          }),
-          status: result.event.requiresApproval ? "Pending Approval" : "Confirmed",
-        });
-        // Refresh status after a moment
-        setTimeout(() => {
-          window.location.reload();
-        }, 5000);
-      } else {
-        setBookingState("error");
-        setBookingResult({ error: result.error });
-      }
-    } catch {
-      setBookingState("error");
-      setBookingResult({ error: "Network error. Please try again." });
-    }
-  }
+  }, [fetchStatus]);
 
   if (!data || data.rooms.length === 0) {
     return (
@@ -244,126 +178,13 @@ export default function RoomDisplayPage() {
 
         {/* Quick booking form */}
         {showBooking && (
-          <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-5 max-w-md w-full mb-8">
-            {bookingState === "form" && (
-              <form onSubmit={handleQuickBook} className="space-y-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-sm font-semibold text-white/70 uppercase tracking-wider">
-                    Quick Book
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowBooking(false)}
-                    className="text-white/30 hover:text-white/60 transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <input
-                  name="title"
-                  required
-                  placeholder="What's this for? (e.g., Team Meeting)"
-                  className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                />
-
-                <div className="grid grid-cols-2 gap-3">
-                  <input
-                    name="contactName"
-                    required
-                    placeholder="Your name"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                  />
-                  <input
-                    name="contactEmail"
-                    type="email"
-                    required
-                    placeholder="Your email"
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder:text-white/30 text-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-white/40 mb-1.5">
-                    Duration
-                  </label>
-                  <div className="grid grid-cols-4 gap-2">
-                    {[
-                      { value: 30, label: "30m" },
-                      { value: 60, label: "1hr" },
-                      { value: 90, label: "1.5hr" },
-                      { value: 120, label: "2hr" },
-                    ].map((opt) => (
-                      <label
-                        key={opt.value}
-                        className="flex items-center justify-center px-3 py-2 bg-white/5 border border-white/20 rounded-lg text-sm cursor-pointer hover:bg-white/10 has-[:checked]:bg-emerald-500/30 has-[:checked]:border-emerald-500 transition-colors"
-                      >
-                        <input
-                          type="radio"
-                          name="duration"
-                          value={opt.value}
-                          defaultChecked={opt.value === 60}
-                          className="sr-only"
-                        />
-                        {opt.label}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-emerald-500 hover:bg-emerald-400 text-white py-3 rounded-xl font-semibold text-sm transition-colors"
-                >
-                  Confirm Booking
-                </button>
-              </form>
-            )}
-
-            {bookingState === "loading" && (
-              <div className="text-center py-8">
-                <Loader2 className="w-8 h-8 text-emerald-400 animate-spin mx-auto mb-3" />
-                <p className="text-white/60 text-sm">Booking your room...</p>
-              </div>
-            )}
-
-            {bookingState === "success" && (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-6 h-6 text-emerald-400" />
-                </div>
-                <p className="text-lg font-bold text-white mb-1">Booked!</p>
-                <p className="text-white/60 text-sm mb-1">
-                  {bookingResult.title}
-                </p>
-                <p className="text-white/40 text-sm">
-                  {bookingResult.startTime} – {bookingResult.endTime}
-                </p>
-                <p className="text-emerald-400 text-xs mt-2 font-medium">
-                  {bookingResult.status}
-                </p>
-              </div>
-            )}
-
-            {bookingState === "error" && (
-              <div className="text-center py-6">
-                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <X className="w-6 h-6 text-red-400" />
-                </div>
-                <p className="text-lg font-bold text-white mb-1">
-                  Booking Failed
-                </p>
-                <p className="text-red-400 text-sm mb-3">
-                  {bookingResult.error}
-                </p>
-                <button
-                  onClick={() => setBookingState("form")}
-                  className="text-white/50 hover:text-white text-sm underline"
-                >
-                  Try again
-                </button>
-              </div>
-            )}
+          <div className="mb-8">
+            <QuickBookForm
+              orgSlug={params.orgSlug}
+              roomSlug={params.roomSlug}
+              onClose={() => setShowBooking(false)}
+              onBooked={fetchStatus}
+            />
           </div>
         )}
 
@@ -427,6 +248,13 @@ export default function RoomDisplayPage() {
       {/* Footer */}
       <footer className="px-8 py-3 text-center text-xs text-white/20 shrink-0">
         {data.org.name} · Refreshes every {REFRESH_INTERVAL_MS / 1000}s
+        {" · "}
+        <Link
+          href={`/kiosk/${params.orgSlug}/${params.roomSlug}`}
+          className="text-white/30 hover:text-white/50 underline transition-colors"
+        >
+          Kiosk mode
+        </Link>
       </footer>
     </div>
   );
