@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { unstable_cache } from "next/cache";
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/session";
 import {
   Calendar,
   ArrowRight,
@@ -28,6 +30,19 @@ const getLandingStats = unstable_cache(
 );
 
 export default async function Home() {
+  // If user is signed in, redirect to their org
+  const session = await getSession();
+  if (session?.user) {
+    const userId = (session.user as { id: string }).id;
+    const membership = await prisma.organizationMember.findFirst({
+      where: { userId },
+      select: { organization: { select: { slug: true } } },
+    });
+    if (membership) {
+      redirect(`/${membership.organization.slug}`);
+    }
+  }
+
   const { orgs } = await getLandingStats();
 
   return (
