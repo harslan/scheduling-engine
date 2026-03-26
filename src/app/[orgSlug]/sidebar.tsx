@@ -26,6 +26,7 @@ import {
   Copy,
   Check,
   ArrowLeftRight,
+  Monitor,
 } from "lucide-react";
 
 export function Sidebar({
@@ -127,6 +128,14 @@ export function Sidebar({
           >
             Help
           </NavLink>
+          <Link
+            href={`/status/${orgSlug}`}
+            target="_blank"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-primary/5 hover:text-primary transition-all"
+          >
+            <Monitor className="w-4 h-4" />
+            {org.roomTerm} Status Board
+          </Link>
         </div>
 
         {isManager && (
