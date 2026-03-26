@@ -54,6 +54,15 @@ test.describe("Navigation & Pages", () => {
     await expect(page).toHaveURL(/\/incae$/);
   });
 
+  test("status board page loads", async ({ page }) => {
+    await page.goto("/status/incae");
+
+    // Dark themed status board with org name and room status indicators
+    await expect(page.locator("h1")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Status Board")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Back to calendar" })).toBeVisible();
+  });
+
   test("forgot password page loads", async ({ page }) => {
     await page.goto("/forgot-password");
 
