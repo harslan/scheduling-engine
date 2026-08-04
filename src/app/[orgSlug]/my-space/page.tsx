@@ -183,10 +183,19 @@ async function incomingSwaps(organizationId: string, semester: string, meId: str
     where: { organizationId, semester, status: "pending" },
     orderBy: { createdAt: "desc" },
   });
+  const approvals = swaps.length
+    ? await prisma.swapApproval.findMany({
+        where: { swapId: { in: swaps.map((s) => s.id) } },
+      })
+    : [];
+  const approvedBy = new Map<string, Set<string>>();
+  for (const a of approvals) {
+    (approvedBy.get(a.swapId) ?? approvedBy.set(a.swapId, new Set()).get(a.swapId)!).add(a.userId);
+  }
   const mine = swaps.filter(
     (s) =>
       s.neededUserIds.split(",").includes(meId) &&
-      !s.approvedUserIds.split(",").includes(meId) &&
+      !(approvedBy.get(s.id)?.has(meId) ?? false) &&
       s.proposerId !== meId,
   );
   const ids = [...new Set(mine.flatMap((s) => [s.proposerId, s.targetId]))];
@@ -197,7 +206,7 @@ async function incomingSwaps(organizationId: string, semester: string, meId: str
   return mine.map((s) => ({
     id: s.id,
     label: `${nameOf.get(s.proposerId)} ⇄ ${nameOf.get(s.targetId)}`,
-    progress: `${s.approvedUserIds.split(",").filter(Boolean).length}/${s.neededUserIds.split(",").filter(Boolean).length} consented`,
+    progress: `${approvedBy.get(s.id)?.size ?? 0}/${s.neededUserIds.split(",").filter(Boolean).length} consented`,
   }));
 }
 

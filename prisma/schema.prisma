@@ -703,3 +703,15 @@ model CharterChange {
   @@index([organizationId, createdAt])
   @@map("charter_changes")
 }
+
+// Race-safe swap consent: an approval is a ROW (idempotent via unique), and
+// the pending->accepted transition is a single-winner conditional update.
+model SwapApproval {
+  id        String   @id @default(cuid())
+  swapId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([swapId, userId])
+  @@map("swap_approvals")
+}

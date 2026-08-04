@@ -125,15 +125,6 @@ export async function materializeHolds(
     data: { organizationId, name: "Office hold — semester", colorIndex: 0 },
   });
 
-  // replace prior generated holds from today forward
-  await prisma.event.deleteMany({
-    where: {
-      organizationId,
-      eventTypeId: holdType.id,
-      startDateTime: { gte: new Date() },
-    },
-  });
-
   const rooms = await prisma.room.findMany({ where: { organizationId } });
   const roomBySlug = new Map(rooms.map((r) => [r.slug, r]));
   const users = await prisma.user.findMany({
@@ -155,6 +146,12 @@ export async function materializeHolds(
     pool: "pool seat",
   };
 
+  // build the whole calendar first, then swap it in atomically: a crash can
+  // never leave a half-written calendar, and of two concurrent rewrites the
+  // later transaction wins wholly rather than interleaving.
+  const events: NonNullable<
+    Parameters<typeof prisma.event.createMany>[0]
+  >["data"] & unknown[] = [];
   for (const a of run.assignments) {
     if (!a.placed || a.tier === "bookable") continue;
     const room = roomBySlug.get(a.roomSlug);
@@ -170,22 +167,30 @@ export async function materializeHolds(
         if (start < new Date()) continue;
         const end = new Date(start);
         end.setHours(17, 0, 0, 0);
-        await prisma.event.create({
-          data: {
-            organizationId,
-            roomId: room.id,
-            eventTypeId: holdType.id,
-            submitterId: a.userId,
-            title: `${user.name} — ${TIER_LABEL[a.tier] ?? a.tier}`,
-            contactName: user.name,
-            contactEmail: user.email,
-            startDateTime: start,
-            endDateTime: end,
-            status: "APPROVED",
-            approved: true,
-          },
+        events.push({
+          organizationId,
+          roomId: room.id,
+          eventTypeId: holdType.id,
+          submitterId: a.userId,
+          title: `${user.name} — ${TIER_LABEL[a.tier] ?? a.tier}`,
+          contactName: user.name,
+          contactEmail: user.email,
+          startDateTime: start,
+          endDateTime: end,
+          status: "APPROVED",
+          approved: true,
         });
       }
     }
   }
+  await prisma.$transaction([
+    prisma.event.deleteMany({
+      where: {
+        organizationId,
+        eventTypeId: holdType.id,
+        startDateTime: { gte: new Date() },
+      },
+    }),
+    prisma.event.createMany({ data: events }),
+  ]);
 }

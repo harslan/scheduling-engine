@@ -64,24 +64,30 @@ export async function actOnSwap(
     return { error: "This swap doesn't affect your space." };
 
   if (decision === "decline") {
-    await prisma.spaceSwap.update({
-      where: { id: swapId },
+    // conditional: only a still-pending swap can be declined
+    await prisma.spaceSwap.updateMany({
+      where: { id: swapId, status: "pending" },
       data: { status: "declined" },
     });
     return { success: true, status: "declined" };
   }
 
-  const approved = new Set(swap.approvedUserIds.split(",").filter(Boolean));
-  approved.add(userId);
-  const all = needed.every((n) => approved.has(n));
-  await prisma.spaceSwap.update({
-    where: { id: swapId },
-    data: {
-      approvedUserIds: [...approved].join(","),
-      status: all ? "accepted" : "pending",
-    },
+  // Race-safe consent: an approval is a row (idempotent — the unique
+  // constraint absorbs double-clicks and concurrent submits)...
+  await prisma.swapApproval
+    .create({ data: { swapId, userId } })
+    .catch(() => undefined); // already approved: fine
+
+  const approvals = await prisma.swapApproval.count({ where: { swapId } });
+  if (approvals < needed.length) return { success: true, status: "pending" };
+
+  // ...and the pending->accepted transition is a SINGLE-WINNER conditional
+  // update: of two concurrent final consents, exactly one applies the swap.
+  const won = await prisma.spaceSwap.updateMany({
+    where: { id: swapId, status: "pending" },
+    data: { status: "accepted", approvedUserIds: needed.join(",") },
   });
-  if (!all) return { success: true, status: "pending" };
+  if (won.count === 0) return { success: true, status: "accepted" };
 
   // unanimous — apply to the run and rewrite the calendar
   const run = await prisma.spaceRun.findUniqueOrThrow({
