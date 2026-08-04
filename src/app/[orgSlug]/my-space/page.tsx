@@ -3,6 +3,7 @@ import { getOrgMembership } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { currentSemester } from "@/lib/semester";
 import Link from "next/link";
+import { SwapPanel } from "./swap-panel";
 
 /** Your office, and the reasons — the reveal with its trace (charter 3/4/6). */
 export default async function MySpacePage({
@@ -140,6 +141,16 @@ export default async function MySpacePage({
         </div>
       ) : null}
 
+      {run && mine && mine.placed && mine.roomSlug && (
+        <SwapPanel
+          organizationId={org.id}
+          semester={semester}
+          options={await swapOptions(org.id, run.id, user.id)}
+          incoming={await incomingSwaps(org.id, semester, user.id)}
+          outgoing={await outgoingSwaps(org.id, semester, user.id)}
+        />
+      )}
+
       <p className="text-sm">
         <Link className="text-primary font-medium" href={`/${orgSlug}/declare`}>
           Update my declaration →
@@ -147,4 +158,63 @@ export default async function MySpacePage({
       </p>
     </div>
   );
+}
+
+async function swapOptions(organizationId: string, runId: string, meId: string) {
+  const asgs = await prisma.spaceAssignment.findMany({
+    where: { runId, placed: true, NOT: [{ roomSlug: "" }, { userId: meId }] },
+  });
+  const users = await prisma.user.findMany({
+    where: { id: { in: asgs.map((a) => a.userId) } },
+  });
+  const nameOf = new Map(users.map((u) => [u.id, u.name || u.email]));
+  const rooms = await prisma.room.findMany({ where: { organizationId } });
+  const roomName = new Map(rooms.map((r) => [r.slug, r.name]));
+  return asgs
+    .map((a) => ({
+      userId: a.userId,
+      label: `${nameOf.get(a.userId)} — ${roomName.get(a.roomSlug) ?? a.roomSlug}`,
+    }))
+    .sort((x, y) => x.label.localeCompare(y.label));
+}
+
+async function incomingSwaps(organizationId: string, semester: string, meId: string) {
+  const swaps = await prisma.spaceSwap.findMany({
+    where: { organizationId, semester, status: "pending" },
+    orderBy: { createdAt: "desc" },
+  });
+  const mine = swaps.filter(
+    (s) =>
+      s.neededUserIds.split(",").includes(meId) &&
+      !s.approvedUserIds.split(",").includes(meId) &&
+      s.proposerId !== meId,
+  );
+  const ids = [...new Set(mine.flatMap((s) => [s.proposerId, s.targetId]))];
+  const users = ids.length
+    ? await prisma.user.findMany({ where: { id: { in: ids } } })
+    : [];
+  const nameOf = new Map(users.map((u) => [u.id, u.name || u.email]));
+  return mine.map((s) => ({
+    id: s.id,
+    label: `${nameOf.get(s.proposerId)} ⇄ ${nameOf.get(s.targetId)}`,
+    progress: `${s.approvedUserIds.split(",").filter(Boolean).length}/${s.neededUserIds.split(",").filter(Boolean).length} consented`,
+  }));
+}
+
+async function outgoingSwaps(organizationId: string, semester: string, meId: string) {
+  const swaps = await prisma.spaceSwap.findMany({
+    where: { organizationId, semester, proposerId: meId },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  });
+  const ids = [...new Set(swaps.map((s) => s.targetId))];
+  const users = ids.length
+    ? await prisma.user.findMany({ where: { id: { in: ids } } })
+    : [];
+  const nameOf = new Map(users.map((u) => [u.id, u.name || u.email]));
+  return swaps.map((s) => ({
+    id: s.id,
+    label: `with ${nameOf.get(s.targetId)}`,
+    status: s.status,
+  }));
 }

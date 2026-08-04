@@ -668,3 +668,38 @@ model SpaceAssignment {
   @@unique([runId, userId])
   @@map("space_assignments")
 }
+
+// --- SBS Faculty Space: swaps (5.3) and the in-product boundary log --------
+
+model SpaceSwap {
+  id              String   @id @default(cuid())
+  organizationId  String
+  semester        String
+  runId           String
+  proposerId      String
+  targetId        String
+  neededUserIds   String   @default("") // everyone sharing either office, minus proposer
+  approvedUserIds String   @default("")
+  status          String   @default("pending") // pending | accepted | declined
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, semester, status])
+  @@map("space_swaps")
+}
+
+// Charter 10.2 in the product: a dial changes ONLY with a dated, reasoned
+// entry. A quiet edit is not an amendment — the service refuses it.
+model CharterChange {
+  id             String   @id @default(cuid())
+  organizationId String
+  byUserId       String
+  field          String
+  fromValue      String
+  toValue        String
+  reason         String
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@map("charter_changes")
+}

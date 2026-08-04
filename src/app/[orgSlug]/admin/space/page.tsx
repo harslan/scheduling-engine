@@ -60,7 +60,15 @@ export default async function AdminSpacePage({
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
-        <h2 className="text-sm font-bold text-slate-900 mb-3">The dials</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-slate-900">The dials</h2>
+          <a
+            href={`/${orgSlug}/admin/space/charter`}
+            className="text-sm text-primary font-medium"
+          >
+            Edit charter (reason required) →
+          </a>
+        </div>
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-slate-600">
           <div>Dedicated threshold: {dial(charter.thresholdDays)} days</div>
           <div>Reserved offices: {dial(charter.reservedOffices)}</div>

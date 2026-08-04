@@ -1,0 +1,111 @@
+import { prisma } from "./prisma";
+import { affectedUsers, applySwap, type Asg } from "./swap";
+import { materializeHolds } from "./space-run";
+
+/** Swap orchestration (charter 5.3). Auth lives in the actions; this layer is
+ * scriptable and testable. A swap applies ONLY when everyone sharing either
+ * office has consented; any decline kills it. */
+
+async function latestRun(organizationId: string, semester: string) {
+  return prisma.spaceRun.findFirst({
+    where: { organizationId, semester },
+    orderBy: { createdAt: "desc" },
+    include: { assignments: true },
+  });
+}
+
+const toAsg = (a: {
+  userId: string;
+  roomSlug: string;
+  tier: string;
+  withUserIds: string;
+  placed: boolean;
+}): Asg => ({
+  userId: a.userId,
+  roomSlug: a.roomSlug,
+  tier: a.tier,
+  withUserIds: a.withUserIds,
+  placed: a.placed,
+});
+
+export async function proposeSwap(
+  organizationId: string,
+  semester: string,
+  proposerId: string,
+  targetId: string,
+) {
+  if (proposerId === targetId) return { error: "Pick a colleague, not yourself." };
+  const run = await latestRun(organizationId, semester);
+  if (!run) return { error: "No allocation run exists yet." };
+  const affected = affectedUsers(run.assignments.map(toAsg), proposerId, targetId);
+  if ("error" in affected) return affected;
+  const swap = await prisma.spaceSwap.create({
+    data: {
+      organizationId,
+      semester,
+      runId: run.id,
+      proposerId,
+      targetId,
+      neededUserIds: affected.join(","),
+    },
+  });
+  return { success: true, swapId: swap.id, needed: affected };
+}
+
+export async function actOnSwap(
+  swapId: string,
+  userId: string,
+  decision: "consent" | "decline",
+) {
+  const swap = await prisma.spaceSwap.findUnique({ where: { id: swapId } });
+  if (!swap || swap.status !== "pending") return { error: "Swap is not pending." };
+  const needed = swap.neededUserIds.split(",").filter(Boolean);
+  if (!needed.includes(userId))
+    return { error: "This swap doesn't affect your space." };
+
+  if (decision === "decline") {
+    await prisma.spaceSwap.update({
+      where: { id: swapId },
+      data: { status: "declined" },
+    });
+    return { success: true, status: "declined" };
+  }
+
+  const approved = new Set(swap.approvedUserIds.split(",").filter(Boolean));
+  approved.add(userId);
+  const all = needed.every((n) => approved.has(n));
+  await prisma.spaceSwap.update({
+    where: { id: swapId },
+    data: {
+      approvedUserIds: [...approved].join(","),
+      status: all ? "accepted" : "pending",
+    },
+  });
+  if (!all) return { success: true, status: "pending" };
+
+  // unanimous — apply to the run and rewrite the calendar
+  const run = await prisma.spaceRun.findUniqueOrThrow({
+    where: { id: swap.runId },
+    include: { assignments: true },
+  });
+  const changed = applySwap(
+    run.assignments.map(toAsg),
+    swap.proposerId,
+    swap.targetId,
+  );
+  await prisma.$transaction(
+    changed.map((c) =>
+      prisma.spaceAssignment.update({
+        where: { runId_userId: { runId: run.id, userId: c.userId } },
+        data: {
+          roomSlug: c.roomSlug,
+          tier: c.tier,
+          withUserIds: c.withUserIds,
+          placed: c.placed,
+        },
+      }),
+    ),
+  );
+  await materializeHolds(swap.organizationId, run.id, swap.semester);
+  return { success: true, status: "accepted" };
+}

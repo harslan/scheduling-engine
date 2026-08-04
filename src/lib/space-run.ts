@@ -109,7 +109,7 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
 }
 
 /** Write placed assignments onto the calendar as 4 weeks of office holds. */
-async function materializeHolds(
+export async function materializeHolds(
   organizationId: string,
   runId: string,
   semester: string,
