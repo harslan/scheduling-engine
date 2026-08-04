@@ -13,20 +13,23 @@ rewrites. The engine refuses to run a rule that drifted from the ratified text.
 
 ## Phases
 
-0. **Brain into body** (now): `src/lib/allocation.ts` — deferred acceptance,
-   blocking-pair verification, three-tier allocation — mirroring the Python
-   reference (`sbs-space/src/allocate.py`) with the same tests. The Python
-   engine stays the reference implementation; parity is checked, not assumed.
-1. **The semester loop**: declaration UI (schedule pre-filled, partner pick,
-   the what-if that visibly changes nothing — clause 2.2), allocation run as an
-   admin action producing office-holds as recurring events, the reveal page
-   with the clause-numbered reason trace, swap-by-unanimous-consent on the
-   approval queue.
-2. **Real inputs**: Suffolk SSO; the reconciled room schedule (possibly via the
-   existing Infor Reserve integration); the release-records connection —
-   which the allocation gate requires before any real run.
-3. **Pilot**: fresh isolated deployment (never the INCAE production instance),
-   one or two departments, Fall.
+0. **Brain into body** — ✅ done. `src/lib/allocation.ts` mirrors the Python
+   reference; parity verified on real data (61 vs 60, tier-for-tier).
+1. **The semester loop** — ✅ done. Declaration (2.2 as interface), the run
+   (SIMULATION until ratified), the reveal with clause-numbered reasons,
+   swap-by-unanimous-consent (race-safe: approval rows + single-winner
+   transition), the charter admin with required reasons and a change log,
+   the Dean's insights page, and the full-dress rehearsal: the real Spring
+   feed imported under invented names (`scripts/import-registrar.ts`).
+2. **In front of humans** — ← now. `PILOT-BRIEF.md` to the Dean; the
+   fifteen-minute walkthrough; the comment window with the packet
+   (`sbs-space/charter/comment-packet/`). The next feature commits should be
+   *caused by feedback*, not by us.
+3. **Real inputs**: Suffolk SSO; the reconciled room schedule (possibly via
+   the existing Infor Reserve integration); release records — the run refuses
+   official status without them.
+4. **Pilot**: fresh isolated deployment (never the INCAE production instance),
+   shadow mode — pilot the system, not the move — one or two departments, Fall.
 
 ## Hard rules carried over from the charter work
 
