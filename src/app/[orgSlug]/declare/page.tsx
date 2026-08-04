@@ -1,25 +1,15 @@
 import { prisma } from "@/lib/prisma";
 import { getOrgMembership } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { currentSemester } from "@/lib/semester";
 import { DeclareForm } from "./form";
 
 /**
  * The semester declaration (Phase 1 of the SBS product — see PRODUCT.md).
  * Charter 2.2 is the design: what you declare shapes scheduling and pairing,
  * never entitlement, so the page says so and the tier hint visibly proves it.
+ * The threshold comes from the org's SpaceCharter (2.4) — never a constant.
  */
-
-// Charter 2.4 (pilot value). Sourced from the ratified charter config once the
-// charter service lands; a constant here would fail the drift check then.
-const THRESHOLD_DAYS = 4;
-
-function currentSemester(): string {
-  const now = new Date();
-  const m = now.getMonth(); // 0-based
-  if (m >= 7) return `Fall ${now.getFullYear()}`;
-  if (m <= 4) return `Spring ${now.getFullYear()}`;
-  return `Summer ${now.getFullYear()}`;
-}
 
 export default async function DeclarePage({
   params,
@@ -34,6 +24,10 @@ export default async function DeclarePage({
   if (!membership) redirect(`/${orgSlug}`);
 
   const semester = currentSemester();
+  const charter = await prisma.spaceCharter.findUnique({
+    where: { organizationId: org.id },
+  });
+  const thresholdDays = charter?.thresholdDays ?? 4;
 
   const [mine, colleagues] = await Promise.all([
     prisma.declaration.findUnique({
@@ -77,7 +71,7 @@ export default async function DeclarePage({
         organizationId={org.id}
         orgSlug={orgSlug}
         semester={semester}
-        thresholdDays={THRESHOLD_DAYS}
+        thresholdDays={thresholdDays}
         initialDays={mine?.days ? mine.days.split(",") : []}
         initialPartner={mine?.partnerPrefUserId ?? ""}
         initialWantsDedicated={mine?.wantsDedicated ?? false}

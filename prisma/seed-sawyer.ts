@@ -80,6 +80,10 @@ async function main() {
   const aldana = await mk("raldana@sawyer.demo", "R. Aldana");     // pair, Tue/Thu
   const novak = await mk("qnovak@sawyer.demo", "Q. Novak");        // pool
   const ilori = await mk("tilori@sawyer.demo", "T. Ilori");        // pool
+  const achebe = await mk("pachebe@sawyer.demo", "P. Achebe");     // dedicated
+  const delgado = await mk("cdelgado@sawyer.demo", "C. Delgado");  // pair, Tue/Thu
+  const lindqvist = await mk("blindqvist@sawyer.demo", "B. Lindqvist"); // pair, Mon/Wed
+  const ferreira = await mk("sferreira@sawyer.demo", "S. Ferreira");    // pool (single)
 
   // --- offices + private rooms --------------------------------------------
   const officeNums = [5201, 5202, 5203, 5204, 5205, 5206, 5207, 5208, 5209, 5210];
@@ -221,7 +225,54 @@ async function main() {
     await prisma.emailTemplate.upsert({ where: { slug: t.slug }, update: {}, create: t });
   }
 
-  console.log(`Sawyer demo seeded: 13 rooms, 7 users, ${count} events.`);
+  // --- measured teaching (the entitlement source — charter 2.1/2.2) --------
+  // Semester matches lib/semester.ts for the current date.
+  const now = new Date();
+  const semester =
+    now.getMonth() >= 7 ? `Fall ${now.getFullYear()}`
+    : now.getMonth() <= 4 ? `Spring ${now.getFullYear()}`
+    : `Summer ${now.getFullYear()}`;
+  const teaching: [typeof osei, string, number][] = [
+    [osei, "M,T,W,TH", 4],
+    [achebe, "M,T,W,TH", 4],
+    [vance, "M,W", 2],
+    [lindqvist, "M,W", 3],
+    [aldana, "T,TH", 2],
+    [delgado, "T,TH", 3],
+    [novak, "M", 1],
+    [ilori, "T", 1],
+    [ferreira, "T", 1],
+  ];
+  for (const [u, days, nSections] of teaching) {
+    await prisma.teachingRecord.upsert({
+      where: {
+        organizationId_userId_semester: {
+          organizationId: org.id, userId: u.id, semester,
+        },
+      },
+      update: { days, nSections },
+      create: {
+        organizationId: org.id, userId: u.id, semester, days, nSections,
+        source: "demo-seed (registrar feed in production)",
+      },
+    });
+  }
+
+  // --- the org's charter dials (charter 2.4/6.1/6.2/7.2; 10.4 draft) --------
+  await prisma.spaceCharter.upsert({
+    where: { organizationId: org.id },
+    update: { privateRoomSlugs: "5211,5212,5213" },
+    create: {
+      organizationId: org.id,
+      thresholdDays: 4,
+      reservedOffices: 0,
+      minSf: 80,
+      privateRoomSlugs: "5211,5212,5213",
+      // ratifiedBy stays null: every run is a SIMULATION until a real vote
+    },
+  });
+
+  console.log(`Sawyer demo seeded: 13 rooms, 11 users, ${count} events, ${teaching.length} teaching records, charter (draft).`);
   console.log("  Org:     /sawyer");
   console.log("  Dean:    dean@sawyer.demo / sawyer2026   (admin view)");
   console.log("  Faculty: mverhoeven@sawyer.demo / sawyer2026 (the Mon/Wed half of a pair)");

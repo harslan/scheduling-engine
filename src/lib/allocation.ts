@@ -202,3 +202,67 @@ export function allocate(
     stable,
   };
 }
+
+/**
+ * Charter 4.1: colleagues who name EACH OTHER are paired first, before any
+ * optimization — regardless of pattern, provided their days don't collide
+ * (3.2). Everyone else flows through allocate() unchanged. Dedicated (2.4)
+ * still outranks pairing, per the 3.1 tier order.
+ */
+export function allocateWithPreferences(
+  people: Person[],
+  offices: number,
+  dials: Dials,
+  partnerPref: Map<string, string>, // userId -> preferred partner userId
+): Allocation & { namedPairs: [string, string][] } {
+  const byId = new Map(people.map((p) => [p.id, p]));
+  const eligible = (id: string) =>
+    byId.has(id) &&
+    byId.get(id)!.days.length < dials.thresholdDays && // dedicated outranks
+    !(dials.adjunctsInScope === false && byId.get(id)!.nSections === 1);
+
+  const namedPairs: [string, string][] = [];
+  const taken = new Set<string>();
+  for (const [a, b] of partnerPref) {
+    if (taken.has(a) || taken.has(b) || a >= b) continue; // visit each pair once
+    if (partnerPref.get(b) !== a) continue; // must be MUTUAL
+    if (!eligible(a) || !eligible(b)) continue;
+    const daysA = new Set(byId.get(a)!.days);
+    const collide = byId.get(b)!.days.some((d) => daysA.has(d));
+    if (collide) continue; // 3.2 — days never collide; falls back to the engine
+    namedPairs.push([a, b]);
+    taken.add(a);
+    taken.add(b);
+  }
+
+  const rest = people.filter((p) => !taken.has(p.id));
+  const base = allocate(rest, offices, dials);
+
+  // renumber with named pairs first among pair-tier offices, after dedicated
+  const groups: { tier: Assignment["tier"]; members: string[] }[] = [
+    ...base.dedicated.map((i) => ({ tier: "ded" as const, members: [i] })),
+    ...namedPairs.map(([x, y]) => ({ tier: "pair" as const, members: [x, y] })),
+    ...base.pairs.map(([x, y]) => ({ tier: "pair" as const, members: [x, y] })),
+    ...base.poolOffices.map((m) => ({ tier: "pool" as const, members: m })),
+  ];
+  const usable = base.usable;
+  const assign = new Map<string, Assignment>();
+  const unplaced: string[] = [];
+  groups.forEach((g, idx) => {
+    const office = `O${String(idx + 1).padStart(3, "0")}`;
+    const placed = idx + 1 <= usable;
+    for (const m of g.members) {
+      assign.set(m, { office, tier: g.tier, with: g.members.filter((x) => x !== m), placed });
+      if (!placed) unplaced.push(m);
+    }
+  });
+
+  return {
+    ...base,
+    pairs: [...namedPairs, ...base.pairs],
+    namedPairs,
+    assign,
+    unplaced: unplaced.sort(),
+    needed: groups.length,
+  };
+}

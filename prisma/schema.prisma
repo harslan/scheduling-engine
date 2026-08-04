@@ -601,3 +601,70 @@ model Declaration {
   @@index([organizationId, semester])
   @@map("declarations")
 }
+
+// --- SBS Faculty Space: measured claims, the charter, and the run ----------
+// All additive. Charter 2.2 lives in the SPLIT between these models:
+// TeachingRecord (measured, sets entitlement) vs Declaration (preferences only).
+
+model TeachingRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  semester       String
+  days           String   @default("") // measured weekday tokens: M,T,W,TH,F
+  nSections      Int      @default(0)
+  source         String   @default("import") // registrar feed later; never self-report
+  createdAt      DateTime @default(now())
+
+  @@unique([organizationId, userId, semester])
+  @@map("teaching_records")
+}
+
+model SpaceCharter {
+  id                 String    @id @default(cuid())
+  organizationId     String    @unique
+  thresholdDays      Int       @default(4)    // charter 2.4
+  reservedOffices    Int       @default(0)    // charter 6.2
+  slackFraction      Float?                   // UNDECIDED until set
+  adjunctsInScope    Boolean?                 // UNDECIDED until set
+  minSf              Int       @default(80)   // charter 6.1
+  privateRoomSlugs   String    @default("")   // charter 7.2 — comma list, never allocated
+  ratifiedBy         String?                  // charter 10.4 — null = DRAFT
+  ratifiedOn         DateTime?
+  ratificationRecord String?
+  updatedAt          DateTime  @updatedAt
+  createdAt          DateTime  @default(now())
+
+  @@map("space_charters")
+}
+
+model SpaceRun {
+  id             String   @id @default(cuid())
+  organizationId String
+  semester       String
+  status         String   // "SIMULATION" until the charter is ratified (10.4)
+  needed         Int
+  usable         Int
+  stable         Boolean
+  dialsSnapshot  String   @default("{}") // the dials this run executed, verbatim
+  notTeaching    Int      @default(0)    // roster members with no measured record
+  createdAt      DateTime @default(now())
+  assignments    SpaceAssignment[]
+
+  @@index([organizationId, semester, createdAt])
+  @@map("space_runs")
+}
+
+model SpaceAssignment {
+  id          String   @id @default(cuid())
+  runId       String
+  userId      String
+  roomSlug    String   // office label; joins Rooms by slug when materialized
+  tier        String   // ded | pair | pool | bookable
+  withUserIds String   @default("") // comma list — officemates
+  placed      Boolean  @default(true)
+  run         SpaceRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, userId])
+  @@map("space_assignments")
+}

@@ -104,3 +104,40 @@ describe("three-tier allocation (mirrors the Python reference)", () => {
     expect(a.pairs.length).toBe(0);
   });
 });
+
+import { allocateWithPreferences } from "@/lib/allocation";
+
+describe("named pairs first (charter 4.1)", () => {
+  const prefs = (o: Record<string, string>) => new Map(Object.entries(o));
+
+  it("mutual naming pairs people the engine never would (M-only + T-only)", () => {
+    const a = allocateWithPreferences(FIXTURE, 10, { thresholdDays: 4 },
+      prefs({ novak: "ilori", ilori: "novak" }));
+    expect(a.namedPairs).toEqual([["ilori", "novak"]]);
+    const n = a.assign.get("novak")!;
+    expect(n.tier).toBe("pair");
+    expect(n.with).toEqual(["ilori"]);
+  });
+
+  it("one-sided naming does nothing — pairs require BOTH", () => {
+    const a = allocateWithPreferences(FIXTURE, 10, { thresholdDays: 4 },
+      prefs({ novak: "ilori" }));
+    expect(a.namedPairs).toEqual([]);
+  });
+
+  it("colliding days fall back to the engine (clause 3.2)", () => {
+    // verhoeven (M,W) and lindqvist (M,W) name each other — days collide
+    const a = allocateWithPreferences(FIXTURE, 10, { thresholdDays: 4 },
+      prefs({ verhoeven: "lindqvist", lindqvist: "verhoeven" }));
+    expect(a.namedPairs).toEqual([]);
+    expect(a.assign.get("verhoeven")!.tier).toBe("pair"); // engine-paired instead
+  });
+
+  it("dedicated outranks a named pair (tier order 3.1)", () => {
+    // osei is dedicated at threshold 4; naming can't pull them into a pair
+    const a = allocateWithPreferences(FIXTURE, 10, { thresholdDays: 4 },
+      prefs({ osei: "novak", novak: "osei" }));
+    expect(a.namedPairs).toEqual([]);
+    expect(a.assign.get("osei")!.tier).toBe("ded");
+  });
+});

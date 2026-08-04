@@ -125,6 +125,14 @@ export function Sidebar({
           )}
           {isAuthenticated && (
             <NavLink
+              href={`/${orgSlug}/my-space`}
+              icon={<DoorOpen className="w-4 h-4" />}
+            >
+              My space
+            </NavLink>
+          )}
+          {isAuthenticated && (
+            <NavLink
               href={`/${orgSlug}/chat`}
               icon={<Sparkles className="w-4 h-4" />}
             >
@@ -192,6 +200,12 @@ export function Sidebar({
               icon={<Building2 className="w-4 h-4" />}
             >
               {org.roomTerm}s
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/space`}
+              icon={<Layers className="w-4 h-4" />}
+            >
+              Space allocation
             </NavLink>
             <NavLink
               href={`/${orgSlug}/admin/users`}
