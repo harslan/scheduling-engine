@@ -32,10 +32,16 @@ model Organization {
   roomClosingTime         String                      @default("22:00")
   maxEventLengthMinutes   Int                         @default(480)
   schedulingCutoffDays    Int?
+  schedulingCutoffFixedDate DateTime?             @db.Date
   eventSingularTerm       String                      @default("Event")
   eventPluralTerm         String                      @default("Events")
   roomTerm                String                      @default("Room")
   emailReplyToAddress     String                      @default("")
+  reminderEmailHours      Int?
+
+  // Approver settings
+  approverId              String?
+  roomAssignmentApproverId String?
 
   // Reserve Interactive (Infor SCS) integration
   reserveEnabled              Boolean                     @default(false)
@@ -73,6 +79,10 @@ model Organization {
   reserveEvents           ReserveEvent[]
   reserveWebhookEvents    ReserveWebhookEvent[]
   reserveSyncLogs         ReserveSyncLog[]
+  backupApprovers         BackupApprover[]
+  notifiedApprovers       NotifiedApprover[]
+  roomRequests            RoomRequest[]
+  cronStates              CronState[]
 
   @@map("organizations")
 }
@@ -83,6 +93,7 @@ model User {
   name            String               @default("")
   passwordHash    String?
   active          Boolean              @default(true)
+  lastLoginAt     DateTime?
   isSystemAdmin   Boolean              @default(false)
   emailVerified   DateTime?
   image           String?
@@ -91,10 +102,14 @@ model User {
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   accounts        Account[]
-  approvalActions ApprovalAction[]
-  submittedEvents Event[]              @relation("SubmittedBy")
-  memberships     OrganizationMember[]
-  sessions        Session[]
+  approvalActions   ApprovalAction[]
+  submittedEvents   Event[]              @relation("SubmittedBy")
+  memberships       OrganizationMember[]
+  sessions          Session[]
+  backupApprovers   BackupApprover[]     @relation("BackupApproverUser")
+  primaryApprovals  BackupApprover[]     @relation("PrimaryApprover")
+  notifiedApprovals NotifiedApprover[]
+  processedRequests RoomRequest[]
 
   @@map("users")
 }
@@ -128,6 +143,8 @@ model Room {
   updatedAt            DateTime            @updatedAt
   bufferMinutes        Int                 @default(0)
   capacity             Int?
+  parentConversionMinutes Int              @default(0)
+  approverId           String?
   reserveLocationName  String              @default("")
   events               Event[]
   configurations       RoomConfiguration[]
@@ -149,6 +166,8 @@ model RoomConfiguration {
   events               Event[]
   configurationType    RoomConfigurationType? @relation(fields: [configurationTypeId], references: [id])
   room                 Room                   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  reconfigurations1    ReconfigurationTime[]  @relation("ReconfConfig1")
+  reconfigurations2    ReconfigurationTime[]  @relation("ReconfConfig2")
 
   @@map("room_configurations")
 }
@@ -205,6 +224,8 @@ model Event {
   approved                Boolean                @default(false)
   published               Boolean                @default(true)
   deleted                 Boolean                @default(false)
+  overrideBuffer          Boolean                @default(false)
+  emailUpdates            Boolean                @default(true)
   isExternal              Boolean                @default(false)
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
@@ -219,6 +240,7 @@ model Event {
   submitter               User?                  @relation("SubmittedBy", fields: [submitterId], references: [id])
   excludedDates           ExcludedDate[]
   reserveEvents           ReserveEvent[]
+  notifiedApprovers       NotifiedApprover[]
 
   @@index([organizationId, startDateTime])
   @@index([organizationId, roomId])
@@ -238,6 +260,7 @@ model EventInstance {
   event                   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
+  @@index([startDateTime, endDateTime])
   @@map("event_instances")
 }
 
@@ -447,6 +470,87 @@ model ReserveSyncLog {
   @@map("reserve_sync_logs")
 }
 
+model ReconfigurationTime {
+  id                     String            @id @default(cuid())
+  roomConfigurationId1   String
+  roomConfigurationId2   String
+  reconfigurationMinutes Int               @default(0)
+  roomConfiguration1     RoomConfiguration @relation("ReconfConfig1", fields: [roomConfigurationId1], references: [id], onDelete: Cascade)
+  roomConfiguration2     RoomConfiguration @relation("ReconfConfig2", fields: [roomConfigurationId2], references: [id], onDelete: Cascade)
+
+  @@unique([roomConfigurationId1, roomConfigurationId2])
+  @@map("reconfiguration_times")
+}
+
+model CronState {
+  id    String   @id @default(cuid())
+  key   String   @unique
+  value DateTime
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("cron_states")
+}
+
+model BackupApprover {
+  id            String       @id @default(cuid())
+  organizationId String
+  approverId    String
+  backupUserId  String
+  sortOrder     Int          @default(0)
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approver      User         @relation("PrimaryApprover", fields: [approverId], references: [id], onDelete: Cascade)
+  backupUser    User         @relation("BackupApproverUser", fields: [backupUserId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, approverId, backupUserId])
+  @@map("backup_approvers")
+}
+
+model NotifiedApprover {
+  id             String       @id @default(cuid())
+  organizationId String
+  eventId        String
+  userId         String
+  notifiedAt     DateTime     @default(now())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event          Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, eventId, userId])
+  @@map("notified_approvers")
+}
+
+model RoomRequest {
+  id                String            @id @default(cuid())
+  organizationId    String
+  roomId            String?
+  description       String            @default("")
+  contactName       String            @default("")
+  contactEmail      String            @default("")
+  contactPhone      String            @default("")
+  expectedAttendeeCount Int?
+  requestedStartDateTime DateTime?
+  requestedEndDateTime   DateTime?
+  status            RoomRequestStatus @default(PENDING)
+  processedAt       DateTime?
+  processedByUserId String?
+  denialReason      String            @default("")
+  createdEventId    String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  processedBy       User?             @relation(fields: [processedByUserId], references: [id])
+
+  @@index([organizationId, status])
+  @@map("room_requests")
+}
+
+enum RoomRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+}
+
 enum OrgRole {
   ADMIN
   MANAGER
@@ -475,4 +579,25 @@ enum CalendarViewType {
   MONTH
   WEEK
   DAY
+}
+
+// --- SBS Faculty Space: the semester declaration (Phase 1) -----------------
+// Deliberately relation-free scalars so this stays additive to existing models.
+// Charter 2.2: declarations shape scheduling and pairing, NEVER entitlement —
+// entitlement comes from measured presence, which is not stored here.
+model Declaration {
+  id                String   @id @default(cuid())
+  organizationId    String
+  userId            String
+  semester          String   // e.g. "Fall 2026"
+  days              String   @default("") // comma-joined tokens: M,T,W,TH (TH is one token)
+  partnerPrefUserId String?  // clause 4.1 — named pairs require BOTH to name each other
+  wantsDedicated    Boolean  @default(false)
+  notes             String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([organizationId, userId, semester])
+  @@index([organizationId, semester])
+  @@map("declarations")
 }

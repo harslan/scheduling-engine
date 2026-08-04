@@ -28,6 +28,11 @@ import {
   ArrowLeftRight,
   Monitor,
   QrCode,
+  Mail,
+  UserCheck,
+  Inbox,
+  DoorOpen,
+  CalendarCheck,
 } from "lucide-react";
 
 export function Sidebar({
@@ -42,6 +47,7 @@ export function Sidebar({
     eventSingularTerm: string;
     eventPluralTerm: string;
     roomTerm: string;
+    allowsRoomRequests?: boolean;
   };
   isManager: boolean;
   isAdmin: boolean;
@@ -111,10 +117,26 @@ export function Sidebar({
           )}
           {isAuthenticated && (
             <NavLink
+              href={`/${orgSlug}/declare`}
+              icon={<CalendarCheck className="w-4 h-4" />}
+            >
+              Declare my semester
+            </NavLink>
+          )}
+          {isAuthenticated && (
+            <NavLink
               href={`/${orgSlug}/chat`}
               icon={<Sparkles className="w-4 h-4" />}
             >
               AI Assistant
+            </NavLink>
+          )}
+          {org.allowsRoomRequests && (
+            <NavLink
+              href={`/${orgSlug}/request-space`}
+              icon={<DoorOpen className="w-4 h-4" />}
+            >
+              Request Space
             </NavLink>
           )}
           <NavLink
@@ -212,6 +234,24 @@ export function Sidebar({
               icon={<QrCode className="w-4 h-4" />}
             >
               QR Codes
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/email-templates`}
+              icon={<Mail className="w-4 h-4" />}
+            >
+              Email Templates
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/backup-approvers`}
+              icon={<UserCheck className="w-4 h-4" />}
+            >
+              Approvers
+            </NavLink>
+            <NavLink
+              href={`/${orgSlug}/admin/space-requests`}
+              icon={<Inbox className="w-4 h-4" />}
+            >
+              Space Requests
             </NavLink>
             <NavLink
               href={`/${orgSlug}/admin/organization`}
