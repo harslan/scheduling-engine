@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, Bot, User, Sparkles, Loader2, Trash2, RotateCcw } from "lucide-react";
+import { an } from "@/lib/indefinite";
 
 interface Message {
   role: "user" | "assistant";
@@ -109,10 +110,10 @@ export function ChatInterface({
   }
 
   const suggestions = [
-    `Book me a ${roomTerm.toLowerCase()} for tomorrow at 2pm`,
+    `Book me ${an(roomTerm.toLowerCase())} for tomorrow at 2pm`,
     "What rooms are available this Friday afternoon?",
     "Show me my upcoming events",
-    `Find a ${roomTerm.toLowerCase()} for a 2-hour meeting next week`,
+    `Find ${an(roomTerm.toLowerCase())} for a 2-hour meeting next week`,
   ];
 
   return (
@@ -235,7 +236,7 @@ export function ChatInterface({
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={`Try "Book a ${roomTerm.toLowerCase()} for tomorrow at 10am"...`}
+            placeholder={`Try "Book ${an(roomTerm.toLowerCase())} for tomorrow at 10am"...`}
             disabled={loading}
             className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all disabled:opacity-50"
           />

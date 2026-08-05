@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { ChatInterface } from "./chat-interface";
+import { an } from "@/lib/indefinite";
 
 export default async function ChatPage({
   params,
@@ -19,7 +20,7 @@ export default async function ChatPage({
       <div className="mb-4">
         <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">AI Booking Assistant</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Ask me to book a {org.roomTerm.toLowerCase()}, check availability, or manage your {org.eventPluralTerm.toLowerCase()}.
+          Ask me to book {an(org.roomTerm.toLowerCase())}, check availability, or manage your {org.eventPluralTerm.toLowerCase()}.
         </p>
       </div>
       <ChatInterface
