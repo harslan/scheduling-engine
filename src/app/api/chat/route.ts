@@ -448,8 +448,8 @@ Guidelines:
   // Allow up to 5 tool-use rounds
   for (let i = 0; i < 5; i++) {
     response = await anthropic.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+      model: "claude-opus-4-8",
+      max_tokens: 2048,
       system: systemPrompt,
       tools,
       messages: currentMessages,
