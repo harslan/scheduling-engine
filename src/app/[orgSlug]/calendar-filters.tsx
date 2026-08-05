@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ROOM_COLORS } from "./calendar-constants";
+import { RoomSelect } from "./room-select";
 
 type Room = { id: string; name: string };
 type EventType = { id: string; name: string; colorIndex: number | null };
@@ -36,10 +37,46 @@ export function CalendarFilters({
 
   if (!hasRooms && !hasEventTypes) return null;
 
+  // Past a dozen rooms, pills become a wall — collapse to a select.
+  const manyRooms = rooms.length > 12;
+  const roomOptions = manyRooms
+    ? [
+        {
+          href: buildUrl({ room: "all" }),
+          label: `All ${roomTerm}s`,
+          active: activeRoomFilter === "all",
+        },
+        ...rooms.map((room) => {
+          const count = eventCountByRoom.get(room.id) ?? 0;
+          return {
+            href: buildUrl({ room: room.id }),
+            label: count > 0 ? `${room.name} (${count})` : room.name,
+            active: activeRoomFilter === room.id,
+          };
+        }),
+        ...(allowsRoomlessEvents
+          ? [
+              {
+                href: buildUrl({ room: "none" }),
+                label: `No ${roomTerm}`,
+                active: activeRoomFilter === "none",
+              },
+            ]
+          : []),
+      ]
+    : [];
+
   return (
     <div className="mb-4 space-y-2">
+      {manyRooms && (
+        <RoomSelect
+          options={roomOptions}
+          activeHref={roomOptions.find((o) => o.active)?.href ?? roomOptions[0].href}
+          roomTerm={roomTerm}
+        />
+      )}
       {/* Room filter pills */}
-      {hasRooms && (
+      {hasRooms && !manyRooms && (
         <div className="flex flex-nowrap md:flex-wrap gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
           {/* All pill */}
           <Link

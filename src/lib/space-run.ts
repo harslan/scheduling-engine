@@ -158,7 +158,10 @@ export async function materializeHolds(
   });
   const daysByUser = new Map(recs.map((r) => [r.userId, r.days.split(",").filter(Boolean)]));
 
-  const DAY: Record<string, number> = { M: 0, T: 1, W: 2, TH: 3, F: 4 };
+  // No Friday holds: "Fridays the floor runs open — no holds, no bookings
+  // needed" (declare page, demo banner). Friday teaching still counts toward
+  // presence and tiers; it just never writes a hold onto the calendar.
+  const DAY: Record<string, number> = { M: 0, T: 1, W: 2, TH: 3 };
   // "this week" is the org's week, not the server's (UTC evenings differ)
   const todayStr = new Date().toLocaleDateString("en-CA", {
     timeZone: org.timezone || "America/New_York",

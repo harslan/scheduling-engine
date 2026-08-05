@@ -35,7 +35,7 @@ export default async function CalendarPage({
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ month?: string; year?: string; view?: string; date?: string; room?: string; eventType?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; view?: string; date?: string; room?: string; eventType?: string; holds?: string }>;
 }) {
   const { orgSlug } = await params;
   const sp = await searchParams;
@@ -228,6 +228,19 @@ export default async function CalendarPage({
     filteredEvents = filteredEvents.filter((e) => e.eventType && typeSet.has(e.eventType.id));
   }
 
+  // Office holds are background structure — the same rows every weekday. In
+  // month/year views they bury real bookings, so hide them by default there
+  // (week/day views keep them: that's where "who's in which office" reads).
+  const isHold = (e: EventWithRoom) =>
+    e.eventType?.name === "Office hold — semester";
+  const showHolds = sp.holds === "1";
+  const zoomedOut = view === "month" || view === "year";
+  const hiddenHoldCount =
+    zoomedOut && !showHolds ? filteredEvents.filter(isHold).length : 0;
+  if (zoomedOut && !showHolds) {
+    filteredEvents = filteredEvents.filter((e) => !isHold(e));
+  }
+
   const roomColorMap = new Map<string, number>();
   visibleRooms.forEach((room, i) => roomColorMap.set(room.id, i % ROOM_COLORS.length));
 
@@ -241,6 +254,7 @@ export default async function CalendarPage({
     year?: number;
     room?: string;
     eventType?: string;
+    holds?: string;
   } = {}) {
     const v = overrides.view ?? view;
     const room = overrides.room ?? roomFilter;
@@ -257,6 +271,7 @@ export default async function CalendarPage({
 
     if (room && room !== "all") base += `&room=${room}`;
     if (et) base += `&eventType=${et}`;
+    if (overrides.holds ?? (showHolds ? "1" : "")) base += `&holds=1`;
     return base;
   }
 
@@ -381,6 +396,35 @@ export default async function CalendarPage({
         roomTerm={org.roomTerm}
         buildUrl={buildFilterUrl}
       />
+
+      {/* Office-hold visibility (month/year only) */}
+      {zoomedOut && (hiddenHoldCount > 0 || showHolds) && (
+        <div className="mb-3 text-xs text-slate-500">
+          {showHolds ? (
+            <>
+              Showing semester office holds.{" "}
+              <Link
+                href={buildCalendarUrl({ holds: "" })}
+                className="text-primary font-medium hover:underline"
+              >
+                Hide them
+              </Link>{" "}
+              to see just bookings.
+            </>
+          ) : (
+            <>
+              {hiddenHoldCount} semester office holds are not shown at this zoom.{" "}
+              <Link
+                href={buildCalendarUrl({ holds: "1" })}
+                className="text-primary font-medium hover:underline"
+              >
+                Show them
+              </Link>
+              , or switch to Week/Day where they read best.
+            </>
+          )}
+        </div>
+      )}
 
       {/* Calendar body */}
       {view === "year" && (
