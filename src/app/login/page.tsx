@@ -126,7 +126,7 @@ function LoginForm() {
                       autoComplete="email"
                       autoFocus
                       className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl bg-white focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all text-sm placeholder:text-slate-400"
-                      placeholder="you@company.com"
+                      placeholder={isPilot ? "you@sawyer.demo" : "you@company.com"}
                     />
                   </div>
                 </div>
@@ -228,8 +228,8 @@ function LoginForm() {
                   public log. A quiet edit is not an amendment.
                 </p>
                 <p className="text-sm text-slate-700 leading-relaxed">
-                  <b>Shortfalls are named, never hidden.</b> &ldquo;61 offices
-                  needed, 60 usable&rdquo; is an answer, not an embarrassment.
+                  <b>Shortfalls are named, never hidden.</b>{" "}
+                  {"“61 offices needed, 60 usable” is an answer, not an embarrassment."}
                 </p>
                 <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-4">
                   Pilot instance: every identity is fictitious and every
