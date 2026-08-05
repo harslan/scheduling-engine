@@ -104,6 +104,14 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
     include: { assignments: true },
   });
 
+  // A new run supersedes the assignments pending swaps were proposed against.
+  // Expire them: consenting over stale assignments would rewrite the calendar
+  // from the superseded run (5.3 consent must bind to what currently is).
+  await prisma.spaceSwap.updateMany({
+    where: { organizationId, semester, status: "pending", runId: { not: run.id } },
+    data: { status: "expired" },
+  });
+
   await materializeHolds(organizationId, run.id, semester);
   return run;
 }

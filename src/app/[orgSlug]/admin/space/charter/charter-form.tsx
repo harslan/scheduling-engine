@@ -35,14 +35,15 @@ export function CharterForm({
     fd.set("organizationId", organizationId);
     const r = await updateCharterAction(fd);
     setLoading(false);
-    if (r.error) setMsg({ ok: false, text: r.error });
+    if ("error" in r && r.error) setMsg({ ok: false, text: r.error });
     else {
+      const changed = "changed" in r ? r.changed : 0;
       setMsg({
         ok: true,
         text:
-          r.changed === 0
+          changed === 0
             ? "No changes."
-            : `${r.changed} change(s) recorded in the log.`,
+            : `${changed} change(s) recorded in the log.`,
       });
       router.refresh();
     }

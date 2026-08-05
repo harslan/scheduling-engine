@@ -59,6 +59,26 @@ export async function actOnSwap(
 ) {
   const swap = await prisma.spaceSwap.findUnique({ where: { id: swapId } });
   if (!swap || swap.status !== "pending") return { error: "Swap is not pending." };
+
+  // Belt to the run-time braces: never act on a swap proposed against a
+  // superseded run — applying it would rewrite the calendar from stale
+  // assignments. (Runs also expire pending swaps when created.)
+  const latestRunRow = await prisma.spaceRun.findFirst({
+    where: { organizationId: swap.organizationId, semester: swap.semester },
+    orderBy: { createdAt: "desc" },
+    select: { id: true },
+  });
+  if (!latestRunRow || latestRunRow.id !== swap.runId) {
+    await prisma.spaceSwap.updateMany({
+      where: { id: swapId, status: "pending" },
+      data: { status: "expired" },
+    });
+    return {
+      error:
+        "The allocation has been re-run since this swap was proposed, so it expired. Propose it again against the current assignments.",
+    };
+  }
+
   const needed = swap.neededUserIds.split(",").filter(Boolean);
   if (!needed.includes(userId))
     return { error: "This swap doesn't affect your space." };
