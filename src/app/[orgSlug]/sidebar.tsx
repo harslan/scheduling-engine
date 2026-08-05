@@ -305,8 +305,8 @@ export function Sidebar({
 
       {/* Footer section */}
       <div className="px-4 mt-auto">
-        {/* iCal subscription */}
-        <CalendarFeedCopy orgSlug={orgSlug} />
+        {/* iCal subscription — hidden on pilot: the auth wall 401s external calendar clients */}
+        {!isPilot && <CalendarFeedCopy orgSlug={orgSlug} />}
 
         {/* Back to home */}
         {!isPilot && (
@@ -353,7 +353,7 @@ export function Sidebar({
       >
         <div className="flex items-center justify-between px-4 mb-4">
           <Link href={`/${orgSlug}`} className="text-sm font-bold text-slate-900 truncate">
-            {org.eventSingularTerm} Calendar
+            {isPilot ? "SBS Faculty Space" : `${org.eventSingularTerm} Calendar`}
           </Link>
           <button
             onClick={() => setMobileOpen(false)}

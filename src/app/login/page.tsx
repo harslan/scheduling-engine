@@ -140,12 +140,15 @@ function LoginForm() {
                     >
                       Password
                     </label>
-                    <Link
-                      href="/forgot-password"
-                      className="text-xs text-primary hover:text-primary-dark font-medium transition-colors"
-                    >
-                      Forgot password?
-                    </Link>
+                    {/* Pilot: no outbound email, so a reset link can never arrive */}
+                    {!isPilot && (
+                      <Link
+                        href="/forgot-password"
+                        className="text-xs text-primary hover:text-primary-dark font-medium transition-colors"
+                      >
+                        Forgot password?
+                      </Link>
+                    )}
                   </div>
                   <div className="relative">
                     <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
