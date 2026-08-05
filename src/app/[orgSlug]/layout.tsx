@@ -6,6 +6,7 @@ import { getSession } from "@/lib/session";
 import { notFound } from "next/navigation";
 import { SignOutButton } from "./sign-out-button";
 import { Sidebar } from "./sidebar";
+import { isPilot } from "@/lib/pilot";
 
 export async function generateMetadata({
   params,
@@ -81,30 +82,46 @@ export default async function OrgLayout({
           {/* Spacer for mobile hamburger button */}
           <div className="w-8 lg:hidden shrink-0" />
 
-          {/* Logo → links to home */}
-          <Link
-            href="/"
-            className="flex items-center gap-2 shrink-0 group"
-            title="Back to Scheduling Engine home"
-          >
-            <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:shadow-primary/20 transition-all">
-              <Calendar className="w-4 h-4 text-white" />
-            </div>
-            <span className="hidden xl:inline text-sm font-semibold text-slate-400 group-hover:text-primary transition-colors">
-              Scheduling Engine
-            </span>
-          </Link>
+          {/* Logo → links to home (pilot: the org IS the brand) */}
+          {isPilot ? (
+            <Link
+              href={`/${orgSlug}`}
+              className="flex items-center gap-2.5 min-w-0 group"
+            >
+              <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:shadow-primary/20 transition-all shrink-0">
+                <Calendar className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors truncate">
+                {org.appDisplayName || org.name}
+              </span>
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/"
+                className="flex items-center gap-2 shrink-0 group"
+                title="Back to Scheduling Engine home"
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-primary to-blue-600 rounded-lg flex items-center justify-center shadow-sm group-hover:shadow-md group-hover:shadow-primary/20 transition-all">
+                  <Calendar className="w-4 h-4 text-white" />
+                </div>
+                <span className="hidden xl:inline text-sm font-semibold text-slate-400 group-hover:text-primary transition-colors">
+                  Scheduling Engine
+                </span>
+              </Link>
 
-          {/* Breadcrumb separator */}
-          <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 hidden sm:block" />
+              {/* Breadcrumb separator */}
+              <ChevronRight className="w-4 h-4 text-slate-300 shrink-0 hidden sm:block" />
 
-          {/* Org name → links to org calendar */}
-          <Link
-            href={`/${orgSlug}`}
-            className="text-lg font-bold text-slate-900 hover:text-primary transition-colors truncate"
-          >
-            {org.appDisplayName || org.name}
-          </Link>
+              {/* Org name → links to org calendar */}
+              <Link
+                href={`/${orgSlug}`}
+                className="text-lg font-bold text-slate-900 hover:text-primary transition-colors truncate"
+              >
+                {org.appDisplayName || org.name}
+              </Link>
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 lg:gap-4 shrink-0">

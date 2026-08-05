@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { isPilot } from "@/lib/pilot";
 import {
   Calendar,
   CalendarPlus,
@@ -96,8 +97,25 @@ export function Sidebar({
 
         <div className="px-4 mb-6">
           <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2 px-3">
-            Calendar
+            {isPilot ? "Your semester" : "Calendar"}
           </p>
+          {/* Pilot: the loop leads — declare, then see what it earned you */}
+          {isPilot && isAuthenticated && (
+            <>
+              <NavLink
+                href={`/${orgSlug}/declare`}
+                icon={<CalendarCheck className="w-4 h-4" />}
+              >
+                Declare my semester
+              </NavLink>
+              <NavLink
+                href={`/${orgSlug}/my-space`}
+                icon={<DoorOpen className="w-4 h-4" />}
+              >
+                My space
+              </NavLink>
+            </>
+          )}
           <NavLink href={`/${orgSlug}`} icon={<Calendar className="w-4 h-4" />} exact>
             Calendar
           </NavLink>
@@ -115,7 +133,7 @@ export function Sidebar({
               My {org.eventPluralTerm}
             </NavLink>
           )}
-          {isAuthenticated && (
+          {!isPilot && isAuthenticated && (
             <NavLink
               href={`/${orgSlug}/declare`}
               icon={<CalendarCheck className="w-4 h-4" />}
@@ -123,7 +141,7 @@ export function Sidebar({
               Declare my semester
             </NavLink>
           )}
-          {isAuthenticated && (
+          {!isPilot && isAuthenticated && (
             <NavLink
               href={`/${orgSlug}/my-space`}
               icon={<DoorOpen className="w-4 h-4" />}
@@ -213,66 +231,74 @@ export function Sidebar({
             >
               Users
             </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/event-types`}
-              icon={<Tag className="w-4 h-4" />}
-            >
-              {org.eventSingularTerm} Types
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/configurations`}
-              icon={<Layers className="w-4 h-4" />}
-            >
-              Configurations
-            </NavLink>
+            {!isPilot && (
+              <NavLink
+                href={`/${orgSlug}/admin/event-types`}
+                icon={<Tag className="w-4 h-4" />}
+              >
+                {org.eventSingularTerm} Types
+              </NavLink>
+            )}
+            {!isPilot && (
+              <NavLink
+                href={`/${orgSlug}/admin/configurations`}
+                icon={<Layers className="w-4 h-4" />}
+              >
+                Configurations
+              </NavLink>
+            )}
             <NavLink
               href={`/${orgSlug}/admin/reports`}
               icon={<BarChart3 className="w-4 h-4" />}
             >
               Reports
             </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/import`}
-              icon={<FileSpreadsheet className="w-4 h-4" />}
-            >
-              Import / Export
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/reserve`}
-              icon={<ArrowLeftRight className="w-4 h-4" />}
-            >
-              Reserve
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/qr-codes`}
-              icon={<QrCode className="w-4 h-4" />}
-            >
-              QR Codes
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/email-templates`}
-              icon={<Mail className="w-4 h-4" />}
-            >
-              Email Templates
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/backup-approvers`}
-              icon={<UserCheck className="w-4 h-4" />}
-            >
-              Approvers
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/space-requests`}
-              icon={<Inbox className="w-4 h-4" />}
-            >
-              Space Requests
-            </NavLink>
-            <NavLink
-              href={`/${orgSlug}/admin/organization`}
-              icon={<Rss className="w-4 h-4" />}
-            >
-              Organization
-            </NavLink>
+            {!isPilot && (
+              <>
+                <NavLink
+                  href={`/${orgSlug}/admin/import`}
+                  icon={<FileSpreadsheet className="w-4 h-4" />}
+                >
+                  Import / Export
+                </NavLink>
+                <NavLink
+                  href={`/${orgSlug}/admin/reserve`}
+                  icon={<ArrowLeftRight className="w-4 h-4" />}
+                >
+                  Reserve
+                </NavLink>
+                <NavLink
+                  href={`/${orgSlug}/admin/qr-codes`}
+                  icon={<QrCode className="w-4 h-4" />}
+                >
+                  QR Codes
+                </NavLink>
+                <NavLink
+                  href={`/${orgSlug}/admin/email-templates`}
+                  icon={<Mail className="w-4 h-4" />}
+                >
+                  Email Templates
+                </NavLink>
+                <NavLink
+                  href={`/${orgSlug}/admin/backup-approvers`}
+                  icon={<UserCheck className="w-4 h-4" />}
+                >
+                  Approvers
+                </NavLink>
+                <NavLink
+                  href={`/${orgSlug}/admin/space-requests`}
+                  icon={<Inbox className="w-4 h-4" />}
+                >
+                  Space Requests
+                </NavLink>
+                <NavLink
+                  href={`/${orgSlug}/admin/organization`}
+                  icon={<Rss className="w-4 h-4" />}
+                >
+                  Organization
+                </NavLink>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -283,15 +309,17 @@ export function Sidebar({
         <CalendarFeedCopy orgSlug={orgSlug} />
 
         {/* Back to home */}
-        <div className="border-t border-slate-100 pt-3 pb-2">
-          <Link
-            href="/"
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-primary hover:bg-primary/5 transition-colors"
-          >
-            <Home className="w-4 h-4" />
-            Scheduling Engine Home
-          </Link>
-        </div>
+        {!isPilot && (
+          <div className="border-t border-slate-100 pt-3 pb-2">
+            <Link
+              href="/"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-primary hover:bg-primary/5 transition-colors"
+            >
+              <Home className="w-4 h-4" />
+              Scheduling Engine Home
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

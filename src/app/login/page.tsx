@@ -20,6 +20,7 @@ import {
   CALENDAR_EVENTS_COMPACT,
   CalendarGrid,
 } from "@/components/calendar-mockup";
+import { isPilot, PILOT_BRAND } from "@/lib/pilot";
 
 function LoginForm() {
   const router = useRouter();
@@ -63,15 +64,17 @@ function LoginForm() {
               <div className="absolute -inset-1 bg-primary/20 rounded-xl blur-md -z-10" />
             </div>
             <span className="text-xl font-bold text-slate-900 tracking-tight">
-              Scheduling Engine
+              {isPilot ? PILOT_BRAND : "Scheduling Engine"}
             </span>
           </Link>
-          <Link
-            href="/"
-            className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
-          >
-            Back to home
-          </Link>
+          {!isPilot && (
+            <Link
+              href="/"
+              className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors"
+            >
+              Back to home
+            </Link>
+          )}
         </div>
       </header>
 
@@ -84,10 +87,12 @@ function LoginForm() {
             {/* Heading */}
             <div className="text-center mb-8">
               <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                Sign in to your account
+                {isPilot ? PILOT_BRAND : "Sign in to your account"}
               </h1>
               <p className="text-slate-500 mt-2">
-                Enter your credentials to continue
+                {isPilot
+                  ? "A measured, transparent way to share Sargent offices — sign in to the pilot"
+                  : "Enter your credentials to continue"}
               </p>
             </div>
 
@@ -195,14 +200,45 @@ function LoginForm() {
 
             {/* Help text */}
             <p className="mt-6 text-center text-sm text-slate-400">
-              Need access?{" "}
-              <span className="text-slate-500">
-                Contact your organization administrator
-              </span>
+              {isPilot ? (
+                <span className="text-slate-500">
+                  Access is by invitation while the pilot runs
+                </span>
+              ) : (
+                <>
+                  Need access?{" "}
+                  <span className="text-slate-500">
+                    Contact your organization administrator
+                  </span>
+                </>
+              )}
             </p>
+
+            {isPilot && (
+              <div className="mt-10 bg-white/70 backdrop-blur rounded-2xl border border-slate-200/80 p-6 space-y-4">
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  <b>Offices are earned by measured teaching, never by status.</b>{" "}
+                  The system reads the registrar&apos;s schedule, not the org chart.
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  <b>Every rule change needs a written reason,</b> and lands in a
+                  public log. A quiet edit is not an amendment.
+                </p>
+                <p className="text-sm text-slate-700 leading-relaxed">
+                  <b>Shortfalls are named, never hidden.</b> &ldquo;61 offices
+                  needed, 60 usable&rdquo; is an answer, not an embarrassment.
+                </p>
+                <p className="text-xs text-slate-400 leading-relaxed border-t border-slate-100 pt-4">
+                  Pilot instance: every identity is fictitious and every
+                  allocation run is a simulation. Nothing here assigns anyone
+                  anything.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Product preview — echoes the landing page mockup */}
+          {!isPilot && (
           <div className="hidden sm:block mt-16 max-w-2xl mx-auto">
             <div className="relative">
               {/* Fade-out gradient overlay */}
@@ -236,6 +272,7 @@ function LoginForm() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </main>
     </div>

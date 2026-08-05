@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Providers } from "./providers";
+import { isPilot, PILOT_BRAND } from "@/lib/pilot";
 import "./globals.css";
 
 const inter = Inter({
@@ -8,23 +9,28 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const brandName = isPilot ? PILOT_BRAND : "Scheduling Engine";
+const brandDescription = isPilot
+  ? "A measured, transparent way to share faculty office space"
+  : "Modern AI-native scheduling and room booking platform";
+
 export const metadata: Metadata = {
   title: {
-    default: "Scheduling Engine",
-    template: "%s — Scheduling Engine",
+    default: brandName,
+    template: `%s — ${brandName}`,
   },
-  description: "Modern AI-native scheduling and room booking platform",
+  description: brandDescription,
   metadataBase: new URL("https://scheduling-engine-next.vercel.app"),
   openGraph: {
-    title: "Scheduling Engine",
-    description: "Modern AI-native scheduling and room booking platform",
-    siteName: "Scheduling Engine",
+    title: brandName,
+    description: brandDescription,
+    siteName: brandName,
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Scheduling Engine",
-    description: "Modern AI-native scheduling and room booking platform",
+    title: brandName,
+    description: brandDescription,
   },
   icons: {
     icon: "/icon.svg",
