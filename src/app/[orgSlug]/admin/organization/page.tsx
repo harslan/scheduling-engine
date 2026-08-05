@@ -47,10 +47,14 @@ export default async function OrgSettingsPage({
           roomClosingTime: org.roomClosingTime,
           maxEventLengthMinutes: org.maxEventLengthMinutes,
           schedulingCutoffDays: org.schedulingCutoffDays,
+          schedulingCutoffFixedDate: org.schedulingCutoffFixedDate
+            ? org.schedulingCutoffFixedDate.toISOString().split("T")[0]
+            : null,
           eventSingularTerm: org.eventSingularTerm,
           eventPluralTerm: org.eventPluralTerm,
           roomTerm: org.roomTerm,
           emailReplyToAddress: org.emailReplyToAddress,
+          reminderEmailHours: org.reminderEmailHours,
         }}
         orgSlug={orgSlug}
       />

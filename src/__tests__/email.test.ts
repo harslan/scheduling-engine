@@ -1,119 +1,76 @@
 import { describe, it, expect } from "vitest";
-import {
-  eventSubmittedEmail,
-  eventApprovedEmail,
-  eventDeniedEmail,
-  approvalRequestEmail,
-} from "@/lib/email";
+import { mergeTemplate, buildEventMergeData } from "@/lib/email-merge";
 
-describe("eventSubmittedEmail", () => {
-  it("generates pending email when status is PENDING", () => {
-    const result = eventSubmittedEmail({
-      orgName: "INCAE",
-      eventTitle: "MBA Class",
-      roomName: "Aula 1",
-      startDate: "Monday, March 2, 2026 at 9:00 AM",
-      status: "PENDING",
-    });
+/**
+ * Tests for the template-based email system.
+ * Template loading (getEmailTemplate) and sending (sendTemplatedEmail) require
+ * database access and are covered by integration tests. These unit tests verify
+ * the merge logic and data building that power the templates.
+ */
 
-    expect(result.subject).toContain("submitted for approval");
-    expect(result.subject).toContain("INCAE");
-    expect(result.subject).toContain("MBA Class");
-    expect(result.html).toContain("Event Submitted");
-    expect(result.html).toContain("awaiting approval");
-    expect(result.html).toContain("MBA Class");
-    expect(result.html).toContain("Aula 1");
-    expect(result.html).toContain("Pending Approval");
+describe("mergeTemplate with email HTML", () => {
+  const sampleTemplate = `
+    <div>
+      <h1>{{organizationName}}</h1>
+      <p>Event: {{eventTitle}}</p>
+      <p>Room: {{roomName}}</p>
+      <p>Date: {{startDate}} at {{startTime}}</p>
+      <p>Contact: {{contactName}} ({{contactEmail}})</p>
+    </div>`;
+
+  it("produces valid merged HTML", () => {
+    const data = buildEventMergeData(
+      {
+        id: "evt-1",
+        title: "Board Meeting",
+        contactName: "Jane",
+        contactEmail: "jane@example.com",
+        startDateTime: new Date("2026-06-01T10:00:00"),
+        endDateTime: new Date("2026-06-01T12:00:00"),
+      },
+      { name: "Demo Org", slug: "demo" },
+      "Conference Room"
+    );
+
+    const result = mergeTemplate(sampleTemplate, data);
+    expect(result).toContain("<h1>Demo Org</h1>");
+    expect(result).toContain("Board Meeting");
+    expect(result).toContain("Conference Room");
+    expect(result).toContain("Jane");
+    expect(result).toContain("jane@example.com");
+    expect(result).toContain("10:00 AM");
   });
 
-  it("generates confirmed email when status is APPROVED", () => {
-    const result = eventSubmittedEmail({
-      orgName: "INCAE",
-      eventTitle: "Workshop",
-      roomName: "Sala Azul",
-      startDate: "Friday, March 6, 2026 at 2:00 PM",
-      status: "APPROVED",
-    });
+  it("handles denial template with comment", () => {
+    const denialTemplate =
+      "<p>{{eventTitle}} was denied.</p><p>Reason: {{denialComment}}</p>";
+    const data = buildEventMergeData(
+      {
+        id: "evt-1",
+        title: "Party",
+        contactName: "Bob",
+        contactEmail: "bob@example.com",
+        startDateTime: new Date("2026-06-01T18:00:00"),
+        endDateTime: new Date("2026-06-01T21:00:00"),
+      },
+      { name: "Org", slug: "org" },
+      ""
+    );
+    data.denialComment = "Room reserved for maintenance";
 
-    expect(result.subject).toContain("Event confirmed");
-    expect(result.html).toContain("Event Confirmed");
-    expect(result.html).toContain("approved and added to the calendar");
-    expect(result.html).toContain("Approved");
-  });
-
-  it("shows dash when no room provided", () => {
-    const result = eventSubmittedEmail({
-      orgName: "Test",
-      eventTitle: "Test Event",
-      roomName: "",
-      startDate: "Monday, March 2, 2026 at 9:00 AM",
-      status: "PENDING",
-    });
-
-    expect(result.html).toContain("—");
-  });
-});
-
-describe("eventApprovedEmail", () => {
-  it("generates approval notification", () => {
-    const result = eventApprovedEmail({
-      orgName: "INCAE",
-      eventTitle: "Faculty Meeting",
-      roomName: "Sala CD",
-      startDate: "Wednesday, March 4, 2026 at 10:00 AM",
-    });
-
-    expect(result.subject).toContain("approved");
-    expect(result.subject).toContain("INCAE");
-    expect(result.subject).toContain("Faculty Meeting");
-    expect(result.html).toContain("Event Approved");
-    expect(result.html).toContain("Great news");
-    expect(result.html).toContain("Sala CD");
+    const result = mergeTemplate(denialTemplate, data);
+    expect(result).toContain("Party was denied.");
+    expect(result).toContain("Room reserved for maintenance");
   });
 });
 
-describe("eventDeniedEmail", () => {
-  it("generates denial notification with comment", () => {
-    const result = eventDeniedEmail({
-      orgName: "INCAE",
-      eventTitle: "Party",
-      comment: "Room is reserved for maintenance",
-    });
-
-    expect(result.subject).toContain("not approved");
-    expect(result.subject).toContain("Party");
-    expect(result.html).toContain("Event Not Approved");
-    expect(result.html).toContain("Room is reserved for maintenance");
-  });
-
-  it("generates denial notification without comment", () => {
-    const result = eventDeniedEmail({
-      orgName: "INCAE",
-      eventTitle: "Party",
-    });
-
-    expect(result.subject).toContain("not approved");
-    expect(result.html).not.toContain("Comment:");
-  });
-});
-
-describe("approvalRequestEmail", () => {
-  it("generates approval request for managers", () => {
-    const result = approvalRequestEmail({
-      orgName: "INCAE",
-      eventTitle: "Guest Speaker",
-      submitterName: "Maria Garcia",
-      roomName: "Aula Manuel Jiménez",
-      startDate: "Thursday, March 5, 2026 at 4:00 PM",
-      approvalUrl: "https://example.com/incae/admin/approvals",
-    });
-
-    expect(result.subject).toContain("needs approval");
-    expect(result.subject).toContain("Guest Speaker");
-    expect(result.html).toContain("Approval Required");
-    expect(result.html).toContain("Maria Garcia");
-    expect(result.html).toContain("Aula Manuel Jiménez");
-    expect(result.html).toContain("Review Event");
-    expect(result.html).toContain("https://example.com/incae/admin/approvals");
+describe("passwordResetEmail", () => {
+  // passwordResetEmail is a standalone function, not template-based
+  it("is exported from email.ts", async () => {
+    const { passwordResetEmail } = await import("@/lib/email");
+    const result = passwordResetEmail({ resetUrl: "https://example.com/reset/abc123" });
+    expect(result.subject).toContain("Reset your password");
+    expect(result.html).toContain("https://example.com/reset/abc123");
+    expect(result.html).toContain("Reset Password");
   });
 });

@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -21,6 +22,8 @@ export async function inviteUser(formData: FormData) {
   }
 
   const data = parsed.data;
+
+  await requireOrgRole(data.organizationId, ["ADMIN"]);
 
   const org = await prisma.organization.findUnique({
     where: { id: data.organizationId },
@@ -74,6 +77,8 @@ export async function updateMemberRole(
   userId: string,
   role: "ADMIN" | "MANAGER" | "EVENT_SUPPORT" | "USER"
 ) {
+  await requireOrgRole(organizationId, ["ADMIN"]);
+
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },
   });
@@ -90,7 +95,29 @@ export async function updateMemberRole(
   return { success: true };
 }
 
+export async function toggleUserActive(organizationId: string, userId: string) {
+  await requireOrgRole(organizationId, ["ADMIN"]);
+
+  const org = await prisma.organization.findUnique({
+    where: { id: organizationId },
+  });
+  if (!org) return { error: "Organization not found" };
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { error: "User not found" };
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { active: !user.active },
+  });
+
+  revalidatePath(`/${org.slug}/admin/users`);
+  return { success: true };
+}
+
 export async function removeMember(organizationId: string, userId: string) {
+  await requireOrgRole(organizationId, ["ADMIN"]);
+
   const org = await prisma.organization.findUnique({
     where: { id: organizationId },
   });

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { detectConflicts } from "@/lib/conflict-detection";
 
 const anthropic = new Anthropic();
 
@@ -75,12 +76,15 @@ const tools: Anthropic.Tool[] = [
   },
 ];
 
-async function executeTool(name: string, input: Record<string, unknown>): Promise<string> {
+async function executeTool(name: string, input: Record<string, unknown>, context: { userEmail: string; organizationId: string }): Promise<string> {
   switch (name) {
     case "search_available_rooms": {
       const orgId = input.organization_id as string;
       const startDt = new Date(input.start_datetime as string);
       const endDt = new Date(input.end_datetime as string);
+
+      const org = await prisma.organization.findUnique({ where: { id: orgId } });
+      if (!org) return JSON.stringify({ error: "Organization not found" });
 
       const allRooms = await prisma.room.findMany({
         where: { organizationId: orgId, active: true },
@@ -89,22 +93,19 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
 
       const available = [];
       for (const room of allRooms) {
-        const conflicts = await prisma.event.count({
-          where: {
-            roomId: room.id,
-            deleted: false,
-            status: { in: ["APPROVED", "PENDING"] },
-            startDateTime: { lt: endDt },
-            endDateTime: { gt: startDt },
-          },
+        const result = await detectConflicts({
+          orgId,
+          roomId: room.id,
+          startDateTime: startDt,
+          endDateTime: endDt,
+          timezone: org.timezone,
         });
-        if (conflicts < room.concurrentEventLimit) {
+        if (!result.hasConflict) {
           available.push({
             id: room.id,
             name: room.name,
             managersOnly: room.managersOnly,
             concurrentLimit: room.concurrentEventLimit,
-            currentBookings: conflicts,
             notes: room.notes,
           });
         }
@@ -139,22 +140,133 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       const endDt = new Date(input.end_datetime as string);
       const roomId = input.room_id as string;
 
-      // Check conflicts
-      const room = await prisma.room.findUnique({ where: { id: roomId } });
-      if (!room) return JSON.stringify({ error: "Room not found" });
+      // Basic time validation
+      if (startDt >= endDt) {
+        return JSON.stringify({ error: "End time must be after start time." });
+      }
 
-      const conflicts = await prisma.event.count({
-        where: {
-          roomId,
-          deleted: false,
-          status: { in: ["APPROVED", "PENDING"] },
-          startDateTime: { lt: endDt },
-          endDateTime: { gt: startDt },
-        },
+      // Determine if user is admin/manager (reused for constraint checks below)
+      const chatUser = await prisma.user.findUnique({ where: { email: context.userEmail } });
+      const chatIsAdmin = chatUser
+        ? await prisma.organizationMember.findFirst({
+            where: { organizationId: orgId, userId: chatUser.id, role: { in: ["ADMIN", "MANAGER"] } },
+          })
+        : null;
+
+      // EWL: enforce scheduling constraints for non-admin users
+      if (!chatIsAdmin) {
+        // Max event length
+        const durationMinutes = (endDt.getTime() - startDt.getTime()) / (1000 * 60);
+        if (org.maxEventLengthMinutes && durationMinutes > org.maxEventLengthMinutes) {
+          const hours = Math.floor(org.maxEventLengthMinutes / 60);
+          const mins = org.maxEventLengthMinutes % 60;
+          return JSON.stringify({
+            error: `Event duration exceeds the maximum of ${hours > 0 ? `${hours}h` : ""}${mins > 0 ? ` ${mins}m` : ""}. Please shorten your event.`,
+          });
+        }
+
+        // Room opening/closing times
+        if (org.roomOpeningTime && org.roomClosingTime) {
+          const tz = org.timezone || undefined;
+          const startH = parseInt(startDt.toLocaleString("en-US", { hour: "numeric", hour12: false, ...(tz ? { timeZone: tz } : {}) }));
+          const startM = parseInt(startDt.toLocaleString("en-US", { minute: "numeric", ...(tz ? { timeZone: tz } : {}) }));
+          const endH = parseInt(endDt.toLocaleString("en-US", { hour: "numeric", hour12: false, ...(tz ? { timeZone: tz } : {}) }));
+          const endM = parseInt(endDt.toLocaleString("en-US", { minute: "numeric", ...(tz ? { timeZone: tz } : {}) }));
+          const [openH, openM] = org.roomOpeningTime.split(":").map(Number);
+          const [closeH, closeM] = org.roomClosingTime.split(":").map(Number);
+          const startMinutes = startH * 60 + startM;
+          const endMinutes = endH * 60 + endM;
+          const openMinutes = openH * 60 + openM;
+          const closeMinutes = closeH * 60 + closeM;
+
+          if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+            return JSON.stringify({
+              error: `Events must be scheduled between ${org.roomOpeningTime} and ${org.roomClosingTime}.`,
+            });
+          }
+        }
+
+        // Past event check
+        if (startDt < new Date()) {
+          return JSON.stringify({ error: "Cannot schedule events in the past." });
+        }
+
+        // Scheduling cutoff (rolling days)
+        if (org.schedulingCutoffDays) {
+          const tz = org.timezone || undefined;
+          const nowStr = new Date().toLocaleDateString("en-CA", tz ? { timeZone: tz } : {});
+          const startStr = startDt.toLocaleDateString("en-CA", tz ? { timeZone: tz } : {});
+          const nowDate = new Date(nowStr + "T00:00:00Z");
+          const startDate = new Date(startStr + "T00:00:00Z");
+          const diffDays = Math.floor((startDate.getTime() - nowDate.getTime()) / (1000 * 60 * 60 * 24));
+          if (diffDays < org.schedulingCutoffDays) {
+            return JSON.stringify({
+              error: `Events must be scheduled at least ${org.schedulingCutoffDays} day(s) in advance.`,
+            });
+          }
+        }
+
+        // Scheduling cutoff (fixed date)
+        if (org.schedulingCutoffFixedDate && startDt > org.schedulingCutoffFixedDate) {
+          const cutoffStr = org.schedulingCutoffFixedDate.toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          });
+          return JSON.stringify({
+            error: `Events cannot be scheduled after ${cutoffStr}.`,
+          });
+        }
+      }
+
+      // Multi-day event check
+      if (!org.allowsMultiDayEvents) {
+        const tz = org.timezone || undefined;
+        const startDateStr = startDt.toLocaleDateString("en-CA", tz ? { timeZone: tz } : {});
+        const endDateStr = endDt.toLocaleDateString("en-CA", tz ? { timeZone: tz } : {});
+        if (startDateStr !== endDateStr) {
+          return JSON.stringify({ error: "Multi-day events are not allowed for this organization." });
+        }
+      }
+
+      // Check conflicts using full detection engine
+      // (includes parent/child rooms, recurring instances, and buffer time)
+      const conflictResult = await detectConflicts({
+        orgId,
+        roomId,
+        startDateTime: startDt,
+        endDateTime: endDt,
+        timezone: org.timezone,
       });
 
-      if (conflicts >= room.concurrentEventLimit) {
-        return JSON.stringify({ error: `${room.name} is not available during this time.` });
+      if (conflictResult.hasConflict) {
+        const room = await prisma.room.findUnique({ where: { id: roomId } });
+        return JSON.stringify({ error: `${room?.name || "Room"} is not available during this time.` });
+      }
+
+      // Validate room belongs to this organization (prevent cross-org linkage)
+      const room = await prisma.room.findFirst({ where: { id: roomId, organizationId: orgId } });
+      if (!room) return JSON.stringify({ error: "Room not found" });
+
+      // Room must be active
+      if (!room.active) {
+        return JSON.stringify({ error: `${room.name} is no longer available for booking.` });
+      }
+
+      // EWL: managersOnly rooms blocked for non-admin users
+      if (room.managersOnly && !chatIsAdmin) {
+        return JSON.stringify({ error: `${room.name} is only available to managers. Please select a different room.` });
+      }
+
+      // Determine auto-approval (EWL: admins + designated approvers get auto-approval)
+      let autoApproved = !org.requiresApproval;
+      if (!autoApproved) {
+        if (chatIsAdmin) {
+          autoApproved = true;
+        } else if (chatUser) {
+          const isApprover = org.approverId === chatUser.id || room.approverId === chatUser.id;
+          if (isApprover) autoApproved = true;
+        }
       }
 
       const event = await prisma.event.create({
@@ -168,8 +280,8 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
           contactEmail: input.contact_email as string,
           expectedAttendeeCount: (input.expected_attendees as number) || null,
           notes: (input.notes as string) || "",
-          status: org.requiresApproval ? "PENDING" : "APPROVED",
-          approved: !org.requiresApproval,
+          status: autoApproved ? "APPROVED" : "PENDING",
+          approved: autoApproved,
         },
       });
 
@@ -187,9 +299,9 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
         eventId: event.id,
         status: event.status,
         room: room.name,
-        message: org.requiresApproval
-          ? "Booking submitted for approval."
-          : "Booking confirmed!",
+        message: event.status === "APPROVED"
+          ? "Booking confirmed!"
+          : "Booking submitted for approval.",
       });
     }
 
@@ -224,10 +336,49 @@ async function executeTool(name: string, input: Record<string, unknown>): Promis
       });
       if (!event) return JSON.stringify({ error: "Event not found" });
 
-      await prisma.event.update({
-        where: { id: input.event_id as string },
-        data: { deleted: true, status: "CANCELLED" },
-      });
+      // Verify event belongs to this organization
+      if (event.organizationId !== context.organizationId) {
+        return JSON.stringify({ error: "Event not found" });
+      }
+
+      // Cannot cancel already-deleted/cancelled events
+      if (event.deleted || event.status === "CANCELLED") {
+        return JSON.stringify({ error: "This event has already been cancelled." });
+      }
+
+      // Verify user is the event contact or submitter
+      if (event.contactEmail !== context.userEmail) {
+        // Check if user is an admin/manager
+        const member = await prisma.organizationMember.findFirst({
+          where: {
+            organizationId: context.organizationId,
+            user: { email: context.userEmail },
+            role: { in: ["ADMIN", "MANAGER"] },
+          },
+        });
+        if (!member) {
+          return JSON.stringify({ error: "You can only cancel your own events." });
+        }
+      }
+
+      await prisma.$transaction([
+        prisma.event.update({
+          where: { id: input.event_id as string },
+          data: { deleted: true, status: "CANCELLED" },
+        }),
+        // Soft-delete recurring instances so they don't block conflict detection
+        prisma.eventInstance.updateMany({
+          where: { eventId: event.id },
+          data: { deleted: true },
+        }),
+        prisma.eventActivity.create({
+          data: {
+            eventId: event.id,
+            action: "EVENT_CANCELLED",
+            actorEmail: context.userEmail,
+          },
+        }),
+      ]);
 
       return JSON.stringify({ success: true, message: "Event cancelled." });
     }
@@ -313,7 +464,7 @@ Guidelines:
     const toolResultContents: Anthropic.ToolResultBlockParam[] = [];
     for (const block of toolBlocks) {
       if (block.type === "tool_use") {
-        const result = await executeTool(block.name, block.input as Record<string, unknown>);
+        const result = await executeTool(block.name, block.input as Record<string, unknown>, { userEmail: token.email as string, organizationId });
         toolResultContents.push({
           type: "tool_result",
           tool_use_id: block.id,

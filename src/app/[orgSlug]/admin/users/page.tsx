@@ -39,6 +39,7 @@ export default async function AdminUsersPage({
           name: true,
           email: true,
           active: true,
+          lastLoginAt: true,
           isSystemAdmin: true,
           createdAt: true,
         },
@@ -99,6 +100,7 @@ export default async function AdminUsersPage({
               userEmail: member.user.email,
               isSystemAdmin: member.user.isSystemAdmin,
               active: member.user.active,
+              lastLoginAt: member.user.lastLoginAt?.toISOString() ?? null,
             }}
             organizationId={org.id}
             orgSlug={orgSlug}
@@ -115,6 +117,8 @@ export default async function AdminUsersPage({
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">User</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Email</th>
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
+              <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Active</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500">Last Login</th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-500">Actions</th>
             </tr>
           </thead>
@@ -129,6 +133,7 @@ export default async function AdminUsersPage({
                   userEmail: member.user.email,
                   isSystemAdmin: member.user.isSystemAdmin,
                   active: member.user.active,
+                  lastLoginAt: member.user.lastLoginAt?.toISOString() ?? null,
                 }}
                 organizationId={org.id}
                 orgSlug={orgSlug}

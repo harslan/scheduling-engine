@@ -7,13 +7,14 @@
  *   FREQ=WEEKLY;INTERVAL=1;BYDAY=MO,WE,FR
  *   FREQ=WEEKLY;INTERVAL=2
  *   FREQ=MONTHLY;INTERVAL=1;BYMONTHDAY=15
+ *   FREQ=MONTHLY;INTERVAL=1;BYDAY=2TU          (2nd Tuesday of every month)
  *   FREQ=MONTHLY;INTERVAL=1  (uses start date's day-of-month)
  */
 
 export interface RecurrenceRule {
   freq: "DAILY" | "WEEKLY" | "MONTHLY";
   interval: number;
-  byDay?: string[]; // MO, TU, WE, TH, FR, SA, SU
+  byDay?: string[]; // MO, TU, WE, TH, FR, SA, SU — or "2TU" (ordinal prefix) for monthly
   byMonthDay?: number;
   until?: Date;
   count?: number;
@@ -28,6 +29,43 @@ const DAY_MAP: Record<string, number> = {
   FR: 5,
   SA: 6,
 };
+
+/**
+ * Parse an ordinal BYDAY value like "2TU" into { ordinal: 2, day: "TU" }.
+ * Returns null if the value has no ordinal prefix (plain "TU").
+ */
+function parseOrdinalByDay(value: string): { ordinal: number; day: string } | null {
+  const match = value.match(/^(\d)([A-Z]{2})$/);
+  if (!match) return null;
+  return { ordinal: parseInt(match[1]), day: match[2] };
+}
+
+/**
+ * Find the nth occurrence of a day-of-week in a given month.
+ * ordinal: 1=first, 2=second, 3=third, 4=fourth
+ * Returns null if the month doesn't have that many occurrences (e.g., 5th Tuesday).
+ */
+function getNthDayOfWeekInMonth(year: number, month: number, dayOfWeek: number, ordinal: number): Date | null {
+  // Find the first occurrence of this day in the month
+  const first = new Date(year, month, 1);
+  let firstOccurrence = first.getDay();
+  let dayOffset = dayOfWeek - firstOccurrence;
+  if (dayOffset < 0) dayOffset += 7;
+  const firstDate = 1 + dayOffset;
+  const targetDate = firstDate + (ordinal - 1) * 7;
+  // Check if this date is still in the same month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  if (targetDate > daysInMonth) return null;
+  return new Date(year, month, targetDate);
+}
+
+/**
+ * Determine which occurrence (1-based) of its day-of-week a date is within its month.
+ * e.g., March 10, 2026 (Tuesday) → 2nd Tuesday → returns 2
+ */
+export function getOrdinalOfDayInMonth(date: Date): number {
+  return Math.floor((date.getDate() - 1) / 7) + 1;
+}
 
 export function parseRRule(rrule: string): RecurrenceRule {
   const parts: Record<string, string> = {};
@@ -99,46 +137,90 @@ export function generateInstances(
   const maxInstances = rule.count || 200;
 
   let current = new Date(startDateTime);
+  const originalDayOfMonth = startDateTime.getDate();
 
-  while (current <= recurrenceEndDate && instances.length < maxInstances) {
-    const dateKey = current.toISOString().split("T")[0];
+  // Detect monthly-by-day-of-week pattern (e.g., FREQ=MONTHLY;BYDAY=2TU)
+  const monthlyByDow = rule.freq === "MONTHLY" && rule.byDay && rule.byDay.length === 1
+    ? parseOrdinalByDay(rule.byDay[0])
+    : null;
 
-    if (!excludedDates || !excludedDates.has(dateKey)) {
-      if (rule.freq === "WEEKLY" && rule.byDay && rule.byDay.length > 0) {
-        // For weekly with specific days, check if current day matches
-        const dayOfWeek = current.getDay();
-        const dayAbbr = Object.entries(DAY_MAP).find(
-          ([, v]) => v === dayOfWeek
-        )?.[0];
-        if (dayAbbr && rule.byDay.includes(dayAbbr)) {
-          instances.push({
-            startDateTime: new Date(current),
-            endDateTime: new Date(current.getTime() + duration),
-          });
+  if (monthlyByDow) {
+    // Monthly by day-of-week: find the nth weekday in each month
+    const dayOfWeek = DAY_MAP[monthlyByDow.day];
+    if (dayOfWeek === undefined) return instances;
+
+    // Start from the month of startDateTime
+    let year = current.getFullYear();
+    let month = current.getMonth();
+    const timeOfDay = current.getHours() * 3600000 + current.getMinutes() * 60000 +
+      current.getSeconds() * 1000 + current.getMilliseconds();
+
+    while (instances.length < maxInstances) {
+      const target = getNthDayOfWeekInMonth(year, month, dayOfWeek, monthlyByDow.ordinal);
+      if (target) {
+        const instStart = new Date(target.getTime() + timeOfDay);
+        if (instStart > recurrenceEndDate) break;
+        if (instStart >= startDateTime) {
+          const dateKey = instStart.toISOString().split("T")[0];
+          if (!excludedDates || !excludedDates.has(dateKey)) {
+            instances.push({
+              startDateTime: instStart,
+              endDateTime: new Date(instStart.getTime() + duration),
+            });
+          }
         }
-      } else if (rule.freq === "MONTHLY" && rule.byMonthDay !== undefined) {
-        if (current.getDate() === rule.byMonthDay) {
-          instances.push({
-            startDateTime: new Date(current),
-            endDateTime: new Date(current.getTime() + duration),
-          });
-        }
-      } else {
-        instances.push({
-          startDateTime: new Date(current),
-          endDateTime: new Date(current.getTime() + duration),
-        });
+      }
+      // Advance to next month
+      month += rule.interval;
+      if (month > 11) {
+        year += Math.floor(month / 12);
+        month = month % 12;
+      }
+    }
+  } else {
+    // For MONTHLY with BYMONTHDAY, reposition current to the target day
+    if (rule.freq === "MONTHLY" && rule.byMonthDay !== undefined) {
+      const daysInMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+      current.setDate(Math.min(rule.byMonthDay, daysInMonth));
+      // If the target day is before the start date, advance to next month
+      if (current < startDateTime) {
+        current = advanceDate(current, rule, originalDayOfMonth);
       }
     }
 
-    // Advance to next occurrence
-    current = advanceDate(current, rule);
+    while (current <= recurrenceEndDate && instances.length < maxInstances) {
+      const dateKey = current.toISOString().split("T")[0];
+
+      if (!excludedDates || !excludedDates.has(dateKey)) {
+        if (rule.freq === "WEEKLY" && rule.byDay && rule.byDay.length > 0) {
+          // For weekly with specific days, check if current day matches
+          const dayOfWeek = current.getDay();
+          const dayAbbr = Object.entries(DAY_MAP).find(
+            ([, v]) => v === dayOfWeek
+          )?.[0];
+          if (dayAbbr && rule.byDay.includes(dayAbbr)) {
+            instances.push({
+              startDateTime: new Date(current),
+              endDateTime: new Date(current.getTime() + duration),
+            });
+          }
+        } else {
+          instances.push({
+            startDateTime: new Date(current),
+            endDateTime: new Date(current.getTime() + duration),
+          });
+        }
+      }
+
+      // Advance to next occurrence
+      current = advanceDate(current, rule, originalDayOfMonth);
+    }
   }
 
   return instances;
 }
 
-function advanceDate(date: Date, rule: RecurrenceRule): Date {
+function advanceDate(date: Date, rule: RecurrenceRule, originalDayOfMonth?: number): Date {
   const next = new Date(date);
 
   switch (rule.freq) {
@@ -162,9 +244,16 @@ function advanceDate(date: Date, rule: RecurrenceRule): Date {
         next.setDate(next.getDate() + 7 * rule.interval);
       }
       break;
-    case "MONTHLY":
+    case "MONTHLY": {
+      // Use byMonthDay if set, otherwise the original start day to avoid "sticky" clamping
+      // (e.g., Jan 31 → Feb 28 → Mar 31, not Mar 28)
+      const targetDay = rule.byMonthDay ?? originalDayOfMonth ?? date.getDate();
+      next.setDate(1); // Avoid overflow when setting month (e.g., Jan 31 + 1 month)
       next.setMonth(next.getMonth() + rule.interval);
+      const daysInMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+      next.setDate(Math.min(targetDay, daysInMonth));
       break;
+    }
   }
 
   return next;
@@ -196,8 +285,21 @@ export function describeRRule(rrule: string): string {
           : `Every ${rule.interval} weeks on ${days}`;
       }
       return rule.interval === 1 ? "Every week" : `Every ${rule.interval} weeks`;
-    case "MONTHLY":
+    case "MONTHLY": {
+      // Check for monthly-by-day-of-week (e.g., BYDAY=2TU)
+      if (rule.byDay && rule.byDay.length === 1) {
+        const parsed = parseOrdinalByDay(rule.byDay[0]);
+        if (parsed) {
+          const ordinalNames: Record<number, string> = { 1: "1st", 2: "2nd", 3: "3rd", 4: "4th" };
+          const ordLabel = ordinalNames[parsed.ordinal] || `${parsed.ordinal}th`;
+          const dayLabel = dayNames[parsed.day] || parsed.day;
+          return rule.interval === 1
+            ? `Monthly on the ${ordLabel} ${dayLabel}`
+            : `Every ${rule.interval} months on the ${ordLabel} ${dayLabel}`;
+        }
+      }
       return rule.interval === 1 ? "Every month" : `Every ${rule.interval} months`;
+    }
     default:
       return rrule;
   }

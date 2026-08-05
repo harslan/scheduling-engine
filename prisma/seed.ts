@@ -366,6 +366,29 @@ async function main() {
     });
   }
 
+  // Email templates
+  const emailTemplateSlugs = [
+    { slug: "event-submitted", name: "Event Submitted" },
+    { slug: "event-approved", name: "Event Approved" },
+    { slug: "event-denied", name: "Event Denied" },
+    { slug: "approval-required", name: "Approval Required" },
+    { slug: "event-reminder", name: "Event Reminder" },
+    { slug: "space-request-submitted", name: "Space Request Submitted" },
+    { slug: "space-request-approved", name: "Space Request Approved" },
+    { slug: "space-request-denied", name: "Space Request Denied" },
+  ];
+
+  for (const tmpl of emailTemplateSlugs) {
+    await prisma.emailTemplate.upsert({
+      where: { slug: tmpl.slug },
+      update: {},
+      create: {
+        slug: tmpl.slug,
+        name: tmpl.name,
+      },
+    });
+  }
+
   console.log("Seed complete!");
   console.log(`  Admin: admin@scheduling.dev / admin123`);
   console.log(`  User:  demo@incae.edu / demo123`);

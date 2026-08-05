@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Shield, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ApprovalButtons } from "./approval-buttons";
 import { AdminStatusDropdown } from "./admin-status-dropdown";
+import { BulkApprovalBar, BulkCheckbox } from "./bulk-actions";
 
 export default async function ApprovalsPage({
   params,
@@ -137,6 +138,10 @@ export default async function ApprovalsPage({
           </p>
         </div>
       ) : (
+        <BulkApprovalBar
+          pendingEventIds={events.filter((e) => e.status === "PENDING").map((e) => e.id)}
+          orgSlug={orgSlug}
+        >
         <div className="space-y-3">
           {events.map((event) => (
             <div
@@ -144,51 +149,54 @@ export default async function ApprovalsPage({
               className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow"
             >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Link
-                      href={`/${orgSlug}/events/${event.id}`}
-                      className="text-lg font-semibold text-slate-900 hover:text-primary transition-colors truncate"
-                    >
-                      {event.title || "Untitled"}
-                    </Link>
-                    <StatusBadge status={event.status} />
-                  </div>
+                <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <BulkCheckbox eventId={event.id} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-3 mb-2">
+                      <Link
+                        href={`/${orgSlug}/events/${event.id}`}
+                        className="text-lg font-semibold text-slate-900 hover:text-primary transition-colors truncate"
+                      >
+                        {event.title || "Untitled"}
+                      </Link>
+                      <StatusBadge status={event.status} />
+                    </div>
 
-                  <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
-                    {event.room && (
-                      <span>
-                        {org.roomTerm}: <span className="text-slate-700">{event.room.name}</span>
+                    <div className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-slate-500">
+                      {event.room && (
+                        <span>
+                          {org.roomTerm}: <span className="text-slate-700">{event.room.name}</span>
+                        </span>
+                      )}
+                      {event.eventType && (
+                        <span>
+                          Type: <span className="text-slate-700">{event.eventType.name}</span>
+                        </span>
+                      )}
+                      {event.startDateTime && (
+                        <span>
+                          {format(event.startDateTime, "MMM d, yyyy h:mm a")}
+                          {event.endDateTime &&
+                            ` — ${format(event.endDateTime, "h:mm a")}`}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-2 text-sm text-slate-400">
+                      Submitted by{" "}
+                      <span className="text-slate-600">
+                        {event.submitter?.name || event.contactName || event.contactEmail}
                       </span>
-                    )}
-                    {event.eventType && (
-                      <span>
-                        Type: <span className="text-slate-700">{event.eventType.name}</span>
-                      </span>
-                    )}
-                    {event.startDateTime && (
-                      <span>
-                        {format(event.startDateTime, "MMM d, yyyy h:mm a")}
-                        {event.endDateTime &&
-                          ` — ${format(event.endDateTime, "h:mm a")}`}
-                      </span>
+                      {" · "}
+                      {format(event.createdAt, "MMM d, yyyy")}
+                    </div>
+
+                    {event.notes && (
+                      <p className="mt-2 text-sm text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
+                        {event.notes}
+                      </p>
                     )}
                   </div>
-
-                  <div className="mt-2 text-sm text-slate-400">
-                    Submitted by{" "}
-                    <span className="text-slate-600">
-                      {event.submitter?.name || event.contactName || event.contactEmail}
-                    </span>
-                    {" · "}
-                    {format(event.createdAt, "MMM d, yyyy")}
-                  </div>
-
-                  {event.notes && (
-                    <p className="mt-2 text-sm text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-                      {event.notes}
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -242,6 +250,7 @@ export default async function ApprovalsPage({
             </div>
           )}
         </div>
+        </BulkApprovalBar>
       )}
     </div>
   );

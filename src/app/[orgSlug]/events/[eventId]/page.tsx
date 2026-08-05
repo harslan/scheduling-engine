@@ -15,11 +15,13 @@ import {
   FileText,
   Repeat,
   Layers,
+  Copy,
 } from "lucide-react";
 import { getSession } from "@/lib/session";
 import { describeRRule } from "@/lib/recurrence";
 import { DeleteEventButton } from "./delete-button";
 import { EditButton } from "./event-detail-client";
+import { InstanceTimeline } from "./instance-timeline";
 
 export default async function EventDetailPage({
   params,
@@ -59,7 +61,9 @@ export default async function EventDetailPage({
       instances: {
         where: { deleted: false },
         orderBy: { startDateTime: "asc" },
-        take: 20,
+      },
+      excludedDates: {
+        orderBy: { date: "asc" },
       },
     },
   });
@@ -149,6 +153,7 @@ export default async function EventDetailPage({
           {isOwner && event.status !== "CANCELLED" && (
             <DeleteEventButton eventId={event.id} orgSlug={orgSlug} />
           )}
+          <BookAgainLink event={event} orgSlug={orgSlug} />
         </div>
       </div>
 
@@ -200,22 +205,35 @@ export default async function EventDetailPage({
                   {format(event.recurrenceEndDate, "MMMM d, yyyy")}
                 </DetailRow>
               )}
-              {event.instances.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-xs font-medium text-slate-500 mb-2">
-                    Upcoming instances ({event.instances.length})
+              {event.excludedDates.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-1">
+                    Excluded dates
                   </p>
-                  <div className="space-y-1 max-h-40 overflow-y-auto">
-                    {event.instances.map((inst) => (
-                      <div key={inst.id} className="text-sm text-slate-600 flex items-center gap-2">
-                        <Clock className="w-3 h-3 text-slate-300" />
-                        {format(inst.startDateTime, "EEE, MMM d")} at{" "}
-                        {format(inst.startDateTime, "h:mm a")} – {format(inst.endDateTime, "h:mm a")}
-                      </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {event.excludedDates.map((ed) => (
+                      <span
+                        key={ed.id}
+                        className="inline-flex px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded"
+                      >
+                        {format(ed.date, "EEE, MMM d")}
+                      </span>
                     ))}
                   </div>
                 </div>
               )}
+              <InstanceTimeline
+                instances={event.instances.map((inst) => ({
+                  id: inst.id,
+                  startDateTime: inst.startDateTime.toISOString(),
+                  endDateTime: inst.endDateTime.toISOString(),
+                  deleted: inst.deleted,
+                }))}
+                eventId={event.id}
+                orgSlug={orgSlug}
+                canEdit={canEdit}
+                isRecurring={!!event.recurrenceRule}
+              />
             </DetailCard>
           )}
 
@@ -367,5 +385,44 @@ function DetailRow({
         <p className="text-sm text-slate-700 mt-0.5">{children}</p>
       </div>
     </div>
+  );
+}
+
+function BookAgainLink({
+  event,
+  orgSlug,
+}: {
+  event: {
+    title: string;
+    eventTypeId: string | null;
+    roomId: string | null;
+    description: string | null;
+    expectedAttendeeCount: number | null;
+    websiteUrl: string | null;
+    contactName: string;
+    contactEmail: string;
+    contactPhone: string | null;
+    notes: string | null;
+  };
+  orgSlug: string;
+}) {
+  const params = new URLSearchParams();
+  if (event.title) params.set("title", event.title);
+  if (event.eventTypeId) params.set("eventTypeId", event.eventTypeId);
+  if (event.roomId) params.set("roomId", event.roomId);
+  if (event.description) params.set("description", event.description);
+  if (event.expectedAttendeeCount) params.set("expectedAttendeeCount", String(event.expectedAttendeeCount));
+  if (event.websiteUrl) params.set("websiteUrl", event.websiteUrl);
+  if (event.contactPhone) params.set("contactPhone", event.contactPhone);
+  if (event.notes) params.set("notes", event.notes);
+
+  return (
+    <Link
+      href={`/${orgSlug}/submit-event?${params.toString()}`}
+      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors"
+    >
+      <Copy className="w-4 h-4" />
+      Book Again
+    </Link>
   );
 }

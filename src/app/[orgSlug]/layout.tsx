@@ -146,6 +146,7 @@ export default async function OrgLayout({
             eventSingularTerm: org.eventSingularTerm,
             eventPluralTerm: org.eventPluralTerm,
             roomTerm: org.roomTerm,
+            allowsRoomRequests: org.allowsRoomRequests,
           }}
           isManager={isManager}
           isAdmin={isAdmin}

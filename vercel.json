@@ -2,6 +2,7 @@
   "crons": [
     { "path": "/api/reserve/export", "schedule": "0 5 * * *" },
     { "path": "/api/reserve/import", "schedule": "0 5 * * *" },
-    { "path": "/api/reserve/process-webhooks", "schedule": "*/5 * * * *" }
+    { "path": "/api/reserve/process-webhooks", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/send-reminders", "schedule": "*/15 * * * *" }
   ]
 }

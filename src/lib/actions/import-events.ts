@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 
 interface ImportRow {
@@ -28,6 +29,8 @@ export async function importEvents(orgSlug: string, csvText: string) {
   });
 
   if (!org) return { error: "Organization not found" };
+
+  await requireOrgRole(org.id, ["ADMIN"]);
 
   const lines = csvText.trim().split("\n");
   if (lines.length < 2) return { error: "CSV must have a header row and at least one data row" };

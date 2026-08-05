@@ -6,10 +6,13 @@ import { getSession } from "@/lib/session";
 
 export default async function SubmitEventPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { orgSlug } = await params;
+  const query = await searchParams;
   const session = await getSession();
 
   const org = await prisma.organization.findUnique({
@@ -33,11 +36,16 @@ export default async function SubmitEventPage({
   // Get user info if authenticated
   let userName = "";
   let userEmail = "";
+  let isAdminOrManager = false;
   if (session?.user) {
     const userId = (session.user as { id: string }).id;
     const user = await prisma.user.findUnique({ where: { id: userId } });
     userName = user?.name || "";
     userEmail = user?.email || "";
+    const membership = await prisma.organizationMember.findUnique({
+      where: { organizationId_userId: { organizationId: org.id, userId } },
+    });
+    isAdminOrManager = membership?.role === "ADMIN" || membership?.role === "MANAGER";
   }
 
   return (
@@ -59,6 +67,16 @@ export default async function SubmitEventPage({
       <SubmitEventForm
         organizationId={org.id}
         orgSlug={orgSlug}
+        defaultValues={{
+          title: typeof query.title === "string" ? query.title : undefined,
+          eventTypeId: typeof query.eventTypeId === "string" ? query.eventTypeId : undefined,
+          roomId: typeof query.roomId === "string" ? query.roomId : undefined,
+          description: typeof query.description === "string" ? query.description : undefined,
+          expectedAttendeeCount: typeof query.expectedAttendeeCount === "string" ? query.expectedAttendeeCount : undefined,
+          websiteUrl: typeof query.websiteUrl === "string" ? query.websiteUrl : undefined,
+          contactPhone: typeof query.contactPhone === "string" ? query.contactPhone : undefined,
+          notes: typeof query.notes === "string" ? query.notes : undefined,
+        }}
         rooms={org.allowsRoomSelection ? org.rooms.map((r) => ({
           id: r.id,
           name: r.name,
@@ -72,6 +90,7 @@ export default async function SubmitEventPage({
         requiresApproval={org.requiresApproval}
         defaultContactName={userName}
         defaultContactEmail={userEmail}
+        isAdminOrManager={isAdminOrManager}
         orgSettings={{
           collectsAttendeeCount: org.collectsAttendeeCount,
           collectsContactPhone: org.collectsContactPhone,

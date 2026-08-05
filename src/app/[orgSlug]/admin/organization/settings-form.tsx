@@ -27,10 +27,12 @@ interface OrgData {
   roomClosingTime: string;
   maxEventLengthMinutes: number;
   schedulingCutoffDays: number | null;
+  schedulingCutoffFixedDate: string | null;
   eventSingularTerm: string;
   eventPluralTerm: string;
   roomTerm: string;
   emailReplyToAddress: string;
+  reminderEmailHours: number | null;
 }
 
 export function OrgSettingsForm({
@@ -147,6 +149,12 @@ export function OrgSettingsForm({
           </Field>
           <Field label="Scheduling Cutoff (days ahead)">
             <input name="schedulingCutoffDays" type="number" min={0} defaultValue={org.schedulingCutoffDays ?? ""} className={inputCls} placeholder="No limit" />
+          </Field>
+          <Field label="Scheduling Cutoff (fixed date)">
+            <input name="schedulingCutoffFixedDate" type="date" defaultValue={org.schedulingCutoffFixedDate ?? ""} className={inputCls} />
+          </Field>
+          <Field label="Reminder Email (hours before)">
+            <input name="reminderEmailHours" type="number" min={1} defaultValue={org.reminderEmailHours ?? ""} className={inputCls} placeholder="Disabled" />
           </Field>
         </div>
       </Section>

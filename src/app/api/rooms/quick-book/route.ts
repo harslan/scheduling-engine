@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { detectConflicts } from "@/lib/conflict-detection";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +42,37 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Room not found" }, { status: 404 });
   }
 
-  // Check duration against org limits
-  if (durationMinutes > org.maxEventLengthMinutes) {
+  // EWL: managersOnly rooms cannot be booked by non-admin users (kiosk is unauthenticated)
+  if (room.managersOnly) {
+    return NextResponse.json(
+      { error: `${room.name} is only available to managers.` },
+      { status: 403 }
+    );
+  }
+
+  // Check duration against org limits (skip if no limit configured)
+  if (org.maxEventLengthMinutes && durationMinutes > org.maxEventLengthMinutes) {
     return NextResponse.json(
       { error: `Maximum booking length is ${org.maxEventLengthMinutes} minutes` },
       { status: 400 }
     );
+  }
+
+  // Scheduling cutoff (fixed date) — quick-book starts now, so check end time
+  if (org.schedulingCutoffFixedDate) {
+    const now = new Date();
+    const endCheck = new Date(now.getTime() + durationMinutes * 60_000);
+    if (endCheck > org.schedulingCutoffFixedDate) {
+      const cutoffStr = org.schedulingCutoffFixedDate.toLocaleDateString("en-US", {
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+      return NextResponse.json(
+        { error: `Events cannot be scheduled after ${cutoffStr}.` },
+        { status: 400 }
+      );
+    }
   }
 
   const now = new Date();
@@ -57,19 +83,39 @@ export async function POST(request: NextRequest) {
 
   const endDateTime = new Date(startDateTime.getTime() + durationMinutes * 60_000);
 
-  // Check room availability — no overlapping approved/pending events
-  const conflict = await prisma.event.findFirst({
-    where: {
-      roomId: room.id,
-      organizationId: org.id,
-      deleted: false,
-      status: { in: ["APPROVED", "PENDING"] },
-      startDateTime: { lt: endDateTime },
-      endDateTime: { gt: startDateTime },
-    },
+  // EWL: enforce room opening/closing times (kiosk users are non-admin)
+  if (org.roomOpeningTime && org.roomClosingTime) {
+    const tz = org.timezone || undefined;
+    const startH = parseInt(startDateTime.toLocaleString("en-US", { hour: "numeric", hour12: false, ...(tz ? { timeZone: tz } : {}) }));
+    const startM = parseInt(startDateTime.toLocaleString("en-US", { minute: "numeric", ...(tz ? { timeZone: tz } : {}) }));
+    const endH = parseInt(endDateTime.toLocaleString("en-US", { hour: "numeric", hour12: false, ...(tz ? { timeZone: tz } : {}) }));
+    const endM = parseInt(endDateTime.toLocaleString("en-US", { minute: "numeric", ...(tz ? { timeZone: tz } : {}) }));
+    const [openH, openM] = org.roomOpeningTime.split(":").map(Number);
+    const [closeH, closeM] = org.roomClosingTime.split(":").map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+    const openMinutes = openH * 60 + openM;
+    const closeMinutes = closeH * 60 + closeM;
+
+    if (startMinutes < openMinutes || endMinutes > closeMinutes) {
+      return NextResponse.json(
+        { error: `Bookings must be between ${org.roomOpeningTime} and ${org.roomClosingTime}.` },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Check room availability using the full conflict detection engine
+  // (includes parent/child rooms, recurring instances, and buffer time)
+  const conflictResult = await detectConflicts({
+    orgId: org.id,
+    roomId: room.id,
+    startDateTime,
+    endDateTime,
+    timezone: org.timezone,
   });
 
-  if (conflict) {
+  if (conflictResult.hasConflict) {
     return NextResponse.json(
       { error: "This room is no longer available for that time slot" },
       { status: 409 }
@@ -88,6 +134,16 @@ export async function POST(request: NextRequest) {
       endDateTime,
       status: org.requiresApproval ? "PENDING" : "APPROVED",
       approved: !org.requiresApproval,
+    },
+  });
+
+  // Log activity
+  await prisma.eventActivity.create({
+    data: {
+      eventId: event.id,
+      action: "EVENT_SUBMITTED",
+      actorEmail: contactEmail,
+      details: { source: "quick-book", title },
     },
   });
 

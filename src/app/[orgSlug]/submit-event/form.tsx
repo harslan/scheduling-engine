@@ -28,14 +28,27 @@ interface OrgSettings {
   eventPluralTerm: string;
 }
 
+interface DefaultValues {
+  title?: string;
+  eventTypeId?: string;
+  roomId?: string;
+  description?: string;
+  expectedAttendeeCount?: string;
+  websiteUrl?: string;
+  contactPhone?: string;
+  notes?: string;
+}
+
 interface Props {
   organizationId: string;
   orgSlug: string;
   rooms: RoomWithConfigs[];
   eventTypes: { id: string; name: string }[];
   requiresApproval: boolean;
+  isAdminOrManager?: boolean;
   defaultContactName?: string;
   defaultContactEmail?: string;
+  defaultValues?: DefaultValues;
   orgSettings: OrgSettings;
 }
 
@@ -45,14 +58,24 @@ export function SubmitEventForm({
   rooms,
   eventTypes,
   requiresApproval,
+  isAdminOrManager,
   defaultContactName,
   defaultContactEmail,
+  defaultValues,
   orgSettings,
 }: Props) {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [conflicts, setConflicts] = useState<
+    { roomName: string; message: string; reason: string }[]
+  >([]);
+  const [alternatives, setAlternatives] = useState<
+    { roomId: string; roomName: string; configurationId?: string }[]
+  >([]);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedRoomId, setSelectedRoomId] = useState(defaultValues?.roomId || "");
+  const [startDateValue, setStartDateValue] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -79,6 +102,8 @@ export function SubmitEventForm({
 
     if (result.error) {
       setError(result.error);
+      setConflicts(result.conflicts || []);
+      setAlternatives(result.alternatives || []);
       setLoading(false);
       // Scroll to top so user sees the error
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -120,8 +145,43 @@ export function SubmitEventForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
-          {error}
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3 space-y-2">
+          {conflicts.length > 0 ? (
+            <>
+              <p className="font-semibold">Scheduling Conflicts:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                {conflicts.map((c, i) => (
+                  <li key={i}>{c.message}</li>
+                ))}
+              </ul>
+              {alternatives.length > 0 && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-blue-800">
+                  <p className="font-semibold text-sm mb-2">
+                    Available alternative {orgSettings.roomTerm.toLowerCase()}s:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {alternatives.map((alt) => (
+                      <button
+                        key={alt.roomId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedRoomId(alt.roomId);
+                          setError("");
+                          setConflicts([]);
+                          setAlternatives([]);
+                        }}
+                        className="px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-900 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Select {alt.roomName}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          ) : (
+            <p>{error}</p>
+          )}
         </div>
       )}
 
@@ -138,6 +198,7 @@ export function SubmitEventForm({
             name="title"
             type="text"
             required
+            defaultValue={defaultValues?.title}
             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
             placeholder="e.g., Faculty Meeting"
           />
@@ -147,6 +208,7 @@ export function SubmitEventForm({
           <Field label={`${orgSettings.eventSingularTerm} Type`}>
             <select
               name="eventTypeId"
+              defaultValue={defaultValues?.eventTypeId}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
             >
               <option value="">Select type...</option>
@@ -165,6 +227,8 @@ export function SubmitEventForm({
               name="startDateTime"
               type="datetime-local"
               required
+              value={startDateValue}
+              onChange={(e) => setStartDateValue(e.target.value)}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
             />
           </Field>
@@ -185,6 +249,7 @@ export function SubmitEventForm({
           <textarea
             name="description"
             rows={3}
+            defaultValue={defaultValues?.description}
             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all resize-y"
             placeholder="Detailed description of the event..."
           />
@@ -197,6 +262,7 @@ export function SubmitEventForm({
                 name="expectedAttendeeCount"
                 type="number"
                 min="1"
+                defaultValue={defaultValues?.expectedAttendeeCount}
                 className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
                 placeholder="Number of attendees"
               />
@@ -206,6 +272,7 @@ export function SubmitEventForm({
             <input
               name="websiteUrl"
               type="url"
+              defaultValue={defaultValues?.websiteUrl}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
               placeholder="https://..."
             />
@@ -214,11 +281,16 @@ export function SubmitEventForm({
       </Section>
 
       {/* Recurrence */}
-      <RecurrenceSection />
+      <RecurrenceSection startDateValue={startDateValue} />
 
       {/* Room */}
       {rooms.length > 0 && (
-        <RoomSection rooms={rooms} roomTerm={orgSettings.roomTerm} />
+        <RoomSection
+          rooms={rooms}
+          roomTerm={orgSettings.roomTerm}
+          selectedRoomId={selectedRoomId}
+          onRoomChange={setSelectedRoomId}
+        />
       )}
 
       {/* Contact */}
@@ -250,6 +322,7 @@ export function SubmitEventForm({
             <input
               name="contactPhone"
               type="tel"
+              defaultValue={defaultValues?.contactPhone}
               className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
               placeholder="(555) 123-4567"
             />
@@ -259,11 +332,43 @@ export function SubmitEventForm({
           <textarea
             name="notes"
             rows={3}
+            defaultValue={defaultValues?.notes}
             className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all resize-y"
             placeholder="Any special requirements..."
           />
         </Field>
       </Section>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="emailUpdates"
+            name="emailUpdates"
+            value="true"
+            defaultChecked
+            className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20"
+          />
+          <label htmlFor="emailUpdates" className="text-sm text-slate-600">
+            Receive email notifications about this {orgSettings.eventSingularTerm.toLowerCase()}
+          </label>
+        </div>
+
+        {isAdminOrManager && (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="overrideBuffer"
+              name="overrideBuffer"
+              value="true"
+              className="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/20"
+            />
+            <label htmlFor="overrideBuffer" className="text-sm text-slate-600">
+              Override buffer/reconfiguration time requirements
+            </label>
+          </div>
+        )}
+      </div>
 
       <button
         type="submit"
@@ -300,15 +405,35 @@ function Section({
   );
 }
 
-function RecurrenceSection() {
+function RecurrenceSection({ startDateValue }: { startDateValue: string }) {
   const [recurrenceType, setRecurrenceType] = useState("none");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
+  const [excludedDates, setExcludedDates] = useState<string[]>([]);
+  const [newExcludedDate, setNewExcludedDate] = useState("");
 
   const toggleDay = (day: string) => {
     setSelectedDays((prev) =>
       prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
     );
   };
+
+  // Compute monthly-by-day-of-week label from start date (e.g., "Monthly on the 2nd Tuesday")
+  const dayAbbrs = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+  const dayLabels = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const ordinalLabels = ["1st", "2nd", "3rd", "4th"];
+  let monthlyDowLabel = "";
+  let monthlyDowRRule = "";
+  if (startDateValue) {
+    const d = new Date(startDateValue);
+    if (!isNaN(d.getTime())) {
+      const dow = d.getDay();
+      const ordinal = Math.floor((d.getDate() - 1) / 7); // 0-based
+      if (ordinal < 4) {
+        monthlyDowLabel = `Monthly on the ${ordinalLabels[ordinal]} ${dayLabels[dow]}`;
+        monthlyDowRRule = `FREQ=MONTHLY;INTERVAL=1;BYDAY=${ordinal + 1}${dayAbbrs[dow]}`;
+      }
+    }
+  }
 
   // Build the hidden RRULE value
   let rruleValue = "";
@@ -322,6 +447,8 @@ function RecurrenceSection() {
     rruleValue = "FREQ=WEEKLY;INTERVAL=2";
   } else if (recurrenceType === "monthly") {
     rruleValue = "FREQ=MONTHLY;INTERVAL=1";
+  } else if (recurrenceType === "monthly-dow" && monthlyDowRRule) {
+    rruleValue = monthlyDowRRule;
   } else if (recurrenceType === "custom-weekly" && selectedDays.length > 0) {
     rruleValue = `FREQ=WEEKLY;INTERVAL=1;BYDAY=${selectedDays.join(",")}`;
   }
@@ -356,7 +483,10 @@ function RecurrenceSection() {
             <option value="weekdays">Every weekday (Mon-Fri)</option>
             <option value="weekly">Every week</option>
             <option value="biweekly">Every 2 weeks</option>
-            <option value="monthly">Every month</option>
+            <option value="monthly">Every month (same date)</option>
+            {monthlyDowLabel && (
+              <option value="monthly-dow">{monthlyDowLabel}</option>
+            )}
             <option value="custom-weekly">Custom (select days)...</option>
           </select>
         </div>
@@ -393,13 +523,78 @@ function RecurrenceSection() {
           />
         </Field>
       )}
+
+      {recurrenceType !== "none" && (
+        <Field label="Excluded dates (optional)">
+          {excludedDates.map((d) => (
+            <input key={d} type="hidden" name="excludedDates" value={d} />
+          ))}
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={newExcludedDate}
+                onChange={(e) => setNewExcludedDate(e.target.value)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 focus:bg-white outline-none transition-all"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (newExcludedDate && !excludedDates.includes(newExcludedDate)) {
+                    setExcludedDates((prev) => [...prev, newExcludedDate].sort());
+                    setNewExcludedDate("");
+                  }
+                }}
+                disabled={!newExcludedDate}
+                className="px-3 py-2 bg-slate-100 text-slate-600 text-sm font-medium rounded-lg hover:bg-slate-200 transition-colors disabled:opacity-50"
+              >
+                Add
+              </button>
+            </div>
+            {excludedDates.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {excludedDates.map((d) => (
+                  <span
+                    key={d}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded-lg"
+                  >
+                    {new Date(d + "T00:00:00").toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setExcludedDates((prev) => prev.filter((x) => x !== d))}
+                      className="text-amber-500 hover:text-amber-700 ml-0.5"
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-slate-400">
+              Skip specific dates (holidays, closures, etc.)
+            </p>
+          </div>
+        </Field>
+      )}
     </Section>
   );
 }
 
-function RoomSection({ rooms, roomTerm }: { rooms: RoomWithConfigs[]; roomTerm: string }) {
-  const [selectedRoomId, setSelectedRoomId] = useState("");
-
+function RoomSection({
+  rooms,
+  roomTerm,
+  selectedRoomId,
+  onRoomChange,
+}: {
+  rooms: RoomWithConfigs[];
+  roomTerm: string;
+  selectedRoomId: string;
+  onRoomChange: (id: string) => void;
+}) {
   const selectedRoom = rooms.find((r) => r.id === selectedRoomId);
   const hasConfigs = selectedRoom && selectedRoom.configurations.length > 0;
 
@@ -409,7 +604,7 @@ function RoomSection({ rooms, roomTerm }: { rooms: RoomWithConfigs[]; roomTerm: 
         <select
           name="roomId"
           value={selectedRoomId}
-          onChange={(e) => setSelectedRoomId(e.target.value)}
+          onChange={(e) => onRoomChange(e.target.value)}
           className="w-full px-4 py-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
         >
           <option value="">{`Choose a ${roomTerm.toLowerCase()}...`}</option>

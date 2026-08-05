@@ -30,6 +30,7 @@ const OrgSettingsSchema = z.object({
   roomClosingTime: z.string().optional(),
   maxEventLengthMinutes: z.coerce.number().int().positive().optional(),
   schedulingCutoffDays: z.coerce.number().int().positive().optional().nullable(),
+  schedulingCutoffFixedDate: z.string().optional(),
 
   // Custom labels
   eventSingularTerm: z.string().optional(),
@@ -38,6 +39,7 @@ const OrgSettingsSchema = z.object({
 
   // Email
   emailReplyToAddress: z.string().optional(),
+  reminderEmailHours: z.coerce.number().int().positive().optional().nullable(),
 });
 
 export async function updateOrganization(orgId: string, formData: FormData) {
@@ -89,10 +91,14 @@ export async function updateOrganization(orgId: string, formData: FormData) {
       roomClosingTime: data.roomClosingTime ?? org.roomClosingTime,
       maxEventLengthMinutes: data.maxEventLengthMinutes ?? org.maxEventLengthMinutes,
       schedulingCutoffDays: data.schedulingCutoffDays === undefined ? org.schedulingCutoffDays : data.schedulingCutoffDays,
+      schedulingCutoffFixedDate: data.schedulingCutoffFixedDate
+        ? new Date(data.schedulingCutoffFixedDate + "T00:00:00Z")
+        : null,
       eventSingularTerm: data.eventSingularTerm ?? org.eventSingularTerm,
       eventPluralTerm: data.eventPluralTerm ?? org.eventPluralTerm,
       roomTerm: data.roomTerm ?? org.roomTerm,
       emailReplyToAddress: data.emailReplyToAddress ?? org.emailReplyToAddress,
+      reminderEmailHours: data.reminderEmailHours === undefined ? org.reminderEmailHours : data.reminderEmailHours,
     },
   });
 

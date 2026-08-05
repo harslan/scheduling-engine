@@ -78,12 +78,15 @@ export async function GET(
   twelveMonthsAhead.setMonth(twelveMonthsAhead.getMonth() + 12);
 
   // Build query
+  // EWL: unpublished events are hidden from public/guest calendar feeds.
+  // Only show unpublished events to authenticated users (who have a member secret).
   const where: Record<string, unknown> = {
     organizationId: org.id,
     deleted: false,
     status: "APPROVED",
     startDateTime: { gte: sixMonthsAgo },
     endDateTime: { lte: twelveMonthsAhead },
+    ...(!member ? { published: true } : {}),
   };
 
   if (roomId) {
@@ -101,8 +104,9 @@ export async function GET(
     ];
   }
 
-  const events = await prisma.event.findMany({
-    where,
+  // Non-recurring events
+  const nonRecurringEvents = await prisma.event.findMany({
+    where: { ...where, recurrenceRule: null },
     include: {
       room: true,
       eventType: true,
@@ -110,13 +114,56 @@ export async function GET(
     orderBy: { startDateTime: "asc" },
   });
 
+  // Recurring event instances within the time window
+  const instanceWhere: Record<string, unknown> = {
+    deleted: false,
+    startDateTime: { gte: sixMonthsAgo },
+    endDateTime: { lte: twelveMonthsAhead },
+    event: {
+      organizationId: org.id,
+      deleted: false,
+      status: "APPROVED",
+      recurrenceRule: { not: null },
+      ...(!member ? { published: true } : {}),
+      ...(roomId ? { roomId } : {}),
+      ...(userId
+        ? {
+            OR: [
+              { submitterId: userId },
+              ...(await (async () => {
+                const user = await prisma.user.findUnique({
+                  where: { id: userId },
+                  select: { email: true },
+                });
+                return user?.email ? [{ contactEmail: user.email }] : [];
+              })()),
+            ],
+          }
+        : {}),
+    },
+  };
+
+  const recurringInstances = await prisma.eventInstance.findMany({
+    where: instanceWhere,
+    include: {
+      event: {
+        include: {
+          room: true,
+          eventType: true,
+        },
+      },
+    },
+    orderBy: { startDateTime: "asc" },
+  });
+
   // Build calendar name based on filters
+  const allNonRecurring = nonRecurringEvents;
   const orgName = org.appDisplayName || org.name;
   let calendarName = orgName;
   let filename = `${orgSlug}-calendar`;
 
   if (roomSlug) {
-    const roomName = events[0]?.room?.name || roomSlug;
+    const roomName = allNonRecurring[0]?.room?.name || recurringInstances[0]?.event?.room?.name || roomSlug;
     calendarName = `${orgName} — ${roomName}`;
     filename = `${orgSlug}-${roomSlug}`;
   }
@@ -137,7 +184,8 @@ export async function GET(
     "METHOD:PUBLISH",
   ];
 
-  for (const event of events) {
+  // Emit non-recurring events as individual VEVENTs
+  for (const event of nonRecurringEvents) {
     if (!event.startDateTime || !event.endDateTime) continue;
 
     const uid = `${event.id}@scheduling-engine`;
@@ -156,6 +204,40 @@ export async function GET(
       `UID:${uid}`,
       `DTSTART:${formatICalDate(event.startDateTime)}`,
       `DTEND:${formatICalDate(event.endDateTime)}`,
+      `DTSTAMP:${formatICalDate(event.updatedAt)}`,
+      `CREATED:${formatICalDate(event.createdAt)}`,
+      `LAST-MODIFIED:${formatICalDate(event.updatedAt)}`,
+      `SUMMARY:${escapeICalText(event.title || "Untitled Event")}`,
+    );
+
+    if (location) lines.push(`LOCATION:${escapeICalText(location)}`);
+    if (description) lines.push(`DESCRIPTION:${description}`);
+
+    lines.push(
+      `STATUS:CONFIRMED`,
+      "END:VEVENT",
+    );
+  }
+
+  // Emit recurring event instances as individual VEVENTs
+  for (const inst of recurringInstances) {
+    const event = inst.event;
+    const uid = `${event.id}-${inst.id}@scheduling-engine`;
+    const location = event.room?.name || "";
+    const description = [
+      event.eventType?.name ? `Type: ${event.eventType.name}` : "",
+      event.contactName ? `Contact: ${event.contactName}` : "",
+      event.contactEmail ? `Email: ${event.contactEmail}` : "",
+      event.notes || "",
+    ]
+      .filter(Boolean)
+      .join("\\n");
+
+    lines.push(
+      "BEGIN:VEVENT",
+      `UID:${uid}`,
+      `DTSTART:${formatICalDate(inst.startDateTime)}`,
+      `DTEND:${formatICalDate(inst.endDateTime)}`,
       `DTSTAMP:${formatICalDate(event.updatedAt)}`,
       `CREATED:${formatICalDate(event.createdAt)}`,
       `LAST-MODIFIED:${formatICalDate(event.updatedAt)}`,

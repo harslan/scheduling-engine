@@ -4,6 +4,9 @@ import { ChevronLeft, ChevronRight, Calendar as CalIcon, Columns3, LayoutList, G
 import Link from "next/link";
 import sanitizeHtml from "sanitize-html";
 import { ScrollToNow } from "./scroll-to-now";
+import { ROOM_COLORS } from "./calendar-constants";
+import { CalendarFilters } from "./calendar-filters";
+import { getSession } from "@/lib/session";
 import {
   startOfWeek,
   endOfWeek,
@@ -14,19 +17,6 @@ import {
   isSameDay,
   isToday as isDateToday,
 } from "date-fns";
-
-const ROOM_COLORS = [
-  { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-800", solid: "bg-blue-500" },
-  { bg: "bg-green-100", border: "border-green-400", text: "text-green-800", solid: "bg-green-500" },
-  { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-800", solid: "bg-purple-500" },
-  { bg: "bg-amber-100", border: "border-amber-400", text: "text-amber-800", solid: "bg-amber-500" },
-  { bg: "bg-sky-100", border: "border-sky-400", text: "text-sky-800", solid: "bg-sky-500" },
-  { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-800", solid: "bg-orange-500" },
-  { bg: "bg-teal-100", border: "border-teal-400", text: "text-teal-800", solid: "bg-teal-500" },
-  { bg: "bg-red-100", border: "border-red-400", text: "text-red-800", solid: "bg-red-500" },
-  { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-800", solid: "bg-emerald-500" },
-  { bg: "bg-pink-100", border: "border-pink-400", text: "text-pink-800", solid: "bg-pink-500" },
-];
 
 const HOURS = Array.from({ length: 16 }, (_, i) => i + 7); // 7am to 10pm
 
@@ -44,7 +34,7 @@ export default async function CalendarPage({
   searchParams,
 }: {
   params: Promise<{ orgSlug: string }>;
-  searchParams: Promise<{ month?: string; year?: string; view?: string; date?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; view?: string; date?: string; room?: string; eventType?: string }>;
 }) {
   const { orgSlug } = await params;
   const sp = await searchParams;
@@ -98,12 +88,56 @@ export default async function CalendarPage({
     headerTitle = format(rangeStart, "MMMM yyyy");
   }
 
+  // Session + managersOnly visibility
+  const session = await getSession();
+  let isManager = false;
+  if (session?.user) {
+    const userId = (session.user as { id: string }).id;
+    const membership = await prisma.organizationMember.findUnique({
+      where: { organizationId_userId: { organizationId: org.id, userId } },
+    });
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    isManager = user?.isSystemAdmin || membership?.role === "ADMIN" || membership?.role === "MANAGER" || false;
+  }
+
+  // Fetch all active rooms
+  const allRooms = await prisma.room.findMany({
+    where: { organizationId: org.id, active: true },
+    orderBy: { sortOrder: "asc" },
+  });
+
+  // Filter rooms by managersOnly visibility
+  const visibleRooms = isManager ? allRooms : allRooms.filter((r) => !r.managersOnly);
+  const visibleRoomIds = new Set(visibleRooms.map((r) => r.id));
+
+  // Validate room filter param
+  const roomFilter = sp.room === "none"
+    ? "none"
+    : sp.room && sp.room !== "all" && visibleRoomIds.has(sp.room)
+      ? sp.room
+      : "all";
+
+  // Parse event type filter
+  const activeEventTypes = sp.eventType
+    ? sp.eventType.split(",").filter(Boolean)
+    : [];
+
+  // Fetch event types
+  const eventTypes = await prisma.eventType.findMany({
+    where: { organizationId: org.id },
+    orderBy: { name: "asc" },
+  });
+  const eventTypeIds = new Set(eventTypes.map((et) => et.id));
+  const validEventTypes = activeEventTypes.filter((id) => eventTypeIds.has(id));
+
   // Fetch single (non-recurring) events
+  // EWL: unpublished events hidden from public calendar (CalendarViews/Page.cs line 374)
   const singleEvents = await prisma.event.findMany({
     where: {
       organizationId: org.id,
       deleted: false,
       status: "APPROVED",
+      published: true,
       recurrenceRule: null,
       startDateTime: { lte: rangeEnd },
       endDateTime: { gte: rangeStart },
@@ -122,6 +156,7 @@ export default async function CalendarPage({
         organizationId: org.id,
         deleted: false,
         status: "APPROVED",
+        published: true,
         recurrenceRule: { not: null },
       },
     },
@@ -132,7 +167,7 @@ export default async function CalendarPage({
   });
 
   // Merge into unified calendar items
-  const events: EventWithRoom[] = [
+  const allEvents: EventWithRoom[] = [
     ...singleEvents,
     ...recurringInstances.map((inst) => ({
       id: inst.event.id,
@@ -150,36 +185,98 @@ export default async function CalendarPage({
     return aTime - bTime;
   });
 
-  // Fetch rooms for legend
-  const rooms = await prisma.room.findMany({
-    where: { organizationId: org.id, active: true },
-    orderBy: { sortOrder: "asc" },
-  });
+  // Filter out events in managersOnly rooms for non-managers
+  const events = isManager
+    ? allEvents
+    : allEvents.filter((e) => !e.roomId || visibleRoomIds.has(e.roomId));
+
+  // Compute event counts from unfiltered (visible) events for badge display
+  const eventCountByRoom = new Map<string, number>();
+  let roomlessEventCount = 0;
+  const eventCountByType = new Map<string, number>();
+  for (const event of events) {
+    if (event.roomId) {
+      eventCountByRoom.set(event.roomId, (eventCountByRoom.get(event.roomId) ?? 0) + 1);
+    } else {
+      roomlessEventCount++;
+    }
+    if (event.eventType) {
+      eventCountByType.set(event.eventType.id, (eventCountByType.get(event.eventType.id) ?? 0) + 1);
+    }
+  }
+
+  // Apply room filter
+  let filteredEvents = events;
+  if (roomFilter === "none") {
+    filteredEvents = filteredEvents.filter((e) => !e.roomId);
+  } else if (roomFilter !== "all") {
+    filteredEvents = filteredEvents.filter((e) => e.roomId === roomFilter);
+  }
+
+  // Apply event type filter
+  if (validEventTypes.length > 0) {
+    const typeSet = new Set(validEventTypes);
+    filteredEvents = filteredEvents.filter((e) => e.eventType && typeSet.has(e.eventType.id));
+  }
 
   const roomColorMap = new Map<string, number>();
-  rooms.forEach((room, i) => roomColorMap.set(room.id, i % ROOM_COLORS.length));
+  visibleRooms.forEach((room, i) => roomColorMap.set(room.id, i % ROOM_COLORS.length));
+
+  // Centralized URL builder — preserves filter params across navigation
+  const filterSuffix = buildFilterSuffix(roomFilter, validEventTypes);
+
+  function buildCalendarUrl(overrides: {
+    view?: CalendarView;
+    date?: string;
+    month?: number;
+    year?: number;
+    room?: string;
+    eventType?: string;
+  } = {}) {
+    const v = overrides.view ?? view;
+    const room = overrides.room ?? roomFilter;
+    const et = overrides.eventType ?? (validEventTypes.length > 0 ? validEventTypes.join(",") : "");
+
+    let base = `/${orgSlug}?view=${v}`;
+    if (v === "year") {
+      base += `&year=${overrides.year ?? rangeStart.getFullYear()}`;
+    } else if (v === "month") {
+      base += `&month=${overrides.month ?? rangeStart.getMonth() + 1}&year=${overrides.year ?? rangeStart.getFullYear()}`;
+    } else {
+      base += `&date=${overrides.date ?? format(refDate, "yyyy-MM-dd")}`;
+    }
+
+    if (room && room !== "all") base += `&room=${room}`;
+    if (et) base += `&eventType=${et}`;
+    return base;
+  }
 
   // Navigation URLs
-  const dateStr = format(refDate, "yyyy-MM-dd");
   function navUrl(direction: "prev" | "next" | "today") {
     if (direction === "today") {
-      return `/${orgSlug}?view=${view}`;
+      return buildCalendarUrl({ view });
     }
     const delta = direction === "prev" ? -1 : 1;
-    let target: Date;
     if (view === "year") {
-      const y = rangeStart.getFullYear() + delta;
-      return `/${orgSlug}?view=year&year=${y}`;
+      return buildCalendarUrl({ view: "year", year: rangeStart.getFullYear() + delta });
     } else if (view === "month") {
-      target = new Date(rangeStart.getFullYear(), rangeStart.getMonth() + delta, 1);
-      return `/${orgSlug}?view=month&month=${target.getMonth() + 1}&year=${target.getFullYear()}`;
+      const target = new Date(rangeStart.getFullYear(), rangeStart.getMonth() + delta, 1);
+      return buildCalendarUrl({ view: "month", month: target.getMonth() + 1, year: target.getFullYear() });
     } else if (view === "week") {
-      target = addDays(rangeStart, delta * 7);
-      return `/${orgSlug}?view=week&date=${format(target, "yyyy-MM-dd")}`;
+      const target = addDays(rangeStart, delta * 7);
+      return buildCalendarUrl({ view: "week", date: format(target, "yyyy-MM-dd") });
     } else {
-      target = addDays(refDate, delta);
-      return `/${orgSlug}?view=day&date=${format(target, "yyyy-MM-dd")}`;
+      const target = addDays(refDate, delta);
+      return buildCalendarUrl({ view: "day", date: format(target, "yyyy-MM-dd") });
     }
+  }
+
+  // Build filter URL for CalendarFilters (overrides room/eventType only)
+  function buildFilterUrl(overrides: { room?: string; eventType?: string }) {
+    return buildCalendarUrl({
+      room: overrides.room,
+      eventType: overrides.eventType,
+    });
   }
 
   return (
@@ -225,7 +322,12 @@ export default async function CalendarPage({
             ] as const).map(({ key, label, icon: Icon }) => (
               <Link
                 key={key}
-                href={`/${orgSlug}?view=${key}${key === "year" ? `&year=${rangeStart.getFullYear()}` : key === "month" ? `&month=${rangeStart.getMonth() + 1}&year=${rangeStart.getFullYear()}` : `&date=${format(refDate, "yyyy-MM-dd")}`}`}
+                href={buildCalendarUrl({
+                  view: key,
+                  ...(key === "year" ? { year: rangeStart.getFullYear() } : {}),
+                  ...(key === "month" ? { month: rangeStart.getMonth() + 1, year: rangeStart.getFullYear() } : {}),
+                  ...(key === "week" || key === "day" ? { date: format(refDate, "yyyy-MM-dd") } : {}),
+                })}
                 className={`flex items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex-1 sm:flex-none ${
                   view === key
                     ? "bg-white text-slate-900 shadow-sm"
@@ -255,13 +357,30 @@ export default async function CalendarPage({
         </div>
       </div>
 
+      {/* Filter bar */}
+      <CalendarFilters
+        orgSlug={orgSlug}
+        rooms={visibleRooms}
+        eventTypes={eventTypes}
+        activeRoomFilter={roomFilter}
+        activeEventTypes={validEventTypes}
+        eventCountByRoom={eventCountByRoom}
+        roomlessEventCount={roomlessEventCount}
+        eventCountByType={eventCountByType}
+        allowsRoomlessEvents={org.allowsRoomlessEvents}
+        roomColorMap={roomColorMap}
+        roomTerm={org.roomTerm}
+        buildUrl={buildFilterUrl}
+      />
+
       {/* Calendar body */}
       {view === "year" && (
         <YearView
           orgSlug={orgSlug}
           year={rangeStart.getFullYear()}
-          events={events}
+          events={filteredEvents}
           now={now}
+          filterSuffix={filterSuffix}
         />
       )}
       {view === "month" && (
@@ -269,53 +388,42 @@ export default async function CalendarPage({
           orgSlug={orgSlug}
           rangeStart={rangeStart}
           rangeEnd={rangeEnd}
-          events={events}
+          events={filteredEvents}
           roomColorMap={roomColorMap}
           now={now}
           org={org}
+          filterSuffix={filterSuffix}
         />
       )}
       {view === "week" && (
         <WeekView
           orgSlug={orgSlug}
           rangeStart={rangeStart}
-          events={events}
+          events={filteredEvents}
           roomColorMap={roomColorMap}
           org={org}
+          filterSuffix={filterSuffix}
         />
       )}
       {view === "day" && (
         <DayView
           orgSlug={orgSlug}
           refDate={refDate}
-          events={events}
+          events={filteredEvents}
           roomColorMap={roomColorMap}
           org={org}
         />
       )}
-
-      {/* Room legend */}
-      {rooms.length > 0 && (
-        <div className="mt-4 bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
-            {org.roomTerm}s
-          </h3>
-          <div className="flex flex-wrap gap-3">
-            {rooms.map((room) => {
-              const colorIdx = roomColorMap.get(room.id) ?? 0;
-              const color = ROOM_COLORS[colorIdx];
-              return (
-                <div key={room.id} className="flex items-center gap-1.5">
-                  <span className={`w-3 h-3 rounded-sm ${color.solid}`} />
-                  <span className="text-xs text-slate-600">{room.name}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
     </div>
   );
+}
+
+/** Build a URL suffix string for filter params to append to internal links */
+function buildFilterSuffix(roomFilter: string, validEventTypes: string[]): string {
+  let suffix = "";
+  if (roomFilter && roomFilter !== "all") suffix += `&room=${roomFilter}`;
+  if (validEventTypes.length > 0) suffix += `&eventType=${validEventTypes.join(",")}`;
+  return suffix;
 }
 
 // ============================================================
@@ -356,6 +464,7 @@ function MonthView({
   roomColorMap,
   now,
   org,
+  filterSuffix,
 }: {
   orgSlug: string;
   rangeStart: Date;
@@ -364,6 +473,7 @@ function MonthView({
   roomColorMap: Map<string, number>;
   now: Date;
   org: { roomTerm: string };
+  filterSuffix: string;
 }) {
   const month = rangeStart.getMonth();
   const year = rangeStart.getFullYear();
@@ -403,6 +513,7 @@ function MonthView({
         {days.map((day, i) => {
           const dayEvents = day ? eventsByDay.get(day) || [] : [];
           const isToday = isCurrentMonth && day === today;
+          const dateStr = day !== null ? `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}` : "";
 
           return (
             <div
@@ -414,7 +525,7 @@ function MonthView({
               {day !== null && (
                 <>
                   <Link
-                    href={`/${orgSlug}?view=day&date=${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`}
+                    href={`/${orgSlug}?view=day&date=${dateStr}${filterSuffix}`}
                     className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm mb-0.5 hover:bg-primary/10 transition-colors ${
                       isToday
                         ? "bg-primary text-white font-bold"
@@ -443,7 +554,7 @@ function MonthView({
                     })}
                     {dayEvents.length > 3 && (
                       <Link
-                        href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
+                        href={`/${orgSlug}?view=day&date=${dateStr}${filterSuffix}`}
                         className="text-xs text-primary hover:underline px-1.5"
                       >
                         +{dayEvents.length - 3} more
@@ -470,12 +581,14 @@ function WeekView({
   events,
   roomColorMap,
   org,
+  filterSuffix,
 }: {
   orgSlug: string;
   rangeStart: Date;
   events: EventWithRoom[];
   roomColorMap: Map<string, number>;
   org: { roomTerm: string; eventSingularTerm: string; eventPluralTerm: string };
+  filterSuffix: string;
 }) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i));
   const weekHasToday = weekDays.some((d) => isDateToday(d));
@@ -493,7 +606,7 @@ function WeekView({
           return (
             <div key={day.toISOString()} className={`bg-white rounded-xl border ${today ? "border-primary/30 ring-1 ring-primary/10" : "border-slate-200"} overflow-hidden shadow-sm`}>
               <Link
-                href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
+                href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}${filterSuffix}`}
                 className={`flex items-center gap-2 px-4 py-2.5 border-b ${today ? "bg-primary/5 border-primary/10" : "bg-slate-50 border-slate-100"}`}
               >
                 <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${today ? "bg-primary text-white" : "text-slate-700"}`}>
@@ -548,7 +661,7 @@ function WeekView({
               <div key={day.toISOString()} className={`px-2 py-3 text-center border-l border-slate-200 ${today ? "bg-primary/5" : "bg-slate-50"}`}>
                 <div className="text-xs font-semibold uppercase tracking-wider text-slate-500">{format(day, "EEE")}</div>
                 <Link
-                  href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}`}
+                  href={`/${orgSlug}?view=day&date=${format(day, "yyyy-MM-dd")}${filterSuffix}`}
                   className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm mt-1 hover:bg-primary/10 transition-colors ${today ? "bg-primary text-white font-bold" : "text-slate-700"}`}
                 >
                   {format(day, "d")}
@@ -733,11 +846,13 @@ function YearView({
   year,
   events,
   now,
+  filterSuffix,
 }: {
   orgSlug: string;
   year: number;
   events: EventWithRoom[];
   now: Date;
+  filterSuffix: string;
 }) {
   const months = Array.from({ length: 12 }, (_, i) => i);
   const monthNames = [
@@ -769,7 +884,7 @@ function YearView({
           return (
             <div key={month}>
               <Link
-                href={`/${orgSlug}?view=month&month=${month + 1}&year=${year}`}
+                href={`/${orgSlug}?view=month&month=${month + 1}&year=${year}${filterSuffix}`}
                 className="block text-sm font-semibold text-slate-700 mb-2 hover:text-primary transition-colors"
               >
                 {monthNames[month]}
@@ -798,7 +913,7 @@ function YearView({
                   return (
                     <Link
                       key={`d-${day}`}
-                      href={`/${orgSlug}?view=day&date=${dateKey}`}
+                      href={`/${orgSlug}?view=day&date=${dateKey}${filterSuffix}`}
                       className={`h-5 flex items-center justify-center text-[10px] rounded-sm transition-colors ${
                         isToday
                           ? "bg-primary text-white font-bold"

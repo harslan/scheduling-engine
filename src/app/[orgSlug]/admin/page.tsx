@@ -82,14 +82,30 @@ export default async function AdminDashboardPage({
         createdAt: { gte: sevenDaysAgo },
       },
     }),
-    prisma.event.count({
-      where: {
-        organizationId: org.id,
-        deleted: false,
-        status: "APPROVED",
-        startDateTime: { gte: now },
-      },
-    }),
+    // Upcoming events: count non-recurring events + recurring instances
+    Promise.all([
+      prisma.event.count({
+        where: {
+          organizationId: org.id,
+          deleted: false,
+          status: "APPROVED",
+          recurrenceRule: null,
+          startDateTime: { gte: now },
+        },
+      }),
+      prisma.eventInstance.count({
+        where: {
+          deleted: false,
+          startDateTime: { gte: now },
+          event: {
+            organizationId: org.id,
+            deleted: false,
+            status: "APPROVED",
+            recurrenceRule: { not: null },
+          },
+        },
+      }),
+    ]).then(([a, b]) => a + b),
     prisma.room.count({
       where: { organizationId: org.id },
     }),

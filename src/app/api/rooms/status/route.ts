@@ -47,13 +47,18 @@ export async function GET(request: NextRequest) {
   // Get today's approved events for these rooms
   const startOfDay = new Date(now);
   startOfDay.setHours(0, 0, 0, 0);
+  const roomIds = rooms.map((r) => r.id);
 
-  const events = await prisma.event.findMany({
+  // Non-recurring events with times in today's range
+  // Filter to published events only — this is a public/unauthenticated endpoint
+  const nonRecurringEvents = await prisma.event.findMany({
     where: {
       organizationId: org.id,
       deleted: false,
       status: "APPROVED",
-      roomId: { in: rooms.map((r) => r.id) },
+      published: true,
+      recurrenceRule: null,
+      roomId: { in: roomIds },
       startDateTime: { lte: endOfDay },
       endDateTime: { gte: startOfDay },
     },
@@ -68,6 +73,52 @@ export async function GET(request: NextRequest) {
     },
     orderBy: { startDateTime: "asc" },
   });
+
+  // Recurring event instances happening today
+  const recurringInstances = await prisma.eventInstance.findMany({
+    where: {
+      deleted: false,
+      startDateTime: { lte: endOfDay },
+      endDateTime: { gte: startOfDay },
+      event: {
+        organizationId: org.id,
+        deleted: false,
+        status: "APPROVED",
+        published: true,
+        recurrenceRule: { not: null },
+        roomId: { in: roomIds },
+      },
+    },
+    select: {
+      id: true,
+      startDateTime: true,
+      endDateTime: true,
+      event: {
+        select: {
+          id: true,
+          title: true,
+          roomId: true,
+          contactName: true,
+          eventOrganization: true,
+        },
+      },
+    },
+    orderBy: { startDateTime: "asc" },
+  });
+
+  // Merge into a unified list
+  const events = [
+    ...nonRecurringEvents,
+    ...recurringInstances.map((inst) => ({
+      id: inst.event.id,
+      title: inst.event.title,
+      roomId: inst.event.roomId,
+      startDateTime: inst.startDateTime,
+      endDateTime: inst.endDateTime,
+      contactName: inst.event.contactName,
+      eventOrganization: inst.event.eventOrganization,
+    })),
+  ].sort((a, b) => (a.startDateTime?.getTime() ?? 0) - (b.startDateTime?.getTime() ?? 0));
 
   // Group events by room
   const eventsByRoom = new Map<string, typeof events>();

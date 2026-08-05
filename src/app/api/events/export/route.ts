@@ -1,8 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 import { format } from "date-fns";
 
 export async function GET(request: NextRequest) {
+  const token = await getToken({ req: request });
+  if (!token) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const { searchParams } = request.nextUrl;
   const orgSlug = searchParams.get("org");
   const status = searchParams.get("status"); // optional filter
@@ -18,6 +24,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Organization not found" }, { status: 404 });
   }
 
+  // Verify user is an admin/manager of this org
+  if (!token.email) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+  const member = await prisma.organizationMember.findFirst({
+    where: {
+      organizationId: org.id,
+      user: { email: token.email },
+      role: { in: ["ADMIN", "MANAGER"] },
+    },
+  });
+  if (!member) {
+    return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  }
+
   const where: Record<string, unknown> = {
     organizationId: org.id,
     deleted: false,
@@ -26,9 +47,25 @@ export async function GET(request: NextRequest) {
     where.status = status;
   }
 
-  const events = await prisma.event.findMany({
-    where,
+  // Non-recurring events
+  const nonRecurringEvents = await prisma.event.findMany({
+    where: { ...where, recurrenceRule: null },
     include: { room: true, eventType: true, submitter: { select: { name: true, email: true } } },
+    orderBy: { startDateTime: "asc" },
+  });
+
+  // Recurring events with their instances
+  const recurringEvents = await prisma.event.findMany({
+    where: { ...where, recurrenceRule: { not: null } },
+    include: {
+      room: true,
+      eventType: true,
+      submitter: { select: { name: true, email: true } },
+      instances: {
+        where: { deleted: false },
+        orderBy: { startDateTime: "asc" },
+      },
+    },
     orderBy: { startDateTime: "asc" },
   });
 
@@ -54,7 +91,8 @@ export async function GET(request: NextRequest) {
     "Created",
   ];
 
-  const rows = events.map((e) => [
+  // Non-recurring events: one row each
+  const rows = nonRecurringEvents.map((e) => [
     e.id,
     csvEscape(e.title),
     csvEscape(e.eventType?.name || ""),
@@ -71,9 +109,62 @@ export async function GET(request: NextRequest) {
     e.status,
     csvEscape(e.submitter?.name || e.submitter?.email || ""),
     csvEscape(e.notes),
-    csvEscape(e.recurrenceRule || ""),
+    "",
     format(e.createdAt, "yyyy-MM-dd HH:mm"),
   ]);
+
+  // Recurring events: one row per instance (with parent metadata)
+  for (const e of recurringEvents) {
+    if (e.instances.length === 0) {
+      // No instances yet — export the parent row
+      rows.push([
+        e.id,
+        csvEscape(e.title),
+        csvEscape(e.eventType?.name || ""),
+        csvEscape(e.room?.name || ""),
+        e.startDateTime ? format(e.startDateTime, "yyyy-MM-dd") : "",
+        e.startDateTime ? format(e.startDateTime, "HH:mm") : "",
+        e.endDateTime ? format(e.endDateTime, "yyyy-MM-dd") : "",
+        e.endDateTime ? format(e.endDateTime, "HH:mm") : "",
+        csvEscape(e.contactName),
+        csvEscape(e.contactEmail),
+        csvEscape(e.contactPhone),
+        csvEscape(e.eventOrganization),
+        e.expectedAttendeeCount?.toString() || "",
+        e.status,
+        csvEscape(e.submitter?.name || e.submitter?.email || ""),
+        csvEscape(e.notes),
+        csvEscape(e.recurrenceRule || ""),
+        format(e.createdAt, "yyyy-MM-dd HH:mm"),
+      ]);
+    } else {
+      for (const inst of e.instances) {
+        rows.push([
+          e.id,
+          csvEscape(e.title),
+          csvEscape(e.eventType?.name || ""),
+          csvEscape(e.room?.name || ""),
+          format(inst.startDateTime, "yyyy-MM-dd"),
+          format(inst.startDateTime, "HH:mm"),
+          format(inst.endDateTime, "yyyy-MM-dd"),
+          format(inst.endDateTime, "HH:mm"),
+          csvEscape(e.contactName),
+          csvEscape(e.contactEmail),
+          csvEscape(e.contactPhone),
+          csvEscape(e.eventOrganization),
+          e.expectedAttendeeCount?.toString() || "",
+          e.status,
+          csvEscape(e.submitter?.name || e.submitter?.email || ""),
+          csvEscape(e.notes),
+          csvEscape(e.recurrenceRule || ""),
+          format(e.createdAt, "yyyy-MM-dd HH:mm"),
+        ]);
+      }
+    }
+  }
+
+  // Sort all rows by start date
+  rows.sort((a, b) => String(a[4]).localeCompare(String(b[4])) || String(a[5]).localeCompare(String(b[5])));
 
   const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
 

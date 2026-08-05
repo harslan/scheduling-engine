@@ -115,12 +115,14 @@ export async function previewReserveImport(
         const start = combineDateAndTime(startDate, primaryFn.startTime);
         const end = combineDateAndTime(startDate, primaryFn.endTime);
         if (start && end) {
+          // Check non-recurring events
           const conflictingEvents = await prisma.event.findMany({
             where: {
               organizationId,
               roomId: mappedRoom.id,
               deleted: false,
               status: "APPROVED",
+              recurrenceRule: null,
               id: { not: re.eventId ?? undefined },
               startDateTime: { lt: end },
               endDateTime: { gt: start },
@@ -130,6 +132,28 @@ export async function previewReserveImport(
           });
           for (const ce of conflictingEvents) {
             conflicts.push(`Conflicts with "${ce.title || "Untitled"}"`);
+          }
+
+          // Check recurring event instances
+          const conflictingInstances = await prisma.eventInstance.findMany({
+            where: {
+              deleted: false,
+              startDateTime: { lt: end },
+              endDateTime: { gt: start },
+              event: {
+                organizationId,
+                roomId: mappedRoom.id,
+                deleted: false,
+                status: "APPROVED",
+                recurrenceRule: { not: null },
+                id: { not: re.eventId ?? undefined },
+              },
+            },
+            select: { event: { select: { id: true, title: true } } },
+            take: 5,
+          });
+          for (const ci of conflictingInstances) {
+            conflicts.push(`Conflicts with recurring "${ci.event.title || "Untitled"}"`);
           }
         }
       }
