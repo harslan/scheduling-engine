@@ -228,16 +228,16 @@ export default async function CalendarPage({
     filteredEvents = filteredEvents.filter((e) => e.eventType && typeSet.has(e.eventType.id));
   }
 
-  // Office holds are background structure — the same rows every weekday. In
-  // month/year views they bury real bookings, so hide them by default there
-  // (week/day views keep them: that's where "who's in which office" reads).
+  // Office holds are background structure — the same rows every weekday.
+  // Across all offices they bury real bookings at every zoom (53 slivers in a
+  // day column is not information), so hide them unless a single office is
+  // selected — an office's own schedule is where holds actually read. The
+  // live Status Board answers "who is where right now".
   const isHold = (e: EventWithRoom) =>
     e.eventType?.name === "Office hold — semester";
-  const showHolds = sp.holds === "1";
-  const zoomedOut = view === "month" || view === "year";
-  const hiddenHoldCount =
-    zoomedOut && !showHolds ? filteredEvents.filter(isHold).length : 0;
-  if (zoomedOut && !showHolds) {
+  const showHolds = sp.holds === "1" || (roomFilter !== "all" && roomFilter !== "none");
+  const hiddenHoldCount = showHolds ? 0 : filteredEvents.filter(isHold).length;
+  if (!showHolds) {
     filteredEvents = filteredEvents.filter((e) => !isHold(e));
   }
 
@@ -397,12 +397,12 @@ export default async function CalendarPage({
         buildUrl={buildFilterUrl}
       />
 
-      {/* Office-hold visibility (month/year only) */}
-      {zoomedOut && (hiddenHoldCount > 0 || showHolds) && (
+      {/* Office-hold visibility */}
+      {(hiddenHoldCount > 0 || (showHolds && sp.holds === "1")) && (
         <div className="mb-3 text-xs text-slate-500">
           {showHolds ? (
             <>
-              Showing semester office holds.{" "}
+              Showing semester office holds across all offices.{" "}
               <Link
                 href={buildCalendarUrl({ holds: "" })}
                 className="text-primary font-medium hover:underline"
@@ -413,14 +413,22 @@ export default async function CalendarPage({
             </>
           ) : (
             <>
-              {hiddenHoldCount} semester office holds are not shown at this zoom.{" "}
+              {hiddenHoldCount} semester office holds are hidden in the
+              all-offices view. Pick a single office above to see its schedule,{" "}
               <Link
                 href={buildCalendarUrl({ holds: "1" })}
                 className="text-primary font-medium hover:underline"
               >
-                Show them
+                show them anyway
               </Link>
-              , or switch to Week/Day where they read best.
+              , or see the live{" "}
+              <Link
+                href={`/status/${orgSlug}`}
+                className="text-primary font-medium hover:underline"
+              >
+                Office Status Board
+              </Link>
+              .
             </>
           )}
         </div>
