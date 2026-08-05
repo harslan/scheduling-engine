@@ -13,6 +13,7 @@ const PILOT_LOCKDOWN = process.env.PILOT_LOCKDOWN === "1";
 
 const LOCKDOWN_PUBLIC = [
   "/api/auth",
+  "/api/health", // liveness only — returns status, never data
   "/login",
   "/forgot-password",
   "/reset-password",

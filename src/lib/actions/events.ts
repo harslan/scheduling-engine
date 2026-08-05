@@ -9,6 +9,7 @@ import { generateInstances } from "@/lib/recurrence";
 import {
   detectConflicts,
   detectRecurrenceConflicts,
+  isDoubleBookingError,
 } from "@/lib/conflict-detection";
 import { notifyApprovers } from "@/lib/actions/approvals";
 import { sendTemplatedEmail, buildEventMergeData } from "@/lib/email";
@@ -312,7 +313,9 @@ export async function submitEvent(formData: FormData) {
     }
   }
 
-  const event = await prisma.event.create({
+  let event;
+  try {
+    event = await prisma.event.create({
     data: {
       organizationId: data.organizationId,
       submitterId: userId,
@@ -337,6 +340,15 @@ export async function submitEvent(formData: FormData) {
       approved: autoApproved,
     },
   });
+  } catch (err) {
+    if (isDoubleBookingError(err)) {
+      return {
+        error:
+          "That room was just booked for an overlapping time — pick another slot or room.",
+      };
+    }
+    throw err;
+  }
 
   // Generate recurring instances
   if (hasRecurrence && recEndDate) {

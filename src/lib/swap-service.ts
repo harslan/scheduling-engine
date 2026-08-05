@@ -102,26 +102,26 @@ export async function actOnSwap(
   if (approvals < needed.length) return { success: true, status: "pending" };
 
   // ...and the pending->accepted transition is a SINGLE-WINNER conditional
-  // update: of two concurrent final consents, exactly one applies the swap.
-  const won = await prisma.spaceSwap.updateMany({
-    where: { id: swapId, status: "pending" },
-    data: { status: "accepted", approvedUserIds: needed.join(",") },
-  });
-  if (won.count === 0) return { success: true, status: "accepted" };
+  // update. Flip and application commit in ONE transaction: a crash can never
+  // leave an accepted swap that was not applied to the assignments.
+  const applied = await prisma.$transaction(async (tx) => {
+    const won = await tx.spaceSwap.updateMany({
+      where: { id: swapId, status: "pending" },
+      data: { status: "accepted", approvedUserIds: needed.join(",") },
+    });
+    if (won.count === 0) return false;
 
-  // unanimous — apply to the run and rewrite the calendar
-  const run = await prisma.spaceRun.findUniqueOrThrow({
-    where: { id: swap.runId },
-    include: { assignments: true },
-  });
-  const changed = applySwap(
-    run.assignments.map(toAsg),
-    swap.proposerId,
-    swap.targetId,
-  );
-  await prisma.$transaction(
-    changed.map((c) =>
-      prisma.spaceAssignment.update({
+    const run = await tx.spaceRun.findUniqueOrThrow({
+      where: { id: swap.runId },
+      include: { assignments: true },
+    });
+    const changed = applySwap(
+      run.assignments.map(toAsg),
+      swap.proposerId,
+      swap.targetId,
+    );
+    for (const c of changed) {
+      await tx.spaceAssignment.update({
         where: { runId_userId: { runId: run.id, userId: c.userId } },
         data: {
           roomSlug: c.roomSlug,
@@ -129,9 +129,14 @@ export async function actOnSwap(
           withUserIds: c.withUserIds,
           placed: c.placed,
         },
-      }),
-    ),
-  );
-  await materializeHolds(swap.organizationId, run.id, swap.semester);
+      });
+    }
+    return true;
+  });
+  if (!applied) return { success: true, status: "accepted" };
+
+  // Holds are derived state: if we crash before this, the next run or swap
+  // rewrites them from the (already-committed) assignments.
+  await materializeHolds(swap.organizationId, swap.runId, swap.semester);
   return { success: true, status: "accepted" };
 }

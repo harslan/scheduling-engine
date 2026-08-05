@@ -691,3 +691,8 @@ function formatDate(date: Date, timezone?: string): string {
     ...(timezone ? { timeZone: timezone } : {}),
   });
 }
+
+/** True when a DB error is the no_double_booking exclusion constraint. */
+export function isDoubleBookingError(err: unknown): boolean {
+  return err instanceof Error && err.message.includes("no_double_booking");
+}

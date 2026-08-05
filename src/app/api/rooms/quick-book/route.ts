@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { detectConflicts } from "@/lib/conflict-detection";
+import { detectConflicts, isDoubleBookingError } from "@/lib/conflict-detection";
 
 export const dynamic = "force-dynamic";
 
@@ -124,19 +124,30 @@ export async function POST(request: NextRequest) {
   }
 
   // Create the event
-  const event = await prisma.event.create({
-    data: {
-      organizationId: org.id,
-      roomId: room.id,
-      title,
-      contactName,
-      contactEmail,
-      startDateTime,
-      endDateTime,
-      status: org.requiresApproval ? "PENDING" : "APPROVED",
-      approved: !org.requiresApproval,
-    },
-  });
+  let event;
+  try {
+    event = await prisma.event.create({
+      data: {
+        organizationId: org.id,
+        roomId: room.id,
+        title,
+        contactName,
+        contactEmail,
+        startDateTime,
+        endDateTime,
+        status: org.requiresApproval ? "PENDING" : "APPROVED",
+        approved: !org.requiresApproval,
+      },
+    });
+  } catch (err) {
+    if (isDoubleBookingError(err)) {
+      return NextResponse.json(
+        { error: "That room was just booked for an overlapping time." },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   // Log activity
   await prisma.eventActivity.create({

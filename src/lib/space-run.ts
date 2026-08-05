@@ -215,14 +215,18 @@ export async function materializeHolds(
       }
     }
   }
-  await prisma.$transaction([
-    prisma.event.deleteMany({
+  await prisma.$transaction(async (tx) => {
+    // Serialize whole-calendar rewrites per org: without the advisory lock,
+    // two concurrent rewrites under READ COMMITTED can both commit (neither
+    // deleteMany sees the other's uncommitted inserts) and duplicate holds.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${organizationId}))`;
+    await tx.event.deleteMany({
       where: {
         organizationId,
         eventTypeId: holdType.id,
         startDateTime: { gte: new Date() },
       },
-    }),
-    prisma.event.createMany({ data: events }),
-  ]);
+    });
+    await tx.event.createMany({ data: events });
+  });
 }
