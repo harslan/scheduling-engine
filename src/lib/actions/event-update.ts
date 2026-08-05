@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { wallTimeToUtc } from "@/lib/orgtime";
 import { getSession, requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -38,12 +39,6 @@ export async function updateEvent(eventId: string, formData: FormData) {
   }
 
   const data = parsed.data;
-  const startDt = new Date(data.startDateTime);
-  const endDt = new Date(data.endDateTime);
-
-  if (startDt >= endDt) {
-    return { error: "End time must be after start time" };
-  }
 
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -54,6 +49,14 @@ export async function updateEvent(eventId: string, formData: FormData) {
   // Allow the submitter, admin/manager, or support staff (within 24h window) to update
   const userId = (session.user as { id: string }).id;
   const org = event.organization;
+
+  // Form times are wall-clock in the org's timezone
+  const startDt = wallTimeToUtc(data.startDateTime, org.timezone);
+  const endDt = wallTimeToUtc(data.endDateTime, org.timezone);
+
+  if (startDt >= endDt) {
+    return { error: "End time must be after start time" };
+  }
 
   const membership = await prisma.organizationMember.findFirst({
     where: { organizationId: org.id, userId },

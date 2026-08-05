@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { wallTimeToUtc } from "@/lib/orgtime";
 import { getSession } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { detectConflicts } from "@/lib/conflict-detection";
@@ -313,8 +314,9 @@ export async function updateInstance(
     return { error: "Event changes are not allowed for this organization." };
   }
 
-  const startDt = new Date(data.startDateTime);
-  const endDt = new Date(data.endDateTime);
+  // Form times are wall-clock in the org's timezone
+  const startDt = wallTimeToUtc(data.startDateTime, org.timezone);
+  const endDt = wallTimeToUtc(data.endDateTime, org.timezone);
 
   if (isNaN(startDt.getTime()) || isNaN(endDt.getTime())) {
     return { error: "Invalid date/time values." };

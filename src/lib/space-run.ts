@@ -1,4 +1,5 @@
 import { prisma } from "./prisma";
+import { wallTimeToUtc } from "./orgtime";
 import { allocateWithPreferences, type Person } from "./allocation";
 
 /**
@@ -126,6 +127,9 @@ export async function materializeHolds(
     where: { id: runId },
     include: { assignments: true },
   });
+  const org = await prisma.organization.findUniqueOrThrow({
+    where: { id: organizationId },
+  });
   let holdType = await prisma.eventType.findFirst({
     where: { organizationId, name: "Office hold — semester" },
   });
@@ -145,9 +149,12 @@ export async function materializeHolds(
   const daysByUser = new Map(recs.map((r) => [r.userId, r.days.split(",").filter(Boolean)]));
 
   const DAY: Record<string, number> = { M: 0, T: 1, W: 2, TH: 3, F: 4 };
-  const monday = new Date();
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  monday.setHours(0, 0, 0, 0);
+  // "this week" is the org's week, not the server's (UTC evenings differ)
+  const todayStr = new Date().toLocaleDateString("en-CA", {
+    timeZone: org.timezone || "America/New_York",
+  });
+  const monday = new Date(`${todayStr}T00:00:00Z`); // date-only arithmetic
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
   const TIER_LABEL: Record<string, string> = {
     ded: "dedicated office",
     pair: "shared office (pair)",
@@ -169,12 +176,16 @@ export async function materializeHolds(
     for (let week = 0; week < 4; week++) {
       for (const d of days) {
         if (!(d in DAY)) continue;
-        const start = new Date(monday);
-        start.setDate(start.getDate() + week * 7 + DAY[d]);
-        start.setHours(9, 0, 0, 0);
+        // Holds are 9:00-17:00 WALL TIME in the org's timezone, stored as
+        // true instants like every other event.
+        const day = new Date(monday);
+        day.setUTCDate(day.getUTCDate() + week * 7 + DAY[d]);
+        const y = day.getUTCFullYear();
+        const m = String(day.getUTCMonth() + 1).padStart(2, "0");
+        const dd = String(day.getUTCDate()).padStart(2, "0");
+        const start = wallTimeToUtc(`${y}-${m}-${dd}T09:00`, org.timezone);
         if (start < new Date()) continue;
-        const end = new Date(start);
-        end.setHours(17, 0, 0, 0);
+        const end = wallTimeToUtc(`${y}-${m}-${dd}T17:00`, org.timezone);
         events.push({
           organizationId,
           roomId: room.id,

@@ -9,6 +9,7 @@ import {
   endSeriesNow,
   updateInstance,
 } from "@/lib/actions/instance-actions";
+import { utcToWallTime } from "@/lib/orgtime";
 
 interface Instance {
   id: string;
@@ -23,31 +24,33 @@ interface InstanceTimelineProps {
   orgSlug: string;
   canEdit: boolean;
   isRecurring: boolean;
+  timezone: string;
 }
 
-function formatInstanceDate(iso: string) {
+function formatInstanceDate(iso: string, timezone: string) {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", {
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: timezone,
   });
 }
 
-function formatInstanceTime(iso: string) {
+function formatInstanceTime(iso: string, timezone: string) {
   const d = new Date(iso);
   return d.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: timezone,
   });
 }
 
-/** Convert ISO string to datetime-local input value */
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** Convert ISO string (UTC instant) to a datetime-local input value —
+ *  wall-clock in the org's timezone. */
+function toLocalInput(iso: string, timezone: string): string {
+  return utcToWallTime(new Date(iso), timezone);
 }
 
 export function InstanceTimeline({
@@ -56,6 +59,7 @@ export function InstanceTimeline({
   orgSlug,
   canEdit,
   isRecurring,
+  timezone,
 }: InstanceTimelineProps) {
   if (!isRecurring || instances.length === 0) return null;
 
@@ -75,6 +79,7 @@ export function InstanceTimeline({
             eventId={eventId}
             orgSlug={orgSlug}
             canEdit={canEdit}
+            timezone={timezone}
           />
         ))}
       </div>
@@ -91,11 +96,13 @@ function InstanceRow({
   eventId,
   orgSlug,
   canEdit,
+  timezone,
 }: {
   instance: Instance;
   eventId: string;
   orgSlug: string;
   canEdit: boolean;
+  timezone: string;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<"delete" | "deleteFuture" | null>(null);
@@ -125,8 +132,8 @@ function InstanceRow({
   }
 
   function openEditor() {
-    setEditStart(toLocalInput(instance.startDateTime));
-    setEditEnd(toLocalInput(instance.endDateTime));
+    setEditStart(toLocalInput(instance.startDateTime, timezone));
+    setEditEnd(toLocalInput(instance.endDateTime, timezone));
     setEditing(true);
     setMenuOpen(false);
     setError("");
@@ -135,9 +142,11 @@ function InstanceRow({
   function handleSaveTime() {
     setError("");
     startTransition(async () => {
+      // datetime-local values are wall-clock in the org's timezone;
+      // updateInstance converts them to UTC instants server-side.
       const result = await updateInstance(instance.id, orgSlug, {
-        startDateTime: new Date(editStart).toISOString(),
-        endDateTime: new Date(editEnd).toISOString(),
+        startDateTime: editStart,
+        endDateTime: editEnd,
       });
 
       if ("error" in result && result.error) {
@@ -154,9 +163,9 @@ function InstanceRow({
       <div className="flex items-center gap-2 text-sm text-slate-600 py-1">
         <Clock className="w-3 h-3 text-slate-300 shrink-0" />
         <span className="flex-1">
-          {formatInstanceDate(instance.startDateTime)} at{" "}
-          {formatInstanceTime(instance.startDateTime)} –{" "}
-          {formatInstanceTime(instance.endDateTime)}
+          {formatInstanceDate(instance.startDateTime, timezone)} at{" "}
+          {formatInstanceTime(instance.startDateTime, timezone)} –{" "}
+          {formatInstanceTime(instance.endDateTime, timezone)}
         </span>
 
         {canEdit && !confirmAction && !editing && (

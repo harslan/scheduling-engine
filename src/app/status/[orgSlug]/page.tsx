@@ -31,7 +31,7 @@ interface RoomStatus {
 }
 
 interface StatusData {
-  org: { name: string; roomTerm: string; eventSingularTerm: string };
+  org: { name: string; roomTerm: string; eventSingularTerm: string; timezone: string };
   serverTime: string;
   rooms: RoomStatus[];
 }
@@ -118,6 +118,7 @@ export default function StatusBoardPage() {
               room={room}
               orgSlug={params.orgSlug}
               eventTerm={data.org.eventSingularTerm}
+              timezone={data.org.timezone}
             />
           ))}
         </div>
@@ -136,10 +137,10 @@ export default function StatusBoardPage() {
       <footer className="fixed bottom-0 left-0 right-0 border-t border-slate-800 bg-slate-950/90 backdrop-blur-sm px-6 py-2 flex items-center justify-between text-xs text-slate-600">
         <span>
           Auto-refreshes every {REFRESH_INTERVAL_MS / 1000}s
-          {lastRefresh && ` · Last updated ${formatTime(lastRefresh)}`}
+          {lastRefresh && ` · Last updated ${formatTime(lastRefresh, data.org.timezone)}`}
         </span>
         <span>
-          {formatTime(new Date(data.serverTime))}
+          {formatTime(new Date(data.serverTime), data.org.timezone)}
         </span>
       </footer>
     </div>
@@ -150,10 +151,12 @@ function RoomCard({
   room,
   orgSlug,
   eventTerm,
+  timezone,
 }: {
   room: RoomStatus;
   orgSlug: string;
   eventTerm: string;
+  timezone: string;
 }) {
   const isAvailable = room.status === "available";
   const isAvailableSoon = room.status === "available_soon";
@@ -202,7 +205,7 @@ function RoomCard({
           <p className="text-emerald-400 font-semibold text-sm">Available</p>
           {room.nextEvent ? (
             <p className="text-slate-500 text-xs mt-1">
-              Until {formatTime(new Date(room.nextEvent.startsAt))}
+              Until {formatTime(new Date(room.nextEvent.startsAt), timezone)}
               {" · "}
               Next: {room.nextEvent.title}
             </p>
@@ -225,7 +228,7 @@ function RoomCard({
           )}
           {room.currentEvent && (
             <p className="text-slate-600 text-xs mt-0.5">
-              Until {formatTime(new Date(room.currentEvent.endsAt))}
+              Until {formatTime(new Date(room.currentEvent.endsAt), timezone)}
               {room.availableIn && !isAvailableSoon && ` (${room.availableIn}m)`}
             </p>
           )}
@@ -242,6 +245,10 @@ function RoomCard({
   );
 }
 
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function formatTime(date: Date, timeZone?: string): string {
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    ...(timeZone ? { timeZone } : {}),
+  });
 }

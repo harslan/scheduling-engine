@@ -99,7 +99,7 @@ export default async function AdminSpacePage({
               Latest run — {run.status}
             </h2>
             <span className="text-xs text-slate-400">
-              {run.createdAt.toLocaleString()}
+              {run.createdAt.toLocaleString(undefined, { timeZone: org.timezone })}
             </span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">

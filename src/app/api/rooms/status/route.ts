@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { orgDayBounds } from "@/lib/orgtime";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ export async function GET(request: NextRequest) {
 
   const org = await prisma.organization.findUnique({
     where: { slug: orgSlug },
-    select: { id: true, name: true, appDisplayName: true, roomTerm: true, eventSingularTerm: true },
+    select: { id: true, name: true, appDisplayName: true, roomTerm: true, eventSingularTerm: true, timezone: true },
   });
 
   if (!org) {
@@ -21,8 +22,8 @@ export async function GET(request: NextRequest) {
   }
 
   const now = new Date();
-  const endOfDay = new Date(now);
-  endOfDay.setHours(23, 59, 59, 999);
+  // "Today" is the org-local calendar day, not the server's
+  const { start: startOfDay, end: endOfDay } = orgDayBounds(now, org.timezone);
 
   const roomWhere: Record<string, unknown> = {
     organizationId: org.id,
@@ -45,8 +46,6 @@ export async function GET(request: NextRequest) {
   });
 
   // Get today's approved events for these rooms
-  const startOfDay = new Date(now);
-  startOfDay.setHours(0, 0, 0, 0);
   const roomIds = rooms.map((r) => r.id);
 
   // Non-recurring events with times in today's range
@@ -201,6 +200,7 @@ export async function GET(request: NextRequest) {
       name: org.appDisplayName || org.name,
       roomTerm: org.roomTerm,
       eventSingularTerm: org.eventSingularTerm,
+      timezone: org.timezone,
     },
     serverTime: now.toISOString(),
     rooms: roomStatuses,

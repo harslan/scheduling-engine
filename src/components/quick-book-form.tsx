@@ -9,6 +9,7 @@ const SUCCESS_DISMISS_MS = 5_000;
 interface QuickBookFormProps {
   orgSlug: string;
   roomSlug: string;
+  timezone?: string;
   onClose: () => void;
   onBooked: () => void;
 }
@@ -16,6 +17,7 @@ interface QuickBookFormProps {
 export function QuickBookForm({
   orgSlug,
   roomSlug,
+  timezone,
   onClose,
   onBooked,
 }: QuickBookFormProps) {
@@ -64,8 +66,8 @@ export function QuickBookForm({
         setBookingState("success");
         setBookingResult({
           title: result.event.title,
-          startTime: formatTime(new Date(result.event.startDateTime)),
-          endTime: formatTime(new Date(result.event.endDateTime)),
+          startTime: formatTime(new Date(result.event.startDateTime), timezone),
+          endTime: formatTime(new Date(result.event.endDateTime), timezone),
           status: result.event.requiresApproval
             ? "Pending Approval"
             : "Confirmed",

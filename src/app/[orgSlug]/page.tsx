@@ -7,6 +7,7 @@ import { ScrollToNow } from "./scroll-to-now";
 import { ROOM_COLORS } from "./calendar-constants";
 import { CalendarFilters } from "./calendar-filters";
 import { getSession } from "@/lib/session";
+import { TZDate } from "@date-fns/tz";
 import {
   startOfWeek,
   endOfWeek,
@@ -45,14 +46,18 @@ export default async function CalendarPage({
   if (!org) notFound();
 
   const view: CalendarView = (sp.view as CalendarView) || "month";
-  const now = new Date();
+  // All calendar math happens in the org's timezone: "now", the reference
+  // date, range boundaries, and event dates are TZDate so getHours/getDay/
+  // isSameDay/format all speak org-local wall-clock.
+  const tz = org.timezone;
+  const now = new TZDate(new Date(), tz);
 
-  // Parse the reference date
+  // Parse the reference date (wall-clock in the org's timezone)
   let refDate: Date;
   if (sp.date) {
-    refDate = new Date(sp.date + "T12:00:00");
+    refDate = new TZDate(sp.date + "T12:00:00", tz);
   } else if (sp.month && sp.year) {
-    refDate = new Date(parseInt(sp.year), parseInt(sp.month) - 1, 1);
+    refDate = new TZDate(parseInt(sp.year), parseInt(sp.month) - 1, 1, tz);
   } else {
     refDate = now;
   }
@@ -64,8 +69,8 @@ export default async function CalendarPage({
 
   if (view === "year") {
     const year = sp.year ? parseInt(sp.year) : refDate.getFullYear();
-    rangeStart = new Date(year, 0, 1);
-    rangeEnd = new Date(year, 11, 31, 23, 59, 59);
+    rangeStart = new TZDate(year, 0, 1, tz);
+    rangeEnd = new TZDate(year, 11, 31, 23, 59, 59, tz);
     headerTitle = `${year}`;
   } else if (view === "week") {
     rangeStart = startOfWeek(refDate, { weekStartsOn: 0 });
@@ -83,8 +88,8 @@ export default async function CalendarPage({
   } else {
     const month = sp.month ? parseInt(sp.month) - 1 : refDate.getMonth();
     const year = sp.year ? parseInt(sp.year) : refDate.getFullYear();
-    rangeStart = new Date(year, month, 1);
-    rangeEnd = new Date(year, month + 1, 0, 23, 59, 59);
+    rangeStart = new TZDate(year, month, 1, tz);
+    rangeEnd = new TZDate(year, month + 1, 0, 23, 59, 59, tz);
     headerTitle = format(rangeStart, "MMMM yyyy");
   }
 
@@ -166,14 +171,18 @@ export default async function CalendarPage({
     orderBy: { startDateTime: "asc" },
   });
 
-  // Merge into unified calendar items
+  // Merge into unified calendar items (dates wrapped as org-local TZDate)
   const allEvents: EventWithRoom[] = [
-    ...singleEvents,
+    ...singleEvents.map((e) => ({
+      ...e,
+      startDateTime: e.startDateTime && new TZDate(e.startDateTime, tz),
+      endDateTime: e.endDateTime && new TZDate(e.endDateTime, tz),
+    })),
     ...recurringInstances.map((inst) => ({
       id: inst.event.id,
       title: inst.event.title,
-      startDateTime: inst.startDateTime,
-      endDateTime: inst.endDateTime,
+      startDateTime: new TZDate(inst.startDateTime, tz),
+      endDateTime: new TZDate(inst.endDateTime, tz),
       roomId: inst.event.roomId,
       room: inst.event.room,
       eventType: inst.event.eventType,
@@ -587,7 +596,7 @@ function WeekView({
   rangeStart: Date;
   events: EventWithRoom[];
   roomColorMap: Map<string, number>;
-  org: { roomTerm: string; eventSingularTerm: string; eventPluralTerm: string };
+  org: { roomTerm: string; eventSingularTerm: string; eventPluralTerm: string; timezone: string };
   filterSuffix: string;
 }) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(rangeStart, i));
@@ -670,7 +679,7 @@ function WeekView({
             );
           })}
         </div>
-        <ScrollToNow isToday={weekHasToday} className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
+        <ScrollToNow isToday={weekHasToday} timezone={org.timezone} className="grid grid-cols-[60px_repeat(7,1fr)] max-h-[600px] overflow-y-auto">
           {HOURS.map((hour) => (
             <div key={hour} className="contents">
               <div className="h-16 border-b border-slate-100 flex items-start justify-end pr-2 pt-0.5">
@@ -737,7 +746,7 @@ function DayView({
   refDate: Date;
   events: EventWithRoom[];
   roomColorMap: Map<string, number>;
-  org: { roomTerm: string; eventPluralTerm: string };
+  org: { roomTerm: string; eventPluralTerm: string; timezone: string };
 }) {
   const dayEvents = events
     .filter((e) => e.startDateTime && isSameDay(e.startDateTime, refDate))
@@ -783,7 +792,7 @@ function DayView({
 
       {/* Desktop: time grid */}
       <div className="hidden md:block bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-        <ScrollToNow isToday={isDateToday(refDate)} className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
+        <ScrollToNow isToday={isDateToday(refDate)} timezone={org.timezone} className="grid grid-cols-[60px_1fr] max-h-[600px] overflow-y-auto">
           {HOURS.map((hour) => {
             const hourEvents = dayEvents.filter((e) => e.startDateTime?.getHours() === hour);
 

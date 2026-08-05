@@ -37,7 +37,7 @@ interface RoomStatus {
 }
 
 interface StatusData {
-  org: { name: string; roomTerm: string; eventSingularTerm: string };
+  org: { name: string; roomTerm: string; eventSingularTerm: string; timezone: string };
   serverTime: string;
   rooms: RoomStatus[];
 }
@@ -119,13 +119,18 @@ export default function RoomDisplayPage() {
         </Link>
         <div className="text-right">
           <p className="text-2xl font-light tabular-nums text-white/80">
-            {now.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+            {now.toLocaleTimeString([], {
+              hour: "numeric",
+              minute: "2-digit",
+              timeZone: data.org.timezone,
+            })}
           </p>
           <p className="text-xs text-white/30 mt-0.5">
             {now.toLocaleDateString([], {
               weekday: "long",
               month: "long",
               day: "numeric",
+              timeZone: data.org.timezone,
             })}
           </p>
         </div>
@@ -182,6 +187,7 @@ export default function RoomDisplayPage() {
             <QuickBookForm
               orgSlug={params.orgSlug}
               roomSlug={params.roomSlug}
+              timezone={data.org.timezone}
               onClose={() => setShowBooking(false)}
               onBooked={fetchStatus}
             />
@@ -205,6 +211,7 @@ export default function RoomDisplayPage() {
               {new Date(room.currentEvent.endsAt).toLocaleTimeString([], {
                 hour: "numeric",
                 minute: "2-digit",
+                timeZone: data.org.timezone,
               })}
             </p>
           </div>
@@ -223,6 +230,7 @@ export default function RoomDisplayPage() {
               {new Date(room.nextEvent.startsAt).toLocaleTimeString([], {
                 hour: "numeric",
                 minute: "2-digit",
+                timeZone: data.org.timezone,
               })}
             </span>
           </div>
@@ -240,6 +248,7 @@ export default function RoomDisplayPage() {
             {new Date(room.availableUntil).toLocaleTimeString([], {
               hour: "numeric",
               minute: "2-digit",
+              timeZone: data.org.timezone,
             })}
           </p>
         )}

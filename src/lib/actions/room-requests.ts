@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { wallTimeToUtc } from "@/lib/orgtime";
 import { requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -26,8 +27,16 @@ export async function submitRoomRequest(formData: FormData) {
   }
 
   const data = parsed.data;
-  const startDt = new Date(data.requestedStartDateTime);
-  const endDt = new Date(data.requestedEndDateTime);
+
+  const org = await prisma.organization.findUnique({
+    where: { id: data.organizationId },
+  });
+  if (!org) return { error: "Organization not found" };
+  if (!org.allowsRoomRequests) return { error: "Room requests are not enabled" };
+
+  // Form times are wall-clock in the org's timezone
+  const startDt = wallTimeToUtc(data.requestedStartDateTime, org.timezone);
+  const endDt = wallTimeToUtc(data.requestedEndDateTime, org.timezone);
 
   if (startDt >= endDt) {
     return { error: "End time must be after start time" };
@@ -36,12 +45,6 @@ export async function submitRoomRequest(formData: FormData) {
   if (startDt < new Date()) {
     return { error: "Cannot request space in the past." };
   }
-
-  const org = await prisma.organization.findUnique({
-    where: { id: data.organizationId },
-  });
-  if (!org) return { error: "Organization not found" };
-  if (!org.allowsRoomRequests) return { error: "Room requests are not enabled" };
 
   const request = await prisma.roomRequest.create({
     data: {

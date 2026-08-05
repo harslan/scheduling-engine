@@ -85,7 +85,7 @@ export default async function CharterPage({
                 <div className="text-slate-500">{c.reason}</div>
                 <div className="text-xs text-slate-400">
                   {nameOf.get(c.byUserId) ?? c.byUserId} ·{" "}
-                  {c.createdAt.toLocaleString()}
+                  {c.createdAt.toLocaleString(undefined, { timeZone: org.timezone })}
                 </div>
               </li>
             ))}

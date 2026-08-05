@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { wallTimeToUtc } from "@/lib/orgtime";
 import { getSession, requireOrgRole } from "@/lib/session";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -48,20 +49,22 @@ export async function submitEvent(formData: FormData) {
   }
 
   const data = parsed.data;
-  const startDt = new Date(data.startDateTime);
-  const endDt = new Date(data.endDateTime);
 
-  // Validate start < end
-  if (startDt >= endDt) {
-    return { error: "End time must be after start time" };
-  }
-
-  // Check if org requires approval
+  // Check if org requires approval (fetched first: form times are wall-clock
+  // in the org's timezone, so parsing needs org.timezone)
   const org = await prisma.organization.findUnique({
     where: { id: data.organizationId },
   });
 
   if (!org) return { error: "Organization not found" };
+
+  const startDt = wallTimeToUtc(data.startDateTime, org.timezone);
+  const endDt = wallTimeToUtc(data.endDateTime, org.timezone);
+
+  // Validate start < end
+  if (startDt >= endDt) {
+    return { error: "End time must be after start time" };
+  }
 
   // Determine admin status once (reused for constraint bypass)
   const membership = userId
@@ -161,10 +164,14 @@ export async function submitEvent(formData: FormData) {
   }
 
   const hasRecurrence = data.recurrenceRule && data.recurrenceRule.length > 0 && data.recurrenceEndDate;
+  // "until Dec 1" means through the END of Dec 1 in the org's timezone
+  const recEndDt = data.recurrenceEndDate
+    ? wallTimeToUtc(`${data.recurrenceEndDate.slice(0, 10)}T23:59`, org.timezone)
+    : null;
 
   // EWL: validate recurrence end date bounds (ConceptualEventModification.cs lines 464-474)
   if (hasRecurrence) {
-    const recEnd = new Date(data.recurrenceEndDate!);
+    const recEnd = recEndDt!;
     if (recEnd < startDt) {
       return { error: "Recurrence end date must be on or after the event start date." };
     }
@@ -236,7 +243,7 @@ export async function submitEvent(formData: FormData) {
 
   // Validate recurrence generates at least one instance
   if (hasRecurrence) {
-    const testInstances = generateInstances(startDt, endDt, data.recurrenceRule!, new Date(data.recurrenceEndDate!), excludedDatesSet);
+    const testInstances = generateInstances(startDt, endDt, data.recurrenceRule!, recEndDt!, excludedDatesSet);
     if (testInstances.length === 0) {
       return { error: "No recurring instances could be generated. Check your recurrence settings and end date." };
     }
@@ -245,7 +252,7 @@ export async function submitEvent(formData: FormData) {
   // Room conflict detection using full engine
   if (data.roomId && room) {
     if (hasRecurrence) {
-      const recEndDate = new Date(data.recurrenceEndDate!);
+      const recEndDate = recEndDt!;
       const instances = generateInstances(startDt, endDt, data.recurrenceRule!, recEndDate, excludedDatesSet);
       if (instances.length > 0) {
         const result = await detectRecurrenceConflicts({
@@ -287,7 +294,7 @@ export async function submitEvent(formData: FormData) {
       }
     }
   }
-  const recEndDate = data.recurrenceEndDate ? new Date(data.recurrenceEndDate) : null;
+  const recEndDate = recEndDt;
 
   // Determine if this event should be auto-approved.
   // EWL rule: admins/managers + designated approvers get auto-approval even when org requires it.

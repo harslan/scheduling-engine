@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         month: "long",
         day: "numeric",
         year: "numeric",
+        ...(org.timezone ? { timeZone: org.timezone } : {}),
       });
       return NextResponse.json(
         { error: `Events cannot be scheduled after ${cutoffStr}.` },

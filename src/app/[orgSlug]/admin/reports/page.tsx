@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { format, startOfMonth, endOfMonth, subMonths, differenceInMinutes, eachDayOfInterval, subDays, isWeekend } from "date-fns";
+import { TZDate } from "@date-fns/tz";
 import { BarChart3, Building2, Calendar, Clock, TrendingUp, Timer } from "lucide-react";
 
 export default async function ReportsPage({
@@ -15,7 +16,9 @@ export default async function ReportsPage({
   });
   if (!org) notFound();
 
-  const now = new Date();
+  // Org-local "now" — month boundaries, day-of-week and hour groupings below
+  // must all be computed in the org's timezone, not the server's.
+  const now = new TZDate(new Date(), org.timezone);
 
   // Fetch rooms with event counts
   const rooms = await prisma.room.findMany({
@@ -87,8 +90,9 @@ export default async function ReportsPage({
 
   for (const startDateTime of allStartTimes) {
     if (startDateTime) {
-      dayOfWeekCounts[startDateTime.getDay()]++;
-      hourCounts[startDateTime.getHours()]++;
+      const local = new TZDate(startDateTime, org.timezone);
+      dayOfWeekCounts[local.getDay()]++;
+      hourCounts[local.getHours()]++;
     }
   }
 

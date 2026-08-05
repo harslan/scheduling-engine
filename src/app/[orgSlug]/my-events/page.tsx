@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { Calendar, Plus, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
+import { TZDate } from "@date-fns/tz";
 import { getCurrentUser } from "@/lib/session";
 
 const PAGE_SIZE = 25;
@@ -42,7 +43,7 @@ export default async function MyEventsPage({
     where.title = { contains: searchQuery, mode: "insensitive" };
   }
 
-  const [totalCount, events] = await Promise.all([
+  const [totalCount, eventsRaw] = await Promise.all([
     prisma.event.count({ where }),
     prisma.event.findMany({
       where,
@@ -52,6 +53,12 @@ export default async function MyEventsPage({
       take: PAGE_SIZE,
     }),
   ]);
+
+  // Render all dates in the org's timezone
+  const events = eventsRaw.map((e) => ({
+    ...e,
+    startDateTime: e.startDateTime && new TZDate(e.startDateTime, org.timezone),
+  }));
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const statuses = ["ALL", "PENDING", "APPROVED", "DENIED", "CANCELLED"];

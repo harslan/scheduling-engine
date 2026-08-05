@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "@/lib/prisma";
+import { wallTimeToUtc, utcToWallTime } from "@/lib/orgtime";
 import { detectConflicts } from "@/lib/conflict-detection";
 
 const anthropic = new Anthropic();
@@ -80,11 +81,12 @@ async function executeTool(name: string, input: Record<string, unknown>, context
   switch (name) {
     case "search_available_rooms": {
       const orgId = input.organization_id as string;
-      const startDt = new Date(input.start_datetime as string);
-      const endDt = new Date(input.end_datetime as string);
-
       const org = await prisma.organization.findUnique({ where: { id: orgId } });
       if (!org) return JSON.stringify({ error: "Organization not found" });
+
+      // Model-supplied times are wall-clock in the org's timezone
+      const startDt = wallTimeToUtc(input.start_datetime as string, org.timezone);
+      const endDt = wallTimeToUtc(input.end_datetime as string, org.timezone);
 
       const allRooms = await prisma.room.findMany({
         where: { organizationId: orgId, active: true },
@@ -136,8 +138,9 @@ async function executeTool(name: string, input: Record<string, unknown>, context
       const org = await prisma.organization.findUnique({ where: { id: orgId } });
       if (!org) return JSON.stringify({ error: "Organization not found" });
 
-      const startDt = new Date(input.start_datetime as string);
-      const endDt = new Date(input.end_datetime as string);
+      // Model-supplied times are wall-clock in the org's timezone
+      const startDt = wallTimeToUtc(input.start_datetime as string, org.timezone);
+      const endDt = wallTimeToUtc(input.end_datetime as string, org.timezone);
       const roomId = input.room_id as string;
 
       // Basic time validation
@@ -212,6 +215,7 @@ async function executeTool(name: string, input: Record<string, unknown>, context
             month: "long",
             day: "numeric",
             year: "numeric",
+            ...(org.timezone ? { timeZone: org.timezone } : {}),
           });
           return JSON.stringify({
             error: `Events cannot be scheduled after ${cutoffStr}.`,
@@ -306,6 +310,10 @@ async function executeTool(name: string, input: Record<string, unknown>, context
     }
 
     case "list_my_events": {
+      const org = await prisma.organization.findUnique({
+        where: { id: input.organization_id as string },
+        select: { timezone: true },
+      });
       const events = await prisma.event.findMany({
         where: {
           organizationId: input.organization_id as string,
@@ -320,12 +328,14 @@ async function executeTool(name: string, input: Record<string, unknown>, context
         take: 10,
       });
 
+      // Times are presented to the model as org-local wall-clock, matching
+      // the convention stated in the system prompt.
       return JSON.stringify(events.map((e) => ({
         id: e.id,
         title: e.title,
         room: e.room?.name || "No room",
-        start: e.startDateTime?.toISOString(),
-        end: e.endDateTime?.toISOString(),
+        start: e.startDateTime ? utcToWallTime(e.startDateTime, org?.timezone) : undefined,
+        end: e.endDateTime ? utcToWallTime(e.endDateTime, org?.timezone) : undefined,
         status: e.status,
       })));
     }
@@ -416,8 +426,9 @@ Key context:
 - Organization ID: ${org.id}
 - User name: ${token.name || "User"}
 - User email: ${token.email}
-- Current date/time: ${new Date().toISOString()}
+- Current date/time (org-local): ${utcToWallTime(new Date(), org.timezone)}
 - Timezone: ${org.timezone}
+- All times are wall-clock in the organization's timezone (${org.timezone}): times users mention, times you show them, and times you pass to or receive from tools. Pass tool datetimes as local wall-clock without any timezone suffix (e.g., 2026-03-25T14:00:00).
 - Rooms are called "${org.roomTerm}s"
 - Events are called "${org.eventPluralTerm}"
 ${org.requiresApproval ? "- This organization requires approval for bookings" : "- Bookings are automatically approved"}

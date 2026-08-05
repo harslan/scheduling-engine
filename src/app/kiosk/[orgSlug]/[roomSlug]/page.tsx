@@ -46,7 +46,7 @@ interface RoomStatus {
 }
 
 interface StatusData {
-  org: { name: string; roomTerm: string; eventSingularTerm: string };
+  org: { name: string; roomTerm: string; eventSingularTerm: string; timezone: string };
   serverTime: string;
   rooms: RoomStatus[];
 }
@@ -177,6 +177,7 @@ export default function KioskPage() {
   }
 
   const room = data.rooms[0];
+  const tz = data.org.timezone;
   const isAvailable = room.status === "available";
   const isAvailableSoon = room.status === "available_soon";
 
@@ -206,10 +207,10 @@ export default function KioskPage() {
 
   const statusDetail = isAvailable
     ? room.availableUntil
-      ? `Available until ${formatTime(new Date(room.availableUntil))}`
+      ? `Available until ${formatTime(new Date(room.availableUntil), tz)}`
       : "Free for the rest of the day"
     : room.currentEvent
-      ? `Ends at ${formatTime(new Date(room.currentEvent.endsAt))}`
+      ? `Ends at ${formatTime(new Date(room.currentEvent.endsAt), tz)}`
       : null;
 
   // Timeline: filter out past events, show current + upcoming only
@@ -240,13 +241,14 @@ export default function KioskPage() {
         </div>
         <div className="text-right">
           <p className="text-3xl lg:text-4xl font-light tabular-nums text-white/80">
-            {formatTime(now)}
+            {formatTime(now, tz)}
           </p>
           <p className="text-sm text-white/30 mt-0.5">
             {now.toLocaleDateString([], {
               weekday: "short",
               month: "short",
               day: "numeric",
+              timeZone: tz,
             })}
           </p>
         </div>
@@ -308,6 +310,7 @@ export default function KioskPage() {
               <QuickBookForm
                 orgSlug={params.orgSlug}
                 roomSlug={params.roomSlug}
+                timezone={tz}
                 onClose={() => setShowBooking(false)}
                 onBooked={fetchStatus}
               />
@@ -356,7 +359,7 @@ export default function KioskPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-white/50 tabular-nums">
-                        {formatTime(start)} – {formatTime(end)}
+                        {formatTime(start, tz)} – {formatTime(end, tz)}
                       </p>
                       <p
                         className={`text-sm font-medium truncate ${

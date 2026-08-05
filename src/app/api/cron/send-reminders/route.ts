@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { sendEmail, sendTemplatedEmail, buildEventMergeData } from "@/lib/email";
 import { format } from "date-fns";
+import { TZDate } from "@date-fns/tz";
 
 interface ReminderItem {
   eventId: string;
@@ -168,8 +169,10 @@ export async function GET(request: Request) {
 
           const eventRows = sorted
             .map((item) => {
-              const dateStr = format(item.startDateTime, "EEE, MMM d");
-              const timeStr = `${format(item.startDateTime, "h:mm a")} — ${format(item.endDateTime, "h:mm a")}`;
+              // Render in the org's timezone, not the server's
+              const tz = item.orgTimezone || "America/New_York";
+              const dateStr = format(new TZDate(item.startDateTime, tz), "EEE, MMM d");
+              const timeStr = `${format(new TZDate(item.startDateTime, tz), "h:mm a")} — ${format(new TZDate(item.endDateTime, tz), "h:mm a")}`;
               return `<tr>
                 <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #1e293b; font-weight: 600; font-size: 14px;">${escapeHtml(item.title)}</td>
                 <td style="padding: 10px 12px; border-bottom: 1px solid #f1f5f9; color: #475569; font-size: 14px;">${escapeHtml(item.roomName || "—")}</td>

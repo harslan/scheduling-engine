@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import { TZDate } from "@date-fns/tz";
 import Link from "next/link";
 import { Shield, Clock, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { ApprovalButtons } from "./approval-buttons";
@@ -46,7 +47,7 @@ export default async function ApprovalsPage({
     ...searchFilter,
   };
 
-  const [totalCount, events, pendingCount] = await Promise.all([
+  const [totalCount, eventsRaw, pendingCount] = await Promise.all([
     prisma.event.count({ where: eventWhere }),
     prisma.event.findMany({
       where: eventWhere,
@@ -63,6 +64,14 @@ export default async function ApprovalsPage({
       where: { organizationId: org.id, deleted: false, status: "PENDING" },
     }),
   ]);
+
+  // Render all dates in the org's timezone
+  const events = eventsRaw.map((e) => ({
+    ...e,
+    startDateTime: e.startDateTime && new TZDate(e.startDateTime, org.timezone),
+    endDateTime: e.endDateTime && new TZDate(e.endDateTime, org.timezone),
+    createdAt: new TZDate(e.createdAt, org.timezone),
+  }));
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 

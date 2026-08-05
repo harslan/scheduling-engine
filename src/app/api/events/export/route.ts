@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { format } from "date-fns";
+import { TZDate } from "@date-fns/tz";
 
 export async function GET(request: NextRequest) {
   const token = await getToken({ req: request });
@@ -38,6 +39,9 @@ export async function GET(request: NextRequest) {
   if (!member) {
     return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
   }
+
+  // CSV dates/times are rendered in the org's timezone
+  const inTz = (d: Date) => new TZDate(d, org.timezone);
 
   const where: Record<string, unknown> = {
     organizationId: org.id,
@@ -97,10 +101,10 @@ export async function GET(request: NextRequest) {
     csvEscape(e.title),
     csvEscape(e.eventType?.name || ""),
     csvEscape(e.room?.name || ""),
-    e.startDateTime ? format(e.startDateTime, "yyyy-MM-dd") : "",
-    e.startDateTime ? format(e.startDateTime, "HH:mm") : "",
-    e.endDateTime ? format(e.endDateTime, "yyyy-MM-dd") : "",
-    e.endDateTime ? format(e.endDateTime, "HH:mm") : "",
+    e.startDateTime ? format(inTz(e.startDateTime), "yyyy-MM-dd") : "",
+    e.startDateTime ? format(inTz(e.startDateTime), "HH:mm") : "",
+    e.endDateTime ? format(inTz(e.endDateTime), "yyyy-MM-dd") : "",
+    e.endDateTime ? format(inTz(e.endDateTime), "HH:mm") : "",
     csvEscape(e.contactName),
     csvEscape(e.contactEmail),
     csvEscape(e.contactPhone),
@@ -110,7 +114,7 @@ export async function GET(request: NextRequest) {
     csvEscape(e.submitter?.name || e.submitter?.email || ""),
     csvEscape(e.notes),
     "",
-    format(e.createdAt, "yyyy-MM-dd HH:mm"),
+    format(inTz(e.createdAt), "yyyy-MM-dd HH:mm"),
   ]);
 
   // Recurring events: one row per instance (with parent metadata)
@@ -122,10 +126,10 @@ export async function GET(request: NextRequest) {
         csvEscape(e.title),
         csvEscape(e.eventType?.name || ""),
         csvEscape(e.room?.name || ""),
-        e.startDateTime ? format(e.startDateTime, "yyyy-MM-dd") : "",
-        e.startDateTime ? format(e.startDateTime, "HH:mm") : "",
-        e.endDateTime ? format(e.endDateTime, "yyyy-MM-dd") : "",
-        e.endDateTime ? format(e.endDateTime, "HH:mm") : "",
+        e.startDateTime ? format(inTz(e.startDateTime), "yyyy-MM-dd") : "",
+        e.startDateTime ? format(inTz(e.startDateTime), "HH:mm") : "",
+        e.endDateTime ? format(inTz(e.endDateTime), "yyyy-MM-dd") : "",
+        e.endDateTime ? format(inTz(e.endDateTime), "HH:mm") : "",
         csvEscape(e.contactName),
         csvEscape(e.contactEmail),
         csvEscape(e.contactPhone),
@@ -135,7 +139,7 @@ export async function GET(request: NextRequest) {
         csvEscape(e.submitter?.name || e.submitter?.email || ""),
         csvEscape(e.notes),
         csvEscape(e.recurrenceRule || ""),
-        format(e.createdAt, "yyyy-MM-dd HH:mm"),
+        format(inTz(e.createdAt), "yyyy-MM-dd HH:mm"),
       ]);
     } else {
       for (const inst of e.instances) {
@@ -144,10 +148,10 @@ export async function GET(request: NextRequest) {
           csvEscape(e.title),
           csvEscape(e.eventType?.name || ""),
           csvEscape(e.room?.name || ""),
-          format(inst.startDateTime, "yyyy-MM-dd"),
-          format(inst.startDateTime, "HH:mm"),
-          format(inst.endDateTime, "yyyy-MM-dd"),
-          format(inst.endDateTime, "HH:mm"),
+          format(inTz(inst.startDateTime), "yyyy-MM-dd"),
+          format(inTz(inst.startDateTime), "HH:mm"),
+          format(inTz(inst.endDateTime), "yyyy-MM-dd"),
+          format(inTz(inst.endDateTime), "HH:mm"),
           csvEscape(e.contactName),
           csvEscape(e.contactEmail),
           csvEscape(e.contactPhone),
@@ -157,7 +161,7 @@ export async function GET(request: NextRequest) {
           csvEscape(e.submitter?.name || e.submitter?.email || ""),
           csvEscape(e.notes),
           csvEscape(e.recurrenceRule || ""),
-          format(e.createdAt, "yyyy-MM-dd HH:mm"),
+          format(inTz(e.createdAt), "yyyy-MM-dd HH:mm"),
         ]);
       }
     }
@@ -171,7 +175,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${orgSlug}-events-${format(new Date(), "yyyy-MM-dd")}.csv"`,
+      "Content-Disposition": `attachment; filename="${orgSlug}-events-${format(inTz(new Date()), "yyyy-MM-dd")}.csv"`,
     },
   });
 }

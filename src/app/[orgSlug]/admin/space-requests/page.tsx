@@ -54,6 +54,7 @@ export default async function SpaceRequestsPage({
         requests={requestData}
         rooms={roomOptions}
         orgSlug={orgSlug}
+        timezone={org.timezone}
       />
     </div>
   );

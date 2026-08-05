@@ -24,10 +24,12 @@ export function SpaceRequestsQueue({
   requests,
   rooms,
   orgSlug,
+  timezone,
 }: {
   requests: RequestData[];
   rooms: { id: string; name: string }[];
   orgSlug: string;
+  timezone: string;
 }) {
   const pending = requests.filter((r) => r.status === "PENDING");
   const processed = requests.filter((r) => r.status !== "PENDING");
@@ -46,6 +48,7 @@ export function SpaceRequestsQueue({
                 request={r}
                 rooms={rooms}
                 orgSlug={orgSlug}
+                timezone={timezone}
               />
             ))}
           </div>
@@ -64,6 +67,7 @@ export function SpaceRequestsQueue({
                 request={r}
                 rooms={rooms}
                 orgSlug={orgSlug}
+                timezone={timezone}
                 readonly
               />
             ))}
@@ -85,11 +89,13 @@ function RequestCard({
   request,
   rooms,
   orgSlug,
+  timezone,
   readonly,
 }: {
   request: RequestData;
   rooms: { id: string; name: string }[];
   orgSlug: string;
+  timezone: string;
   readonly?: boolean;
 }) {
   const [selectedRoomId, setSelectedRoomId] = useState("");
@@ -99,7 +105,7 @@ function RequestCard({
 
   const formatDate = (iso: string | null) => {
     if (!iso) return "—";
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleString(undefined, { timeZone: timezone });
   };
 
   async function handleApprove() {

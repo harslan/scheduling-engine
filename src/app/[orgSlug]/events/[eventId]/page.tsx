@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import { TZDate } from "@date-fns/tz";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -89,6 +90,10 @@ export default async function EventDetailPage({
 
   const canEdit = (isOwner && event.organization.allowsEventChanges && event.status !== "CANCELLED") || isAdminOrManager;
 
+  // All rendered dates below are formatted in the org's timezone.
+  const tz = event.organization.timezone;
+  const inTz = (d: Date) => new TZDate(d, tz);
+
   const statusStyles: Record<string, string> = {
     APPROVED: "bg-emerald-50 text-emerald-700 border-emerald-200",
     PENDING: "bg-amber-50 text-amber-700 border-amber-200",
@@ -124,7 +129,7 @@ export default async function EventDetailPage({
             </span>
           </div>
           <p className="text-sm text-slate-500">
-            Created {format(event.createdAt, "MMMM d, yyyy 'at' h:mm a")}
+            Created {format(inTz(event.createdAt), "MMMM d, yyyy 'at' h:mm a")}
           </p>
         </div>
 
@@ -136,8 +141,9 @@ export default async function EventDetailPage({
                 title: event.title,
                 eventTypeId: event.eventTypeId,
                 roomId: event.roomId,
-                startDateTime: event.startDateTime ? format(event.startDateTime, "yyyy-MM-dd'T'HH:mm") : "",
-                endDateTime: event.endDateTime ? format(event.endDateTime, "yyyy-MM-dd'T'HH:mm") : "",
+                // datetime-local prefills are wall-clock in the org's timezone
+                startDateTime: event.startDateTime ? format(inTz(event.startDateTime), "yyyy-MM-dd'T'HH:mm") : "",
+                endDateTime: event.endDateTime ? format(inTz(event.endDateTime), "yyyy-MM-dd'T'HH:mm") : "",
                 expectedAttendeeCount: event.expectedAttendeeCount,
                 contactName: event.contactName,
                 contactEmail: event.contactEmail,
@@ -164,12 +170,12 @@ export default async function EventDetailPage({
           <DetailCard title="Schedule">
             <DetailRow icon={<Calendar className="w-4 h-4" />} label="Date">
               {event.startDateTime
-                ? format(event.startDateTime, "EEEE, MMMM d, yyyy")
+                ? format(inTz(event.startDateTime), "EEEE, MMMM d, yyyy")
                 : "—"}
             </DetailRow>
             <DetailRow icon={<Clock className="w-4 h-4" />} label="Time">
               {event.startDateTime && event.endDateTime
-                ? `${format(event.startDateTime, "h:mm a")} — ${format(event.endDateTime, "h:mm a")}`
+                ? `${format(inTz(event.startDateTime), "h:mm a")} — ${format(inTz(event.endDateTime), "h:mm a")}`
                 : "—"}
             </DetailRow>
             {event.room && (
@@ -202,7 +208,7 @@ export default async function EventDetailPage({
               </DetailRow>
               {event.recurrenceEndDate && (
                 <DetailRow icon={<Calendar className="w-4 h-4" />} label="Repeats until">
-                  {format(event.recurrenceEndDate, "MMMM d, yyyy")}
+                  {format(inTz(event.recurrenceEndDate), "MMMM d, yyyy")}
                 </DetailRow>
               )}
               {event.excludedDates.length > 0 && (
@@ -216,7 +222,9 @@ export default async function EventDetailPage({
                         key={ed.id}
                         className="inline-flex px-2 py-0.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs rounded"
                       >
-                        {format(ed.date, "EEE, MMM d")}
+                        {/* Excluded dates are stored as UTC midnight of the
+                            calendar date, so format in UTC (not org tz). */}
+                        {format(new TZDate(ed.date, "UTC"), "EEE, MMM d")}
                       </span>
                     ))}
                   </div>
@@ -233,6 +241,7 @@ export default async function EventDetailPage({
                 orgSlug={orgSlug}
                 canEdit={canEdit}
                 isRecurring={!!event.recurrenceRule}
+                timezone={tz}
               />
             </DetailCard>
           )}
@@ -316,7 +325,7 @@ export default async function EventDetailPage({
                       </p>
                     )}
                     <p className="text-xs text-slate-400 ml-4">
-                      {format(action.createdAt, "MMM d, yyyy h:mm a")}
+                      {format(inTz(action.createdAt), "MMM d, yyyy h:mm a")}
                     </p>
                   </div>
                 ))}
@@ -333,7 +342,7 @@ export default async function EventDetailPage({
                     {log.action.replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
                   </p>
                   <p className="text-xs text-slate-400">
-                    {format(log.createdAt, "MMM d, yyyy h:mm a")}
+                    {format(inTz(log.createdAt), "MMM d, yyyy h:mm a")}
                     {log.actorEmail && ` · ${log.actorEmail}`}
                   </p>
                 </div>
