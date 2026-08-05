@@ -55,6 +55,7 @@ export default async function CharterPage({
         charter={{
           thresholdDays: charter.thresholdDays,
           reservedOffices: charter.reservedOffices,
+          reservedRoomSlugs: charter.reservedRoomSlugs,
           slackFraction: charter.slackFraction,
           adjunctsInScope: charter.adjunctsInScope,
           minSf: charter.minSf,

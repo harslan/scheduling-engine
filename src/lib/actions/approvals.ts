@@ -1,5 +1,8 @@
-"use server";
-
+// NOT a "use server" module: these are internal helpers, and marking them as
+// server actions made them directly invokable by any authenticated client —
+// including notifyApprovers with attacker-controlled mergeData (forged
+// approval emails). Callers are server actions themselves; a plain import is
+// all they need.
 import { prisma } from "@/lib/prisma";
 import { sendTemplatedEmail } from "@/lib/email";
 import type { EventMergeData } from "@/lib/email-merge";

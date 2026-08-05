@@ -42,18 +42,27 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
   const privateSlugs = new Set(
     charter.privateRoomSlugs.split(",").map((s) => s.trim()).filter(Boolean),
   );
+  // Charter 6.2 kept literally: reserved rooms are NAMED and removed from the
+  // office stock, so the allocator can never place anyone in them. Any excess
+  // of the numeric dial over the named rooms is still held back as a count.
+  const reservedSlugs = new Set(
+    charter.reservedRoomSlugs.split(",").map((s) => s.trim()).filter(Boolean),
+  );
   const rooms = await prisma.room.findMany({
     where: { organizationId, active: true },
     orderBy: { sortOrder: "asc" },
   });
-  const officeRooms = rooms.filter((r) => !privateSlugs.has(r.slug));
+  const officeRooms = rooms.filter(
+    (r) => !privateSlugs.has(r.slug) && !reservedSlugs.has(r.slug),
+  );
+  const namedReserved = rooms.filter((r) => reservedSlugs.has(r.slug)).length;
 
   const result = allocateWithPreferences(
     people,
     officeRooms.length,
     {
       thresholdDays: charter.thresholdDays,
-      reservedOffices: charter.reservedOffices,
+      reservedOffices: Math.max(0, charter.reservedOffices - namedReserved),
       slackFraction: charter.slackFraction,
       adjunctsInScope: charter.adjunctsInScope,
     },
@@ -78,6 +87,7 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
       dialsSnapshot: JSON.stringify({
         thresholdDays: charter.thresholdDays,
         reservedOffices: charter.reservedOffices,
+        reservedRoomSlugs: charter.reservedRoomSlugs,
         slackFraction: charter.slackFraction,
         adjunctsInScope: charter.adjunctsInScope,
         minSf: charter.minSf,

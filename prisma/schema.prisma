@@ -625,6 +625,7 @@ model SpaceCharter {
   organizationId     String    @unique
   thresholdDays      Int       @default(4)    // charter 2.4
   reservedOffices    Int       @default(0)    // charter 6.2
+  reservedRoomSlugs  String    @default("")   // charter 6.2 — the NAMED rooms; never allocated
   slackFraction      Float?                   // UNDECIDED until set
   adjunctsInScope    Boolean?                 // UNDECIDED until set
   minSf              Int       @default(80)   // charter 6.1

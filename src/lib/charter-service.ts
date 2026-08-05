@@ -11,6 +11,7 @@ import { prisma } from "./prisma";
 export type CharterPatch = {
   thresholdDays?: number;
   reservedOffices?: number;
+  reservedRoomSlugs?: string;
   slackFraction?: number | null;
   adjunctsInScope?: boolean | null;
   minSf?: number;
@@ -20,6 +21,7 @@ export type CharterPatch = {
 const FIELDS: (keyof CharterPatch)[] = [
   "thresholdDays",
   "reservedOffices",
+  "reservedRoomSlugs",
   "slackFraction",
   "adjunctsInScope",
   "minSf",

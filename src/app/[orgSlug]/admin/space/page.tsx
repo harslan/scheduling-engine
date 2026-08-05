@@ -79,7 +79,12 @@ export default async function AdminSpacePage({
         </div>
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm text-slate-600">
           <div>Dedicated threshold: {dial(charter.thresholdDays)} days</div>
-          <div>Reserved offices: {dial(charter.reservedOffices)}</div>
+          <div>
+            Reserved offices: {dial(charter.reservedOffices)}
+            {charter.reservedRoomSlugs && (
+              <span className="text-slate-500"> — rooms {charter.reservedRoomSlugs}</span>
+            )}
+          </div>
           <div>Adjuncts in scope: {dial(charter.adjunctsInScope)}</div>
           <div>Slack reserve: {dial(charter.slackFraction)}</div>
           <div>Standard office: {dial(charter.minSf)} sf min</div>

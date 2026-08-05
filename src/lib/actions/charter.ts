@@ -10,6 +10,7 @@ const UpdateSchema = z.object({
   organizationId: z.string().min(1),
   thresholdDays: z.coerce.number().int().min(1).max(5),
   reservedOffices: z.coerce.number().int().min(0),
+  reservedRoomSlugs: z.string().optional(),
   slackFraction: z.string().optional(), // "" = UNDECIDED
   adjunctsInScope: z.enum(["undecided", "true", "false"]),
   minSf: z.coerce.number().int().min(0),
@@ -33,15 +34,31 @@ export async function updateCharterAction(formData: FormData) {
       return { error: "Slack reserve must be a number between 0 and 1, or blank for UNDECIDED." };
     slackFraction = n;
   }
-  const roomCount = await prisma.room.count({
+  const activeRooms = await prisma.room.findMany({
     where: { organizationId: d.organizationId, active: true },
+    select: { slug: true },
   });
-  if (d.reservedOffices > roomCount)
-    return { error: `Reserved offices (${d.reservedOffices}) cannot exceed the ${roomCount} rooms on record.` };
+  if (d.reservedOffices > activeRooms.length)
+    return { error: `Reserved offices (${d.reservedOffices}) cannot exceed the ${activeRooms.length} rooms on record.` };
+
+  // Named reserved rooms (6.2) must be real rooms and not private rooms (7.2)
+  const reservedRoomSlugs = (d.reservedRoomSlugs ?? "")
+    .split(",").map((x) => x.trim()).filter(Boolean);
+  const known = new Set(activeRooms.map((r) => r.slug));
+  const privates = new Set((d.privateRoomSlugs ?? "").split(",").map((x) => x.trim()));
+  for (const slug of reservedRoomSlugs) {
+    if (!known.has(slug))
+      return { error: `Reserved room "${slug}" is not an active room on record.` };
+    if (privates.has(slug))
+      return { error: `Room "${slug}" is a private room (7.2) — it cannot also be reserved (6.2).` };
+  }
+  if (reservedRoomSlugs.length > d.reservedOffices)
+    return { error: `${reservedRoomSlugs.length} rooms are named but the reserved count is ${d.reservedOffices} — raise the count or name fewer rooms.` };
 
   const patch: CharterPatch = {
     thresholdDays: d.thresholdDays,
     reservedOffices: d.reservedOffices,
+    reservedRoomSlugs: reservedRoomSlugs.join(","),
     slackFraction,
     adjunctsInScope:
       d.adjunctsInScope === "undecided" ? null : d.adjunctsInScope === "true",

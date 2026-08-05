@@ -16,6 +16,7 @@ export function CharterForm({
   charter: {
     thresholdDays: number;
     reservedOffices: number;
+    reservedRoomSlugs: string;
     slackFraction: number | null;
     adjunctsInScope: boolean | null;
     minSf: number;
@@ -93,6 +94,14 @@ export function CharterForm({
             <span className="text-slate-600">Reserved offices — 6.2</span>
             <input name="reservedOffices" type="number" min={0}
               defaultValue={charter.reservedOffices} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className="text-slate-600">
+              Reserved rooms by name — 6.2 (comma slugs; these exact rooms are never allocated)
+            </span>
+            <input name="reservedRoomSlugs" type="text"
+              defaultValue={charter.reservedRoomSlugs} className={inputCls}
+              placeholder="e.g. 5351,5352,5353,5354" />
           </label>
           <label className="block">
             <span className="text-slate-600">Slack reserve (0–1, blank = UNDECIDED)</span>
