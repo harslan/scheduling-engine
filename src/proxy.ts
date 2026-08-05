@@ -5,9 +5,41 @@ import { getToken } from "next-auth/jwt";
 // Paths that require authentication (relative to /{orgSlug}/)
 const PROTECTED_PATHS = ["/admin", "/my-events", "/chat"];
 
+// PILOT_LOCKDOWN=1 flips the instance to deny-by-default: every route needs a
+// session except login/auth plumbing. Set on pilot deployments, where the data
+// (real teaching patterns under invented names) must never be anonymously
+// browsable. Production instances leave it unset and keep the allowlist below.
+const PILOT_LOCKDOWN = process.env.PILOT_LOCKDOWN === "1";
+
+const LOCKDOWN_PUBLIC = [
+  "/api/auth",
+  "/login",
+  "/forgot-password",
+  "/reset-password",
+  "/_next",
+];
+
 export async function proxy(request: NextRequest) {
   const token = await getToken({ req: request });
   const { pathname } = request.nextUrl;
+
+  if (PILOT_LOCKDOWN) {
+    const isPublic =
+      LOCKDOWN_PUBLIC.some((p) => pathname.startsWith(p)) ||
+      pathname === "/favicon.ico" ||
+      pathname === "/icon.svg";
+    if (!isPublic && !token) {
+      if (pathname.startsWith("/api")) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    const response = NextResponse.next();
+    response.headers.set("x-pathname", pathname);
+    return response;
+  }
 
   // Always allow these routes
   if (
