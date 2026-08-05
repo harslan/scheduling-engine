@@ -21,10 +21,10 @@ export async function generateMetadata({
 
   const orgName = org?.appDisplayName || org?.name || orgSlug;
   return {
-    title: {
-      default: orgName,
-      template: `%s — ${orgName}`,
-    },
+    title: isPilot
+      ? // absolute: the org IS the brand — avoid "Brand — Brand" via the root template
+        { absolute: orgName, template: `%s — ${orgName}` }
+      : { default: orgName, template: `%s — ${orgName}` },
     description: `${orgName} scheduling and room booking`,
     openGraph: {
       title: orgName,
