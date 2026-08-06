@@ -83,6 +83,17 @@ export async function ratifyCharterAction(formData: FormData) {
     return { error: parsed.error.issues.map((i) => i.message).join(", ") };
   const d = parsed.data;
   const { user } = await requireOrgRole(d.organizationId, ["ADMIN"]);
+
+  // The pilot ratifies nothing: ratification belongs to the real faculty
+  // vote (10.4), and OFFICIAL runs additionally require connected release
+  // records (2.3). Refusing here keeps the login page's promise true —
+  // every run in this deployment is a simulation — no matter who clicks.
+  if (process.env.PILOT_LOCKDOWN === "1" || process.env.NEXT_PUBLIC_PILOT === "1") {
+    return {
+      error:
+        "This pilot cannot ratify: ratification belongs to the real faculty vote (charter 10.4), and official runs also require the School's release records to be connected (2.3). Every run here remains a simulation — that promise is enforced, not assumed.",
+    };
+  }
   const result = await ratifyCharter(
     d.organizationId,
     user.id,
