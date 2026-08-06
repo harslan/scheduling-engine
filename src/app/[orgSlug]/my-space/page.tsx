@@ -83,6 +83,10 @@ export default async function MySpacePage({
         "8.1",
         "Unplaced at the current dials — reported by name to the Dean, never absorbed. This is the alarm working; nothing is taken from you.",
       ]);
+    trace.push([
+      "8.3",
+      "Disagree with any line above? Request human review — write to the Dean's office; a person, not the system, answers within ten working days. Nothing on this page is beyond appeal.",
+    ]);
   }
 
   return (
