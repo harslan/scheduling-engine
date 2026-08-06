@@ -76,10 +76,10 @@ export default async function BriefPage({
             </div>
           </div>
           <p className="text-sm text-slate-600 leading-relaxed">
-            {inScope} teaching faculty served by {run.needed} offices instead of{" "}
-            {inScope}: {tierCount("ded")} earn a dedicated office (4-day
-            schedules), {tierCount("pair")} share in stable pairs whose days
-            never collide, {tierCount("pool")} hold guaranteed pool seats.
+            The rule fits {inScope} teaching faculty into {run.needed} offices
+            instead of {inScope}: {tierCount("ded")} earn a dedicated office
+            (4-day schedules), {tierCount("pair")} share in stable pairs whose
+            days never collide, {tierCount("pool")} hold guaranteed pool seats.
             {unplaced.length > 0 && (
               <>
                 {" "}
