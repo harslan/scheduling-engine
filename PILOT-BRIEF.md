@@ -85,10 +85,15 @@ believe anything.
   the three dials; Brenda's roster and the release records connect. Nobody
   outside this room feels any of it.
 - **Fall, alongside reality** — one or two departments declare their real
-  semesters; the allocation runs in *shadow* next to the actual floor. Each
-  person privately sees their would-be outcome, clause by clause. The output
-  is a **displacement ledger**: the named, honest answer to "who would
-  actually move?" — which for most of the floor is *nobody*.
+  semesters; the allocation runs in *shadow* next to the actual floor.
+  **Personal clarity from hour one:** the moment anyone learns the rule
+  exists, their own would-be outcome is already visible to them, privately,
+  clause by clause — the announcement and the answer to "what happens to
+  *me*?" arrive in the same breath, because the anxious part of any space
+  process is the gap between those two, and this process closes it to zero.
+  The aggregate output is a **displacement ledger**: the named, honest
+  answer to "who would actually move?" — which for most of the floor is
+  *nobody*.
 - **Fall, in parallel** — the comment window, run as **amendments on the
   record**: every faculty comment gets a written accept-or-decline with a
   reason, in the same public log the dials use. Ratification is then a vote
