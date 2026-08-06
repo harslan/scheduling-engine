@@ -38,5 +38,6 @@ the pilot succeeding, not by momentum).
 | Email/cron | Disabled on pilot by design; production validation needed when enabled | Pilot → production cutover |
 | Assurance | E2E suite in CI (playwright exists, needs DB service), load test, security review/pen test | Pilot greenlight; ~1 week |
 | Governance | `schedulingCutoffDays` double meaning (min-advance vs recurrence horizon) | Product decision with the Dean's office |
+| Transition | **Minimum-displacement assignment** — PILOT-BRIEF and proposed charter 10.1 promise that where the rule is indifferent about which room, the incumbent keeps theirs; the allocator's office→room mapping is currently sort-order only | Brenda's roster (who sits where today) — the feature and its data arrive together, before the first OFFICIAL run |
 
 Full bug-audit trail: memory `project_sbs_pilot_bughunt` (2026-08-05) and commit history.
