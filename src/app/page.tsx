@@ -36,9 +36,14 @@ export default async function Home() {
     const userId = (session.user as { id: string }).id;
     const membership = await prisma.organizationMember.findFirst({
       where: { userId },
-      select: { organization: { select: { slug: true } } },
+      select: { role: true, organization: { select: { slug: true } } },
     });
     if (membership) {
+      // Pilot: administrators land on the one-screen brief, not the calendar
+      const { isPilot } = await import("@/lib/pilot");
+      if (isPilot && (membership.role === "ADMIN" || membership.role === "MANAGER")) {
+        redirect(`/${membership.organization.slug}/brief`);
+      }
       redirect(`/${membership.organization.slug}`);
     }
   }

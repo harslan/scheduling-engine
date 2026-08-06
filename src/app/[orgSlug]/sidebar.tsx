@@ -206,6 +206,14 @@ export function Sidebar({
             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2 px-3">
               Administration
             </p>
+            {isPilot && (
+              <NavLink
+                href={`/${orgSlug}/brief`}
+                icon={<Sparkles className="w-4 h-4" />}
+              >
+                The brief
+              </NavLink>
+            )}
             <NavLink
               href={`/${orgSlug}/admin`}
               icon={<Settings className="w-4 h-4" />}
