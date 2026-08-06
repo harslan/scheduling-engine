@@ -10,11 +10,13 @@ Since July, the office-sharing initiative has produced three things, in order:
    spring; at the busiest moment ~35 needed a seat outside a classroom; our
    Mon/Wed and Tue/Thu schedules naturally interleave. The building roughly
    fits — the hard part was never capacity, it's fairness and buy-in.
-2. **The rule**: a plain-language charter faculty can ratify *before anyone
-   knows their own room* — with hard guarantees (a real office standard,
-   protected private rooms for confidential conversations, storage, open
-   Fridays, human appeal) and honest limits (what the schedule can't measure,
-   flagged, never hidden).
+2. **The rule**: a plain-language charter faculty can ratify on its merits —
+   one measure applied to everyone by the same arithmetic, every dial
+   reversible only with a written reason on a public log, and nobody's door
+   changing without their written consent — with hard guarantees (a real
+   office standard, protected private rooms for confidential conversations,
+   storage, open Fridays, human appeal) and honest limits (what the schedule
+   can't measure, flagged, never hidden).
 3. **The working system** — this is new. Not a mockup: real software, running
    the full loop your email described.
 
@@ -63,20 +65,49 @@ one, with the shortfall named. The analysis and the product agree to the digit.
 Everyone in the demo is fictitious; the schedules are real; nothing in it
 assigns anyone anything.
 
-## What a fall pilot looks like
+## How the process starts — for people already in their offices
 
-**A shadow pilot: we pilot the system, not the move.** Nobody changes offices.
+The first question every colleague on Sargent 5 will ask: *I'm in my office
+now — what happens to me?* The process is built around that question.
 
-- **Now–mid-Aug** — you set (or explicitly defer) the three dials; charter
-  comment window opens with the plain-language packet and the spring
-  simulation attached.
-- **Late Aug** — charter ratified (or amended by the comments — both outcomes
-  are the process working).
-- **September** — one or two departments declare their real semesters in the
-  system; the allocation runs in simulation alongside reality; faculty see
-  what they *would* have, and tell us what's wrong.
-- **End of term** — feedback becomes charter amendments (logged, reasoned),
-  and we decide together whether spring goes live.
+**It starts where people sit, and its first act is measurement, not
+movement.** The registrar's schedule runs through the rule and shows each
+person what they *would* hold: ten colleagues' schedules earn an unshared
+office outright; seventy-two would share with one person whose days never
+overlap theirs — on the days they come in, the office is still effectively
+theirs. For most incumbents the rule's answer is closer to "you keep what you
+have" than they fear, and the system shows them that before asking them to
+believe anything.
+
+**The calendar — nothing binds before the spring turn:**
+
+- **Now–September** — twenty minutes with you; you set (or explicitly defer)
+  the three dials; Brenda's roster and the release records connect. Nobody
+  outside this room feels any of it.
+- **Fall, alongside reality** — one or two departments declare their real
+  semesters; the allocation runs in *shadow* next to the actual floor. Each
+  person privately sees their would-be outcome, clause by clause. The output
+  is a **displacement ledger**: the named, honest answer to "who would
+  actually move?" — which for most of the floor is *nobody*.
+- **Fall, in parallel** — the comment window, run as **amendments on the
+  record**: every faculty comment gets a written accept-or-decline with a
+  reason, in the same public log the dials use. Ratification is then a vote
+  on a document faculty visibly shaped — with every rejection explained.
+- **November** — the ratification vote. Pass or fail, the process worked:
+  a failed vote moves nobody and sends the charter back for amendment with
+  the objections already on the record.
+- **Spring 2027 turn** — the first official run, under a **minimum-
+  displacement rule**: wherever the charter is indifferent about *which*
+  room, you keep the one you're in. The rule decides what your schedule
+  earned; incumbency decides the room number. Swaps open for a week before
+  anything takes effect.
+
+**The property that makes this safe to say yes to: every step pays for
+itself even if it's the last.** Stop after the measurement — you still hold
+the real demand picture and the displacement ledger. Stop after the shadow —
+faculty stress-tested a rule at zero cost. Stop at a failed vote — nothing
+moved, nothing to unwind. The process never needs momentum to justify
+itself; it only needs to be started.
 
 ## What we need, from whom
 
@@ -90,6 +121,8 @@ assigns anyone anything.
 
 ## The sentence
 
-A rule faculty ratify blind, software that can only execute what was ratified —
-and proves it — and a ledger that turns every shared office into student space
-you can point to.
+One rule applied to everyone by the same arithmetic, software that can only
+execute what faculty ratified — and proves it — a transition where most
+people's letter reads *your schedule earned the office you're already in*,
+and a ledger that turns every shared office into student space you can
+point to.
