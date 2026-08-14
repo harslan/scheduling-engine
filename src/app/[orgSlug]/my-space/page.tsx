@@ -155,6 +155,21 @@ export default async function MySpacePage({
         />
       )}
 
+      <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+        <h2 className="font-bold text-slate-900 mb-1">Let students find you</h2>
+        <p className="text-sm text-slate-500 mb-3">
+          Publish your office hours — when you&apos;re in and where. It&apos;s the one thing the
+          model can&apos;t read from your schedule, so it only exists if you say it. You control
+          whether your live location shows.
+        </p>
+        <Link
+          className="text-primary font-medium text-sm"
+          href={`/${orgSlug}/office-hours`}
+        >
+          Publish my office hours →
+        </Link>
+      </div>
+
       <p className="text-sm">
         <Link className="text-primary font-medium" href={`/${orgSlug}/declare`}>
           Update my declaration →

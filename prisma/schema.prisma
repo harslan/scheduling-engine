@@ -8,108 +8,108 @@ datasource db {
 }
 
 model Organization {
-  id                      String                      @id @default(cuid())
-  name                    String
-  shortName               String
-  slug                    String                      @unique
-  timezone                String                      @default("America/New_York")
-  appDisplayName          String                      @default("")
-  logoUrl                 String?
-  primaryColor            String                      @default("#0B7DE6")
-  messageBoardHtml        String                      @default("")
-  allowsRoomSelection     Boolean                     @default(true)
-  allowsMultiDayEvents    Boolean                     @default(true)
-  allowsRoomlessEvents    Boolean                     @default(false)
-  allowsUnregisteredUsers Boolean                     @default(false)
-  calendarIsPrivate       Boolean                     @default(false)
-  requiresApproval        Boolean                     @default(false)
-  allowsEventChanges      Boolean                     @default(true)
-  allowsRoomRequests      Boolean                     @default(false)
-  collectsEventTitle      Boolean                     @default(true)
-  collectsAttendeeCount   Boolean                     @default(true)
-  collectsContactPhone    Boolean                     @default(false)
-  roomOpeningTime         String                      @default("07:00")
-  roomClosingTime         String                      @default("22:00")
-  maxEventLengthMinutes   Int                         @default(480)
-  schedulingCutoffDays    Int?
-  schedulingCutoffFixedDate DateTime?             @db.Date
-  eventSingularTerm       String                      @default("Event")
-  eventPluralTerm         String                      @default("Events")
-  roomTerm                String                      @default("Room")
-  emailReplyToAddress     String                      @default("")
-  reminderEmailHours      Int?
+  id                        String    @id @default(cuid())
+  name                      String
+  shortName                 String
+  slug                      String    @unique
+  timezone                  String    @default("America/New_York")
+  appDisplayName            String    @default("")
+  logoUrl                   String?
+  primaryColor              String    @default("#0B7DE6")
+  messageBoardHtml          String    @default("")
+  allowsRoomSelection       Boolean   @default(true)
+  allowsMultiDayEvents      Boolean   @default(true)
+  allowsRoomlessEvents      Boolean   @default(false)
+  allowsUnregisteredUsers   Boolean   @default(false)
+  calendarIsPrivate         Boolean   @default(false)
+  requiresApproval          Boolean   @default(false)
+  allowsEventChanges        Boolean   @default(true)
+  allowsRoomRequests        Boolean   @default(false)
+  collectsEventTitle        Boolean   @default(true)
+  collectsAttendeeCount     Boolean   @default(true)
+  collectsContactPhone      Boolean   @default(false)
+  roomOpeningTime           String    @default("07:00")
+  roomClosingTime           String    @default("22:00")
+  maxEventLengthMinutes     Int       @default(480)
+  schedulingCutoffDays      Int?
+  schedulingCutoffFixedDate DateTime? @db.Date
+  eventSingularTerm         String    @default("Event")
+  eventPluralTerm           String    @default("Events")
+  roomTerm                  String    @default("Room")
+  emailReplyToAddress       String    @default("")
+  reminderEmailHours        Int?
 
   // Approver settings
-  approverId              String?
+  approverId               String?
   roomAssignmentApproverId String?
 
   // Reserve Interactive (Infor SCS) integration
-  reserveEnabled              Boolean                     @default(false)
-  reserveExportEnabled        Boolean                     @default(false)
-  reserveImportMode           String?                     // null=off, "manual", "automatic"
-  reserveGatewayUsername      String                      @default("")
-  reserveGatewayPassword      String                      @default("")
-  reserveWebhookSecret        String                      @default("")
-  reserveSiteName             String                      @default("")
-  reserveEventIdFieldName     String                      @default("")
-  reserveEventNotesFieldName  String                      @default("")
-  reserveEventOrgFieldName    String                      @default("")
-  reserveOwnerUsername        String                      @default("")
-  reserveSalespersonUsername  String                      @default("")
-  reserveLifecycleStage      String                      @default("")
-  reserveHoldFunctionType    String                      @default("")
-  reserveHoldContactId       String                      @default("")
+  reserveEnabled             Boolean   @default(false)
+  reserveExportEnabled       Boolean   @default(false)
+  reserveImportMode          String? // null=off, "manual", "automatic"
+  reserveGatewayUsername     String    @default("")
+  reserveGatewayPassword     String    @default("")
+  reserveWebhookSecret       String    @default("")
+  reserveSiteName            String    @default("")
+  reserveEventIdFieldName    String    @default("")
+  reserveEventNotesFieldName String    @default("")
+  reserveEventOrgFieldName   String    @default("")
+  reserveOwnerUsername       String    @default("")
+  reserveSalespersonUsername String    @default("")
+  reserveLifecycleStage      String    @default("")
+  reserveHoldFunctionType    String    @default("")
+  reserveHoldContactId       String    @default("")
   reserveLastSyncAt          DateTime?
   reserveLastExportAt        DateTime?
   reserveLastImportAt        DateTime?
 
-  createdAt               DateTime                    @default(now())
-  updatedAt               DateTime                    @updatedAt
-  contentPages            ContentPage[]
-  eventOrganizations      EventOrganization[]
-  eventTypes              EventType[]
-  events                  Event[]
-  calendarViews           OrganizationCalendarView[]
-  emailTemplates          OrganizationEmailTemplate[]
-  members                 OrganizationMember[]
-  roomConfigurationTypes  RoomConfigurationType[]
-  rooms                   Room[]
-  reserveAccounts         ReserveAccount[]
-  reserveContacts         ReserveContact[]
-  reserveEvents           ReserveEvent[]
-  reserveWebhookEvents    ReserveWebhookEvent[]
-  reserveSyncLogs         ReserveSyncLog[]
-  backupApprovers         BackupApprover[]
-  notifiedApprovers       NotifiedApprover[]
-  roomRequests            RoomRequest[]
-  cronStates              CronState[]
+  createdAt              DateTime                    @default(now())
+  updatedAt              DateTime                    @updatedAt
+  contentPages           ContentPage[]
+  eventOrganizations     EventOrganization[]
+  eventTypes             EventType[]
+  events                 Event[]
+  calendarViews          OrganizationCalendarView[]
+  emailTemplates         OrganizationEmailTemplate[]
+  members                OrganizationMember[]
+  roomConfigurationTypes RoomConfigurationType[]
+  rooms                  Room[]
+  reserveAccounts        ReserveAccount[]
+  reserveContacts        ReserveContact[]
+  reserveEvents          ReserveEvent[]
+  reserveWebhookEvents   ReserveWebhookEvent[]
+  reserveSyncLogs        ReserveSyncLog[]
+  backupApprovers        BackupApprover[]
+  notifiedApprovers      NotifiedApprover[]
+  roomRequests           RoomRequest[]
+  cronStates             CronState[]
 
   @@map("organizations")
 }
 
 model User {
-  id              String               @id @default(cuid())
-  email           String               @unique
-  name            String               @default("")
-  passwordHash    String?
-  active          Boolean              @default(true)
-  lastLoginAt     DateTime?
-  isSystemAdmin   Boolean              @default(false)
-  emailVerified   DateTime?
-  image           String?
-  passwordResetToken   String?   @unique
+  id                   String               @id @default(cuid())
+  email                String               @unique
+  name                 String               @default("")
+  passwordHash         String?
+  active               Boolean              @default(true)
+  lastLoginAt          DateTime?
+  isSystemAdmin        Boolean              @default(false)
+  emailVerified        DateTime?
+  image                String?
+  passwordResetToken   String?              @unique
   passwordResetExpires DateTime?
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  accounts        Account[]
-  approvalActions   ApprovalAction[]
-  submittedEvents   Event[]              @relation("SubmittedBy")
-  memberships       OrganizationMember[]
-  sessions          Session[]
-  backupApprovers   BackupApprover[]     @relation("BackupApproverUser")
-  primaryApprovals  BackupApprover[]     @relation("PrimaryApprover")
-  notifiedApprovals NotifiedApprover[]
-  processedRequests RoomRequest[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  accounts             Account[]
+  approvalActions      ApprovalAction[]
+  submittedEvents      Event[]              @relation("SubmittedBy")
+  memberships          OrganizationMember[]
+  sessions             Session[]
+  backupApprovers      BackupApprover[]     @relation("BackupApproverUser")
+  primaryApprovals     BackupApprover[]     @relation("PrimaryApprover")
+  notifiedApprovals    NotifiedApprover[]
+  processedRequests    RoomRequest[]
 
   @@map("users")
 }
@@ -128,29 +128,29 @@ model OrganizationMember {
 }
 
 model Room {
-  id                   String              @id @default(cuid())
-  organizationId       String
-  name                 String
-  slug                 String
-  iconText             String              @default("")
-  notes                String              @default("")
-  active               Boolean             @default(true)
-  managersOnly         Boolean             @default(false)
-  sortOrder            Int                 @default(0)
-  concurrentEventLimit Int                 @default(1)
-  parentRoomId         String?
-  createdAt            DateTime            @default(now())
-  updatedAt            DateTime            @updatedAt
-  bufferMinutes        Int                 @default(0)
-  capacity             Int?
-  parentConversionMinutes Int              @default(0)
-  approverId           String?
-  reserveLocationName  String              @default("")
-  events               Event[]
-  configurations       RoomConfiguration[]
-  organization         Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  parentRoom           Room?               @relation("RoomHierarchy", fields: [parentRoomId], references: [id])
-  childRooms           Room[]              @relation("RoomHierarchy")
+  id                      String              @id @default(cuid())
+  organizationId          String
+  name                    String
+  slug                    String
+  iconText                String              @default("")
+  notes                   String              @default("")
+  active                  Boolean             @default(true)
+  managersOnly            Boolean             @default(false)
+  sortOrder               Int                 @default(0)
+  concurrentEventLimit    Int                 @default(1)
+  parentRoomId            String?
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  bufferMinutes           Int                 @default(0)
+  capacity                Int?
+  parentConversionMinutes Int                 @default(0)
+  approverId              String?
+  reserveLocationName     String              @default("")
+  events                  Event[]
+  configurations          RoomConfiguration[]
+  organization            Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  parentRoom              Room?               @relation("RoomHierarchy", fields: [parentRoomId], references: [id])
+  childRooms              Room[]              @relation("RoomHierarchy")
 
   @@unique([organizationId, slug])
   @@map("rooms")
@@ -425,17 +425,17 @@ model ReserveContact {
 }
 
 model ReserveEvent {
-  id              String       @id @default(cuid())
-  organizationId  String
-  reserveUniqueId String
-  eventId         String?
-  generalData     Json?
-  importData      Json?
+  id                  String       @id @default(cuid())
+  organizationId      String
+  reserveUniqueId     String
+  eventId             String?
+  generalData         Json?
+  importData          Json?
   importDataUpdatedAt DateTime?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  event           Event?       @relation(fields: [eventId], references: [id])
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event               Event?       @relation(fields: [eventId], references: [id])
 
   @@unique([organizationId, reserveUniqueId])
   @@index([organizationId, eventId])
@@ -456,15 +456,15 @@ model ReserveWebhookEvent {
 }
 
 model ReserveSyncLog {
-  id             String       @id @default(cuid())
-  organizationId String
-  direction      String       // "export" or "import"
-  status         String       // "success", "error", "partial"
-  summary        Json?
-  eventsProcessed Int         @default(0)
-  errorMessage   String?
-  createdAt      DateTime     @default(now())
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id              String       @id @default(cuid())
+  organizationId  String
+  direction       String // "export" or "import"
+  status          String // "success", "error", "partial"
+  summary         Json?
+  eventsProcessed Int          @default(0)
+  errorMessage    String?
+  createdAt       DateTime     @default(now())
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, createdAt])
   @@map("reserve_sync_logs")
@@ -483,9 +483,9 @@ model ReconfigurationTime {
 }
 
 model CronState {
-  id    String   @id @default(cuid())
-  key   String   @unique
-  value DateTime
+  id             String        @id @default(cuid())
+  key            String        @unique
+  value          DateTime
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -493,14 +493,14 @@ model CronState {
 }
 
 model BackupApprover {
-  id            String       @id @default(cuid())
+  id             String       @id @default(cuid())
   organizationId String
-  approverId    String
-  backupUserId  String
-  sortOrder     Int          @default(0)
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  approver      User         @relation("PrimaryApprover", fields: [approverId], references: [id], onDelete: Cascade)
-  backupUser    User         @relation("BackupApproverUser", fields: [backupUserId], references: [id], onDelete: Cascade)
+  approverId     String
+  backupUserId   String
+  sortOrder      Int          @default(0)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  approver       User         @relation("PrimaryApprover", fields: [approverId], references: [id], onDelete: Cascade)
+  backupUser     User         @relation("BackupApproverUser", fields: [backupUserId], references: [id], onDelete: Cascade)
 
   @@unique([organizationId, approverId, backupUserId])
   @@map("backup_approvers")
@@ -521,25 +521,25 @@ model NotifiedApprover {
 }
 
 model RoomRequest {
-  id                String            @id @default(cuid())
-  organizationId    String
-  roomId            String?
-  description       String            @default("")
-  contactName       String            @default("")
-  contactEmail      String            @default("")
-  contactPhone      String            @default("")
-  expectedAttendeeCount Int?
+  id                     String            @id @default(cuid())
+  organizationId         String
+  roomId                 String?
+  description            String            @default("")
+  contactName            String            @default("")
+  contactEmail           String            @default("")
+  contactPhone           String            @default("")
+  expectedAttendeeCount  Int?
   requestedStartDateTime DateTime?
   requestedEndDateTime   DateTime?
-  status            RoomRequestStatus @default(PENDING)
-  processedAt       DateTime?
-  processedByUserId String?
-  denialReason      String            @default("")
-  createdEventId    String?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
-  organization      Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  processedBy       User?             @relation(fields: [processedByUserId], references: [id])
+  status                 RoomRequestStatus @default(PENDING)
+  processedAt            DateTime?
+  processedByUserId      String?
+  denialReason           String            @default("")
+  createdEventId         String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  organization           Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  processedBy            User?             @relation(fields: [processedByUserId], references: [id])
 
   @@index([organizationId, status])
   @@map("room_requests")
@@ -589,9 +589,9 @@ model Declaration {
   id                String   @id @default(cuid())
   organizationId    String
   userId            String
-  semester          String   // e.g. "Fall 2026"
+  semester          String // e.g. "Fall 2026"
   days              String   @default("") // comma-joined tokens: M,T,W,TH (TH is one token)
-  partnerPrefUserId String?  // clause 4.1 — named pairs require BOTH to name each other
+  partnerPrefUserId String? // clause 4.1 — named pairs require BOTH to name each other
   wantsDedicated    Boolean  @default(false)
   notes             String   @default("")
   createdAt         DateTime @default(now())
@@ -623,14 +623,14 @@ model TeachingRecord {
 model SpaceCharter {
   id                 String    @id @default(cuid())
   organizationId     String    @unique
-  thresholdDays      Int       @default(4)    // charter 2.4
-  reservedOffices    Int       @default(0)    // charter 6.2
-  reservedRoomSlugs  String    @default("")   // charter 6.2 — the NAMED rooms; never allocated
-  slackFraction      Float?                   // UNDECIDED until set
-  adjunctsInScope    Boolean?                 // UNDECIDED until set
-  minSf              Int       @default(80)   // charter 6.1
-  privateRoomSlugs   String    @default("")   // charter 7.2 — comma list, never allocated
-  ratifiedBy         String?                  // charter 10.4 — null = DRAFT
+  thresholdDays      Int       @default(4) // charter 2.4
+  reservedOffices    Int       @default(0) // charter 6.2
+  reservedRoomSlugs  String    @default("") // charter 6.2 — the NAMED rooms; never allocated
+  slackFraction      Float? // UNDECIDED until set
+  adjunctsInScope    Boolean? // UNDECIDED until set
+  minSf              Int       @default(80) // charter 6.1
+  privateRoomSlugs   String    @default("") // charter 7.2 — comma list, never allocated
+  ratifiedBy         String? // charter 10.4 — null = DRAFT
   ratifiedOn         DateTime?
   ratificationRecord String?
   updatedAt          DateTime  @updatedAt
@@ -640,16 +640,16 @@ model SpaceCharter {
 }
 
 model SpaceRun {
-  id             String   @id @default(cuid())
+  id             String            @id @default(cuid())
   organizationId String
   semester       String
-  status         String   // "SIMULATION" until the charter is ratified (10.4)
+  status         String // "SIMULATION" until the charter is ratified (10.4)
   needed         Int
   usable         Int
   stable         Boolean
-  dialsSnapshot  String   @default("{}") // the dials this run executed, verbatim
-  notTeaching    Int      @default(0)    // roster members with no measured record
-  createdAt      DateTime @default(now())
+  dialsSnapshot  String            @default("{}") // the dials this run executed, verbatim
+  notTeaching    Int               @default(0) // roster members with no measured record
+  createdAt      DateTime          @default(now())
   assignments    SpaceAssignment[]
 
   @@index([organizationId, semester, createdAt])
@@ -660,8 +660,8 @@ model SpaceAssignment {
   id          String   @id @default(cuid())
   runId       String
   userId      String
-  roomSlug    String   // office label; joins Rooms by slug when materialized
-  tier        String   // ded | pair | pool | bookable
+  roomSlug    String // office label; joins Rooms by slug when materialized
+  tier        String // ded | pair | pool | bookable
   withUserIds String   @default("") // comma list — officemates
   placed      Boolean  @default(true)
   run         SpaceRun @relation(fields: [runId], references: [id], onDelete: Cascade)
@@ -687,6 +687,48 @@ model SpaceSwap {
 
   @@index([organizationId, semester, status])
   @@map("space_swaps")
+}
+
+// --- SBS Faculty Space: office hours (declared SERVICE, not entitlement) ----
+// The one input the registrar feed can never see — occupancy.py lists it FIRST
+// under NOT MODELED. Faculty DECLARE it, so it only exists if they say so, and
+// two dials stay theirs: `publish` (appear on the student map at all) and
+// `live` (broadcast "in right now" with the room; off by default). Like a
+// Declaration this is preference/service and can never win or lose an office;
+// unlike a Declaration it is student-facing, so consent is explicit per-field.
+model OfficeHours {
+  id             String            @id @default(cuid())
+  organizationId String
+  userId         String
+  semester       String
+  publish        Boolean           @default(false) // off = absent from the student map entirely
+  live           Boolean           @default(false) // off = schedule shown, live location withheld
+  note           String            @default("") // a line to students; optional
+  blocks         OfficeHourBlock[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([organizationId, userId, semester])
+  @@index([organizationId, semester])
+  @@map("office_hours")
+}
+
+// One weekly block. Minute-of-day + weekday token match the demand model's
+// convention (15-min slots), NOT wall-clock strings — so declared hours drop
+// straight into presence math. Virtual blocks serve students but occupy no
+// Sargent office; the demand read counts in-person only.
+model OfficeHourBlock {
+  id            String      @id @default(cuid())
+  officeHoursId String
+  day           String // one weekday token: M | T | W | TH | F
+  startMin      Int // minutes past midnight, org timezone
+  endMin        Int
+  roomSlug      String      @default("") // joins Rooms by slug; free text ("online") allowed
+  mode          String      @default("in-person") // in-person | virtual
+  officeHours   OfficeHours @relation(fields: [officeHoursId], references: [id], onDelete: Cascade)
+
+  @@index([officeHoursId])
+  @@map("office_hour_blocks")
 }
 
 // Charter 10.2 in the product: a dial changes ONLY with a dated, reasoned

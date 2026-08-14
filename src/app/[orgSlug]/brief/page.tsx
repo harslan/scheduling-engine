@@ -3,6 +3,7 @@ import { requireOrgRole } from "@/lib/session";
 import { currentSemester } from "@/lib/semester";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { declaredPresence, DAY_ORDER } from "@/lib/office-hours";
 
 /**
  * The Dean's brief — the whole argument on one screen, in the Dean's
@@ -41,6 +42,19 @@ export default async function BriefPage({
   const inScope = run
     ? run.assignments.filter((a) => a.tier !== "bookable").length
     : 0;
+
+  // Office hours — the demand model's first admitted blind spot, turned into
+  // faculty-signed data. A coverage instrument, not a finished number.
+  const officeHours = await prisma.officeHours.findMany({
+    where: { organizationId: org.id, semester, publish: true },
+    select: { blocks: true },
+  });
+  const declared = declaredPresence(officeHours);
+  const nScope = await prisma.organizationMember.count({
+    where: { organizationId: org.id },
+  });
+  const nPublished = officeHours.filter((o) => o.blocks.length > 0).length;
+  const coveragePct = nScope ? Math.round((100 * nPublished) / nScope) : 0;
 
   const undecided = (label: string) => (
     <span className="text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5 text-xs font-bold">
@@ -99,6 +113,60 @@ export default async function BriefPage({
           No allocation has been run yet this semester.
         </div>
       )}
+
+      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+        <h2 className="text-sm font-bold text-slate-900 mb-1">
+          Office hours — the invisible gap, closing
+        </h2>
+        <p className="text-xs text-slate-500 mb-4">
+          The demand model lists office hours <i>first</i> under &ldquo;not modeled &mdash;
+          biases demand downward,&rdquo; because the registrar feed can&rsquo;t see them. As
+          faculty publish on the{" "}
+          <Link className="text-primary" href={`/find/${orgSlug}`}>
+            student map
+          </Link>
+          , that guess becomes signed data &mdash; and unlike the buffer, it&rsquo;s measured.
+        </p>
+        <div className="grid grid-cols-3 gap-3 mb-4">
+          <div className="text-center bg-slate-50 border border-slate-200 rounded-lg py-3">
+            <div className="text-2xl font-bold text-slate-900">
+              {nPublished}
+              <span className="text-sm text-slate-400">/{nScope}</span>
+            </div>
+            <div className="text-xs text-slate-500">faculty declared</div>
+          </div>
+          <div className="text-center bg-slate-50 border border-slate-200 rounded-lg py-3">
+            <div className="text-2xl font-bold text-slate-900">{coveragePct}%</div>
+            <div className="text-xs text-slate-500">coverage</div>
+          </div>
+          <div className="text-center bg-slate-50 border border-slate-200 rounded-lg py-3">
+            <div className="text-2xl font-bold text-slate-900">{declared.peakOverall}</div>
+            <div className="text-xs text-slate-500">peak in office at once</div>
+          </div>
+        </div>
+        <table className="w-full text-sm">
+          <tbody>
+            {DAY_ORDER.map((d) => (
+              <tr key={d} className="border-b border-slate-100 last:border-0">
+                <td className="py-1.5 text-slate-500 font-semibold w-16">{d}</td>
+                <td className="py-1.5 text-slate-700">
+                  {declared.perDay[d].peak}
+                  {declared.perDay[d].atClock && (
+                    <span className="text-slate-400"> @ {declared.perDay[d].atClock}</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p className="text-xs text-slate-400 mt-3">
+          <b>Read this as a floor, not a total.</b> It reflects only the {nPublished} who have
+          published &mdash; at {coveragePct}% coverage it is nowhere near complete. Virtual hours
+          are excluded: they serve students but occupy no office. Shown as its own series, never
+          added to the buffer estimate &mdash; overlap would double-count, the quiet imputation
+          this project refuses.
+        </p>
+      </div>
 
       <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
         <h2 className="text-sm font-bold text-slate-900 mb-3">
