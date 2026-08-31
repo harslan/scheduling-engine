@@ -14,12 +14,11 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {
-        organization_id: { type: "string", description: "The organization ID" },
         start_datetime: { type: "string", description: "Start datetime in ISO format (e.g., 2026-03-25T14:00:00)" },
         end_datetime: { type: "string", description: "End datetime in ISO format (e.g., 2026-03-25T16:00:00)" },
         min_capacity: { type: "number", description: "Minimum concurrent event capacity (optional)" },
       },
-      required: ["organization_id", "start_datetime", "end_datetime"],
+      required: ["start_datetime", "end_datetime"],
     },
   },
   {
@@ -27,10 +26,8 @@ const tools: Anthropic.Tool[] = [
     description: "List all active rooms in the organization with their details.",
     input_schema: {
       type: "object" as const,
-      properties: {
-        organization_id: { type: "string", description: "The organization ID" },
-      },
-      required: ["organization_id"],
+      properties: {},
+      required: [],
     },
   },
   {
@@ -39,7 +36,6 @@ const tools: Anthropic.Tool[] = [
     input_schema: {
       type: "object" as const,
       properties: {
-        organization_id: { type: "string", description: "The organization ID" },
         title: { type: "string", description: "Event title" },
         room_id: { type: "string", description: "Room ID to book" },
         start_datetime: { type: "string", description: "Start datetime in ISO format" },
@@ -49,7 +45,7 @@ const tools: Anthropic.Tool[] = [
         expected_attendees: { type: "number", description: "Expected number of attendees (optional)" },
         notes: { type: "string", description: "Additional notes (optional)" },
       },
-      required: ["organization_id", "title", "room_id", "start_datetime", "end_datetime", "contact_name", "contact_email"],
+      required: ["title", "room_id", "start_datetime", "end_datetime", "contact_name", "contact_email"],
     },
   },
   {
@@ -57,11 +53,8 @@ const tools: Anthropic.Tool[] = [
     description: "List upcoming events for the current user.",
     input_schema: {
       type: "object" as const,
-      properties: {
-        organization_id: { type: "string", description: "The organization ID" },
-        user_email: { type: "string", description: "The user's email" },
-      },
-      required: ["organization_id", "user_email"],
+      properties: {},
+      required: [],
     },
   },
   {
@@ -80,7 +73,7 @@ const tools: Anthropic.Tool[] = [
 async function executeTool(name: string, input: Record<string, unknown>, context: { userEmail: string; organizationId: string }): Promise<string> {
   switch (name) {
     case "search_available_rooms": {
-      const orgId = input.organization_id as string;
+      const orgId = context.organizationId;
       const org = await prisma.organization.findUnique({ where: { id: orgId } });
       if (!org) return JSON.stringify({ error: "Organization not found" });
 
@@ -121,7 +114,7 @@ async function executeTool(name: string, input: Record<string, unknown>, context
 
     case "list_rooms": {
       const rooms = await prisma.room.findMany({
-        where: { organizationId: input.organization_id as string, active: true },
+        where: { organizationId: context.organizationId, active: true },
         orderBy: { sortOrder: "asc" },
       });
       return JSON.stringify(rooms.map((r) => ({
@@ -134,7 +127,7 @@ async function executeTool(name: string, input: Record<string, unknown>, context
     }
 
     case "create_booking": {
-      const orgId = input.organization_id as string;
+      const orgId = context.organizationId;
       const org = await prisma.organization.findUnique({ where: { id: orgId } });
       if (!org) return JSON.stringify({ error: "Organization not found" });
 
@@ -155,6 +148,10 @@ async function executeTool(name: string, input: Record<string, unknown>, context
             where: { organizationId: orgId, userId: chatUser.id, role: { in: ["ADMIN", "MANAGER"] } },
           })
         : null;
+
+      // Non-admins can only book under their own identity; the model must not be
+      // able to submit a booking on behalf of another person's email.
+      const contactEmail = chatIsAdmin ? (input.contact_email as string) : context.userEmail;
 
       // EWL: enforce scheduling constraints for non-admin users
       if (!chatIsAdmin) {
@@ -281,7 +278,7 @@ async function executeTool(name: string, input: Record<string, unknown>, context
           startDateTime: startDt,
           endDateTime: endDt,
           contactName: input.contact_name as string,
-          contactEmail: input.contact_email as string,
+          contactEmail,
           expectedAttendeeCount: (input.expected_attendees as number) || null,
           notes: (input.notes as string) || "",
           status: autoApproved ? "APPROVED" : "PENDING",
@@ -293,7 +290,7 @@ async function executeTool(name: string, input: Record<string, unknown>, context
         data: {
           eventId: event.id,
           action: "EVENT_SUBMITTED_VIA_AI",
-          actorEmail: input.contact_email as string,
+          actorEmail: contactEmail,
           details: { title: input.title as string, room: room.name },
         },
       });
@@ -311,15 +308,15 @@ async function executeTool(name: string, input: Record<string, unknown>, context
 
     case "list_my_events": {
       const org = await prisma.organization.findUnique({
-        where: { id: input.organization_id as string },
+        where: { id: context.organizationId },
         select: { timezone: true },
       });
       const events = await prisma.event.findMany({
         where: {
-          organizationId: input.organization_id as string,
+          organizationId: context.organizationId,
           deleted: false,
           OR: [
-            { contactEmail: input.user_email as string },
+            { contactEmail: context.userEmail },
           ],
           startDateTime: { gte: new Date() },
         },
@@ -413,10 +410,23 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { messages, organizationId, orgSlug } = body;
+  const { messages, organizationId } = body;
 
   const org = await prisma.organization.findUnique({ where: { id: organizationId } });
   if (!org) {
+    return Response.json({ error: "Organization not found" }, { status: 404 });
+  }
+
+  // The body-supplied organizationId is untrusted: verify the authenticated user
+  // actually belongs to this org before exposing any of its data through the
+  // tools. Return 404 (not 403) so a non-member cannot confirm the org exists.
+  const user = await prisma.user.findUnique({ where: { email: token.email as string } });
+  const membership = user
+    ? await prisma.organizationMember.findFirst({
+        where: { organizationId, userId: user.id },
+      })
+    : null;
+  if (!user?.active || (!membership && !user.isSystemAdmin)) {
     return Response.json({ error: "Organization not found" }, { status: 404 });
   }
 

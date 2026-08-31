@@ -17,6 +17,7 @@ the pilot succeeding, not by momentum).
 | Integrity | Reserved rooms protected by name, not count (charter 6.2 literal) | `reservedRoomSlugs` |
 | Time | One convention: org wall-clock in, true UTC instants stored, org tz rendered; DST-tested | `src/lib/orgtime.ts` + tests |
 | AuthZ | All admin actions role-gated (audited); approver-notify helpers no longer network-invokable | audit 2026-08-05 |
+| AuthZ | `/api/chat` verifies caller membership in the body-supplied org (404 on non-member); tools pinned to the server-verified org/user instead of model-supplied ids; non-admins booked under their own identity | `src/app/api/chat/route.ts`, `src/__tests__/chat-route.test.ts` |
 | Auth surface | Pilot deny-by-default lockdown; anonymous → login/401 everywhere | `src/proxy.ts` |
 | Headers | HSTS, nosniff, frame-deny, referrer policy, permissions policy | `next.config.ts` |
 | Monitoring hook | `/api/health` (public, status-only) for uptime probes | `src/app/api/health/route.ts` |
@@ -34,7 +35,6 @@ the pilot succeeding, not by momentum).
 | Backups | Scheduled (not manual) backups + restore drill; consider Supabase Pro PITR | Before any real (non-fictitious) data |
 | Infra | Free-tier Supabase + hobby Vercel; no staging environment | Before real data; paid tiers + a staging project |
 | Recurrence | `event_instances` not covered by the exclusion constraint (no room column); app-checked only | Schema change; bundle with next migration |
-| Chat | `/api/chat` trusts body organizationId (cross-org in multi-tenant) | Before any second org shares the deployment |
 | Email/cron | Disabled on pilot by design; production validation needed when enabled | Pilot → production cutover |
 | Assurance | E2E suite in CI (playwright exists, needs DB service), load test, security review/pen test | Pilot greenlight; ~1 week |
 | Governance | `schedulingCutoffDays` double meaning (min-advance vs recurrence horizon) | Product decision with the Dean's office |
