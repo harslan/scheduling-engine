@@ -17,6 +17,8 @@ I also want to go first. I don't need a dedicated office, and I'd rather test th
 
 None of this commits the School to anything. I'd just like fifteen minutes to show you it working, and then you decide whether it's worth a next step. If it is, that step is small: a short conversation with you, a little information from Brenda and the School, and everything running quietly alongside the real world with nothing set in stone.
 
+If you'd like to look before we meet, it's already live and private. Go to https://sbs-space-pilot.vercel.app and sign in with triley@suffolk.edu; I'm sending your temporary password in a separate note. Everyone in it is under invented names, and nothing you click assigns anyone anything. I set Brenda up the same way, since the roster will come from her.
+
 Could you spare fifteen or twenty minutes in the next week or two? I'll come to you.
 
 Warm regards,
