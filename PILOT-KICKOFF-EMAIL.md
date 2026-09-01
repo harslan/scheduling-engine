@@ -1,5 +1,5 @@
 **To:** Dean Tracey Riley
-**Subject:** A fairer way to handle SBS office space, and something I'd like to show you
+**Subject:** A fairer way to handle SBS office space, and a link to try it
 
 Dear Tracey,
 
@@ -13,11 +13,11 @@ I'll admit the moment it became real for me. This kind of fair-assignment proble
 
 I also want to go first. I don't need a dedicated office, and I'd rather test the idea on myself than ask it of anyone else. I'd like to put mine into the system as a shared room anyone can book, and I'll book it like everyone else when I need it. If we're going to ask colleagues to share, the first office in the pool should be mine.
 
-None of this commits the School to anything. I'd just like fifteen minutes to show you it working, and then you decide whether it's worth a next step. If it is, that step is small: a short conversation with you, a little information from Brenda and the School, and everything running quietly alongside the real world with nothing set in stone.
+None of this commits the School to anything. Mostly I wanted you and Brenda to see it for yourselves, so I've set it up for you to try. It's live and private at https://sbs-space-pilot.vercel.app. You and Brenda each have a dean's-eye account (triley@suffolk.edu and bbond@suffolk.edu) that shows the decision view: the rule's dials, the run, the shortfall named, and the space it would free for students. There's also a sample faculty sign-in (ahalloran@sawyer.demo) so you can see what a colleague sees, an office and the plain reasons for it. Passwords are in my separate note.
 
-If you'd like to look before we meet, it's already live and private at https://sbs-space-pilot.vercel.app. I've set up sign-ins for both of you. You and Brenda each have a dean's-eye account (triley@suffolk.edu and bbond@suffolk.edu) that shows the decision view: the rule's dials, the run, the shortfall named, and the space it would free for students. There's also a sample faculty sign-in (ahalloran@sawyer.demo) so you can see what a colleague sees, an office and the plain reasons for it. Passwords are in my separate note. Everyone in it is under invented names, and nothing you click assigns anyone anything.
+One thing to be clear about: everything in it is artificial for now. The names are invented and the schedule is a stand-in, so nothing you see is a real assignment and nothing you click affects anyone. It's there so you can get a feel for how it works.
 
-Could you spare fifteen or twenty minutes in the next week or two? I'll come to you.
+Have a look whenever you have a few minutes, and I'd genuinely like to hear what you both think. If it would help to walk through it together, I'll be glad to meet, but there's no need.
 
 Warm regards,
 Hasan
