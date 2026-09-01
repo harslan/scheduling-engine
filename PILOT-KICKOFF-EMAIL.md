@@ -3,9 +3,7 @@
 
 Dear Tracey,
 
-This started with the office-sharing question you raised in the spring. Since July a few of us have been building an answer, and now it runs. I'd like to show it to you. Let me keep this plain.
-
-The problem isn't really the shortage. As SBS grows we don't have a private office for everyone, but we could manage that. What we can't manage is the feeling that whoever ends up sharing got there by seniority, or by negotiating hardest, or by asking loudest. That's the part that stings, and it's the part I wanted to solve.
+I hope all is well. I have been building an answer for the office-sharing question. As SBS grows, and as our priority is to spare more space for students, we don't have a private office for everyone, but we could manage that. What we can't manage is the feeling that whoever ends up sharing got there by seniority, or by negotiating hardest, or by asking loudest. That's the part that stings, and it's the part I wanted to solve.
 
 So we built software that decides office space by one rule, applied to everyone by the same arithmetic: your office is earned by your teaching schedule. You tell it which days you're on campus. It pairs people whose days never overlap, so two colleagues can share one office and each still has it to themselves on the days they're in. Everyone can see exactly why they got what they got. And if two people want to trade, they can, but only when everyone affected agrees. No one's arrangement changes behind their back.
 
