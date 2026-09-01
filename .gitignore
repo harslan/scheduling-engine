@@ -48,3 +48,6 @@ next-env.d.ts
 /src/generated/prisma
 .env.production.local
 .env*.local
+
+# Send-ready email with live pilot credentials — never commit
+PILOT-KICKOFF-EMAIL.send.md
