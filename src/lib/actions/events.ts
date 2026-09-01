@@ -22,7 +22,10 @@ const SubmitEventSchema = z.object({
   roomConfigurationId: z.string().optional(),
   startDateTime: z.string().min(1, "Start date is required"),
   endDateTime: z.string().min(1, "End date is required"),
-  expectedAttendeeCount: z.coerce.number().int().positive().optional(),
+  expectedAttendeeCount: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().int().positive("Expected attendees must be a positive number").optional()
+  ),
   contactName: z.string().min(1, "Contact name is required"),
   contactEmail: z.string().email("Valid email is required"),
   contactPhone: z.string().optional(),
