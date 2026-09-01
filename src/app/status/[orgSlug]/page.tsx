@@ -78,17 +78,23 @@ export default function StatusBoardPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       {/* Header */}
       <header className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <Link
+          href={`/${params.orgSlug}`}
+          className="flex items-center gap-3 group"
+          title={`Back to ${data.org.name}`}
+        >
           <div className="w-9 h-9 bg-gradient-to-br from-primary to-blue-600 rounded-xl flex items-center justify-center">
             <Calendar className="w-4.5 h-4.5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight">{data.org.name}</h1>
+            <h1 className="text-lg font-bold tracking-tight group-hover:text-primary transition-colors">
+              {data.org.name}
+            </h1>
             <p className="text-xs text-slate-500">
               {data.org.roomTerm} Status Board
             </p>
           </div>
-        </div>
+        </Link>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-4 text-sm">
             <span className="flex items-center gap-2">
@@ -102,7 +108,7 @@ export default function StatusBoardPage() {
           </div>
           <Link
             href={`/${params.orgSlug}`}
-            className="text-xs text-slate-600 hover:text-slate-400 transition-colors"
+            className="text-xs font-medium text-slate-300 hover:text-white border border-slate-700 hover:border-slate-500 rounded-lg px-3 py-1.5 transition-colors"
           >
             Back to calendar
           </Link>
