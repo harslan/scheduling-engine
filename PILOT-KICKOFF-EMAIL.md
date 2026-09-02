@@ -7,7 +7,7 @@ I hope Monday went smoothly, and that you and Brenda are settling into 1230.
 
 Watching this week's office shuffle is what pushed me to finish something I have been building. I wanted software that could do this automatically, every semester, and show each person why they got the office they got.
 
-I thought that an office is earned by a faculty's teaching schedule, and the same rule applies to everyone. You say which days you are on campus. It pairs people whose days never overlap, so two colleagues can share one office and each still has it to themselves on the days they are in. If two people want to trade, they can, but only when everyone affected agrees. And nothing is ever official until the faculty vote to adopt the rule; until then, every run is just a simulation.
+I thought that an office is earned by a faculty member's teaching schedule, and the same rule applies to everyone. You say which days you are on campus. It pairs people whose days never overlap, so two colleagues can share one office and each still has it to themselves on the days they are in. If two people want to trade, they can, but only when everyone affected agrees. And nothing is ever official until the faculty vote to adopt the rule; until then, every run is just a simulation.
 
 I didn't fully trust our own tool at first, so we fed it the real teaching schedule, all 120 who taught in person last spring, under invented names, and it matched our hand count to the digit: 61 offices needed, 60 available, short by one, and it named who.
 
