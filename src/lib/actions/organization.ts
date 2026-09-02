@@ -28,8 +28,14 @@ const OrgSettingsSchema = z.object({
   // Scheduling constraints
   roomOpeningTime: z.string().optional(),
   roomClosingTime: z.string().optional(),
-  maxEventLengthMinutes: z.coerce.number().int().positive().optional(),
-  schedulingCutoffDays: z.coerce.number().int().positive().optional().nullable(),
+  maxEventLengthMinutes: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().int().positive("Max event length must be a positive number").optional()
+  ),
+  schedulingCutoffDays: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.coerce.number().int().positive("Scheduling cutoff must be a positive number of days").nullable().optional()
+  ),
   schedulingCutoffFixedDate: z.string().optional(),
 
   // Custom labels
@@ -39,7 +45,10 @@ const OrgSettingsSchema = z.object({
 
   // Email
   emailReplyToAddress: z.string().optional(),
-  reminderEmailHours: z.coerce.number().int().positive().optional().nullable(),
+  reminderEmailHours: z.preprocess(
+    (v) => (v === "" ? null : v),
+    z.coerce.number().int().positive("Reminder hours must be a positive number").nullable().optional()
+  ),
 });
 
 export async function updateOrganization(orgId: string, formData: FormData) {

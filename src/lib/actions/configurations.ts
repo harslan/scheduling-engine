@@ -95,7 +95,10 @@ const ConfigSchema = z.object({
   roomId: z.string(),
   name: z.string().min(1, "Name is required"),
   configurationTypeId: z.string().optional(),
-  concurrentEventLimit: z.coerce.number().int().min(1).optional(),
+  concurrentEventLimit: z.preprocess(
+    (v) => (v === "" || v == null ? undefined : v),
+    z.coerce.number().int().min(1, "Concurrent limit must be at least 1").optional()
+  ),
   imageUrl: z.string().optional(),
 });
 
