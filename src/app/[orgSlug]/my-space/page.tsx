@@ -78,6 +78,16 @@ export default async function MySpacePage({
       "6.1",
       `Standard office guarantee: enclosed, lockable, ≥ ${dials.minSf} sf. A cube never counts.`,
     ]);
+    if (room?.hasWindow)
+      trace.push([
+        "6.3",
+        "A window office. Windows go to the highest-priority schedules first, by the same measured order that sets the tiers, and yours ranked in.",
+      ]);
+    if (mates.length > 0 && (room?.deskCapacity ?? 1) >= 2)
+      trace.push([
+        "6.4",
+        "Room enough for two desks, so you and your officemate each keep your own space, even though your days never overlap.",
+      ]);
     if (!mine.placed)
       trace.push([
         "8.1",
@@ -120,6 +130,20 @@ export default async function MySpacePage({
                   </>
                 )}
               </div>
+              {(room?.hasWindow || (mates.length > 0 && (room?.deskCapacity ?? 1) >= 2)) && (
+                <div className="flex gap-2 mt-2">
+                  {room?.hasWindow && (
+                    <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
+                      Window
+                    </span>
+                  )}
+                  {mates.length > 0 && (room?.deskCapacity ?? 1) >= 2 && (
+                    <span className="text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-full px-2.5 py-0.5">
+                      Two desks
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           {trace.length > 0 && (

@@ -143,6 +143,8 @@ model Room {
   updatedAt               DateTime            @updatedAt
   bufferMinutes           Int                 @default(0)
   capacity                Int?
+  hasWindow               Boolean             @default(false)
+  deskCapacity            Int                 @default(1)
   parentConversionMinutes Int                 @default(0)
   approverId              String?
   reserveLocationName     String              @default("")

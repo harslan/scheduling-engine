@@ -91,6 +91,16 @@ export function AddRoomForm({
             className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Desks</label>
+          <input
+            name="deskCapacity"
+            type="number"
+            min={1}
+            defaultValue={1}
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none text-sm"
+          />
+        </div>
       </div>
 
       <div>
@@ -106,6 +116,10 @@ export function AddRoomForm({
         <label className="flex items-center gap-2 text-sm text-slate-600">
           <input name="managersOnly" type="checkbox" value="true" className="rounded" />
           Managers only
+        </label>
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input name="hasWindow" type="checkbox" value="true" className="rounded" />
+          Has a window
         </label>
       </div>
 

@@ -1,6 +1,7 @@
 import { prisma } from "./prisma";
 import { wallTimeToUtc } from "./orgtime";
 import { allocateWithPreferences, type Person } from "./allocation";
+import { assignRoomsToGroups, groupsFromAssignments } from "./room-assignment";
 
 /**
  * The allocation run: measured teaching in, fair assignment out, offices on
@@ -69,9 +70,12 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
     partnerPref,
   );
 
-  // O001..O00N -> actual rooms in sort order; beyond stock stays a label
-  const officeToRoom = new Map(
-    officeRooms.map((r, i) => [`O${String(i + 1).padStart(3, "0")}`, r]),
+  // O001..O00N -> real rooms. Not sort order: the fair rule places each group,
+  // highest priority first, in the best room it can use — two-desk rooms for
+  // sharers, windows earned by the same priority. See room-assignment.ts.
+  const officeToRoom = assignRoomsToGroups(
+    groupsFromAssignments(result.assign),
+    officeRooms,
   );
 
   const status = charter.ratifiedBy ? "OFFICIAL" : "SIMULATION";

@@ -27,6 +27,8 @@ interface RoomData {
   concurrentEventLimit: number;
   bufferMinutes: number;
   capacity: number | null;
+  hasWindow: boolean;
+  deskCapacity: number;
   notes: string;
   sortOrder: number;
   eventCount: number;
@@ -97,10 +99,16 @@ export function RoomRow({
             <input name="capacity" type="number" min={1} defaultValue={room.capacity || ""} placeholder="Capacity" className="px-3 py-2 border border-slate-200 rounded-lg text-sm" />
             <input name="concurrentEventLimit" type="number" min={1} defaultValue={room.concurrentEventLimit} className="px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Max concurrent" />
             <input name="bufferMinutes" type="number" min={0} defaultValue={room.bufferMinutes} className="px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Buffer (min)" />
+            <input name="deskCapacity" type="number" min={1} defaultValue={room.deskCapacity} className="px-3 py-2 border border-slate-200 rounded-lg text-sm" placeholder="Desks" />
           </div>
           <label className="flex items-center gap-2 text-sm text-slate-600">
             <input name="managersOnly" type="checkbox" value="true" defaultChecked={room.managersOnly} />
             Managers only
+          </label>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input type="hidden" name="hasWindow" value="false" />
+            <input name="hasWindow" type="checkbox" value="true" defaultChecked={room.hasWindow} />
+            Has a window
           </label>
           <div className="flex gap-2">
             <button type="submit" disabled={loading} className="flex-1 px-3 py-2 bg-primary text-white rounded-xl text-sm font-medium">Save</button>
@@ -189,6 +197,15 @@ export function RoomRow({
               placeholder="Capacity"
               className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm w-20"
             />
+            <input
+              name="deskCapacity"
+              type="number"
+              min={1}
+              defaultValue={room.deskCapacity}
+              placeholder="Desks"
+              title="Desks (2 lets a shared office give each person their own)"
+              className="px-2 py-1.5 border border-slate-200 rounded-lg text-sm w-16"
+            />
             <label className="flex items-center gap-1 text-sm">
               <input
                 name="managersOnly"
@@ -197,6 +214,16 @@ export function RoomRow({
                 defaultChecked={room.managersOnly}
               />
               Mgr only
+            </label>
+            <label className="flex items-center gap-1 text-sm">
+              <input type="hidden" name="hasWindow" value="false" />
+              <input
+                name="hasWindow"
+                type="checkbox"
+                value="true"
+                defaultChecked={room.hasWindow}
+              />
+              Window
             </label>
             <button
               type="submit"
@@ -233,6 +260,12 @@ export function RoomRow({
               <ChevronRight className="w-3.5 h-3.5 text-slate-400" />
             )}
             {room.name}
+            {room.hasWindow && (
+              <span className="text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-1">window</span>
+            )}
+            {room.deskCapacity >= 2 && (
+              <span className="text-[10px] font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded px-1">{room.deskCapacity} desks</span>
+            )}
             {room.configurations.length > 0 && (
               <span className="text-xs text-slate-400 font-normal">
                 ({room.configurations.length} config{room.configurations.length !== 1 ? "s" : ""})
