@@ -14,6 +14,12 @@ const PILOT_LOCKDOWN = process.env.PILOT_LOCKDOWN === "1";
 const LOCKDOWN_PUBLIC = [
   "/api/auth",
   "/api/health", // liveness only — returns status, never data
+  // The student-facing door: a professor's published office hours and nothing
+  // else. /api/office-hours returns ONLY what faculty chose to publish (never
+  // the allocation), and /find is its page. Both are opt-in, so they stay open
+  // even under lockdown — a student should never need an account to find you.
+  "/api/office-hours",
+  "/find",
   "/login",
   "/forgot-password",
   "/reset-password",
