@@ -95,7 +95,7 @@ export default async function MySpacePage({
         (room?.deskCapacity ?? 1) >= 2
           ? [
               "6.4",
-              "Room enough for two desks, so you and your officemate each keep your own space, even though your days never overlap.",
+              "Room enough for two desks, so you and your officemate each keep your own space. Where there are not enough two-desk rooms for every shared office, they go by the same measured order that sets the tiers, and yours reached one.",
             ]
           : [
               "6.4",
