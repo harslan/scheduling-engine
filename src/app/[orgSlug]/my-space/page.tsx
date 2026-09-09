@@ -90,11 +90,18 @@ export default async function MySpacePage({
               "This office has a window. The charter does not prioritize windows right now, so it came with the room, not from the rule.",
             ],
       );
-    if (mates.length > 0 && (room?.deskCapacity ?? 1) >= 2)
-      trace.push([
-        "6.4",
-        "Room enough for two desks, so you and your officemate each keep your own space, even though your days never overlap.",
-      ]);
+    if (mates.length > 0)
+      trace.push(
+        (room?.deskCapacity ?? 1) >= 2
+          ? [
+              "6.4",
+              "Room enough for two desks, so you and your officemate each keep your own space, even though your days never overlap.",
+            ]
+          : [
+              "6.4",
+              "A single-desk shared office for now. There were not enough two-desk rooms for every shared office, and yours is one that missed out. It is named here, not hidden, and a later run can place you in one if a two-desk room frees up.",
+            ],
+      );
     if (!mine.placed)
       trace.push([
         "8.1",
@@ -137,7 +144,7 @@ export default async function MySpacePage({
                   </>
                 )}
               </div>
-              {(room?.hasWindow || (mates.length > 0 && (room?.deskCapacity ?? 1) >= 2)) && (
+              {(room?.hasWindow || mates.length > 0) && (
                 <div className="flex gap-2 mt-2">
                   {room?.hasWindow && (
                     <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2.5 py-0.5">
@@ -147,6 +154,11 @@ export default async function MySpacePage({
                   {mates.length > 0 && (room?.deskCapacity ?? 1) >= 2 && (
                     <span className="text-xs font-medium text-sky-700 bg-sky-50 border border-sky-200 rounded-full px-2.5 py-0.5">
                       Two desks
+                    </span>
+                  )}
+                  {mates.length > 0 && (room?.deskCapacity ?? 1) < 2 && (
+                    <span className="text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-full px-2.5 py-0.5">
+                      Shared desk
                     </span>
                   )}
                 </div>
