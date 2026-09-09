@@ -16,15 +16,26 @@ const room = (slug: string, sortOrder: number, hasWindow: boolean, deskCapacity:
 const solo = (office: string): OfficeGroup => ({ office, size: 1, tier: "ded" });
 const pair = (office: string): OfficeGroup => ({ office, size: 2, tier: "pair" });
 
-describe("assignRoomsToGroups — windows by priority", () => {
-  it("gives windows to higher-priority groups first, within a desk class", () => {
-    const rooms = [
-      room("C", 3, true, 1), // 1-desk window
-      room("D", 4, false, 1), // 1-desk no window
-    ];
-    const map = assignRoomsToGroups([solo("O001"), solo("O002")], rooms);
-    expect(map.get("O001")!.slug).toBe("C"); // top priority earns the window
-    expect(map.get("O002")!.slug).toBe("D");
+describe("assignRoomsToGroups — window policy is a ratified choice", () => {
+  // window room D2 has a HIGHER sort order, so only a window-prioritizing
+  // policy would pick it before the plain room.
+  const rooms = () => [
+    room("PLAIN", 1, false, 1), // no window, first in sort order
+    room("WIN", 2, true, 1), // window, later in sort order
+  ];
+
+  it("earns windows by priority when the charter says 'presence'", () => {
+    const map = assignRoomsToGroups([solo("O001"), solo("O002")], rooms(), {
+      prioritizeWindows: true,
+    });
+    expect(map.get("O001")!.slug).toBe("WIN"); // top priority earns the window
+    expect(map.get("O002")!.slug).toBe("PLAIN");
+  });
+
+  it("does NOT prioritize windows by default (policy 'none')", () => {
+    const map = assignRoomsToGroups([solo("O001"), solo("O002")], rooms());
+    expect(map.get("O001")!.slug).toBe("PLAIN"); // sort order only — window is incidental
+    expect(map.get("O002")!.slug).toBe("WIN");
   });
 });
 

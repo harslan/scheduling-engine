@@ -60,6 +60,7 @@ export default async function CharterPage({
           adjunctsInScope: charter.adjunctsInScope,
           minSf: charter.minSf,
           privateRoomSlugs: charter.privateRoomSlugs,
+          windowPolicy: charter.windowPolicy,
           ratified: Boolean(charter.ratifiedBy),
         }}
       />

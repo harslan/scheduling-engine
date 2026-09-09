@@ -21,6 +21,7 @@ export function CharterForm({
     adjunctsInScope: boolean | null;
     minSf: number;
     privateRoomSlugs: string;
+    windowPolicy: string;
     ratified: boolean;
   };
 }) {
@@ -133,6 +134,13 @@ export function CharterForm({
             <span className="text-slate-600">Private room slugs — 7.2 (never allocated)</span>
             <input name="privateRoomSlugs"
               defaultValue={charter.privateRoomSlugs} className={inputCls} />
+          </label>
+          <label className="block">
+            <span className="text-slate-600">Window offices — 6.3 (who gets them)</span>
+            <select name="windowPolicy" defaultValue={charter.windowPolicy} className={inputCls}>
+              <option value="none">Not prioritized — a window comes with the room</option>
+              <option value="presence">Earned by presence — busiest schedules first</option>
+            </select>
           </label>
         </div>
         <label className="block text-sm">

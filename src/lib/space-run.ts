@@ -76,6 +76,7 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
   const officeToRoom = assignRoomsToGroups(
     groupsFromAssignments(result.assign),
     officeRooms,
+    { prioritizeWindows: charter.windowPolicy === "presence" },
   );
 
   const status = charter.ratifiedBy ? "OFFICIAL" : "SIMULATION";
@@ -96,6 +97,7 @@ export async function executeSpaceRun(organizationId: string, semester: string) 
         adjunctsInScope: charter.adjunctsInScope,
         minSf: charter.minSf,
         privateRoomSlugs: charter.privateRoomSlugs,
+        windowPolicy: charter.windowPolicy,
       }),
       assignments: {
         create: [

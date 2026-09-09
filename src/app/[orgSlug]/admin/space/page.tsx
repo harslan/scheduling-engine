@@ -92,6 +92,10 @@ export default async function AdminSpacePage({
             Private rooms:{" "}
             {dial(charter.privateRoomSlugs || null)}
           </div>
+          <div>
+            Windows:{" "}
+            {charter.windowPolicy === "presence" ? "earned by presence" : "not prioritized"}
+          </div>
         </div>
       </div>
 

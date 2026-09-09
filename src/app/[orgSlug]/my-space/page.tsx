@@ -79,10 +79,17 @@ export default async function MySpacePage({
       `Standard office guarantee: enclosed, lockable, ≥ ${dials.minSf} sf. A cube never counts.`,
     ]);
     if (room?.hasWindow)
-      trace.push([
-        "6.3",
-        "A window office. Windows go to the highest-priority schedules first, by the same measured order that sets the tiers, and yours ranked in.",
-      ]);
+      trace.push(
+        dials.windowPolicy === "presence"
+          ? [
+              "6.3",
+              "A window office. Under the ratified rule, windows go to the highest-priority schedules first, among the offices that fit yours, and yours ranked in.",
+            ]
+          : [
+              "6.3",
+              "This office has a window. The charter does not prioritize windows right now, so it came with the room, not from the rule.",
+            ],
+      );
     if (mates.length > 0 && (room?.deskCapacity ?? 1) >= 2)
       trace.push([
         "6.4",

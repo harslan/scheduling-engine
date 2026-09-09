@@ -15,6 +15,7 @@ const UpdateSchema = z.object({
   adjunctsInScope: z.enum(["undecided", "true", "false"]),
   minSf: z.coerce.number().int().min(0),
   privateRoomSlugs: z.string().optional(),
+  windowPolicy: z.enum(["none", "presence"]).optional(),
   reason: z.string().optional(),
 });
 
@@ -64,6 +65,7 @@ export async function updateCharterAction(formData: FormData) {
       d.adjunctsInScope === "undecided" ? null : d.adjunctsInScope === "true",
     minSf: d.minSf,
     privateRoomSlugs: d.privateRoomSlugs ?? "",
+    windowPolicy: d.windowPolicy ?? "none",
   };
   const result = await updateCharter(d.organizationId, user.id, patch, d.reason ?? "");
   revalidatePath("/[orgSlug]/admin/space/charter", "page");

@@ -632,6 +632,7 @@ model SpaceCharter {
   adjunctsInScope    Boolean? // UNDECIDED until set
   minSf              Int       @default(80) // charter 6.1
   privateRoomSlugs   String    @default("") // charter 7.2 — comma list, never allocated
+  windowPolicy       String    @default("none") // charter 6.3 — "none" | "presence"; how window offices are prioritized
   ratifiedBy         String? // charter 10.4 — null = DRAFT
   ratifiedOn         DateTime?
   ratificationRecord String?

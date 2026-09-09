@@ -16,6 +16,7 @@ export type CharterPatch = {
   adjunctsInScope?: boolean | null;
   minSf?: number;
   privateRoomSlugs?: string;
+  windowPolicy?: string;
 };
 
 const FIELDS: (keyof CharterPatch)[] = [
@@ -26,6 +27,7 @@ const FIELDS: (keyof CharterPatch)[] = [
   "adjunctsInScope",
   "minSf",
   "privateRoomSlugs",
+  "windowPolicy",
 ];
 
 const show = (v: unknown) =>

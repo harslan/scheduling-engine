@@ -6,13 +6,14 @@
  * then pool). This module turns those into REAL rooms, and it is the only place
  * room quality — a window, room for two desks — enters the allocation.
  *
- * The rule is deliberately the same one that sets the tiers: measured priority,
- * in order. Each group, highest priority first, takes the best room for it:
+ * Each group, highest priority first, takes the best room for it:
  *   1. Desk-appropriate first. A shared office (two people) prefers a room that
  *      fits two desks, so each colleague keeps their own space; a solo office
  *      does not need one, so two-desk rooms are saved for sharers when possible.
- *   2. Among those, a window is preferred — so a window is earned the same way a
- *      dedicated office is: by ranking high enough, in order.
+ *   2. A window is preferred ONLY when the charter says so. Whether a window is
+ *      a prioritized good is a value the faculty ratify (windowPolicy: "presence"
+ *      earns windows by the same measured order that sets the tiers; "none"
+ *      leaves them unprioritized). The engine never decides this on its own.
  *   3. Then the room's own sort order, keeping placement stable.
  *
  * Because everyone who shares is day-disjoint (never in on the same day), two
@@ -33,10 +34,12 @@ export type AssignableRoom = {
   deskCapacity: number;
 };
 
-/** Map offices (priority order) to rooms. Groups past the stock get no room. */
+/** Map offices (priority order) to rooms. Groups past the stock get no room.
+ *  Windows influence placement only when the ratified policy prioritizes them. */
 export function assignRoomsToGroups<R extends AssignableRoom>(
   groups: OfficeGroup[],
   rooms: R[],
+  opts: { prioritizeWindows?: boolean } = {},
 ): Map<string, R> {
   const available = [...rooms];
   const out = new Map<string, R>();
@@ -46,7 +49,8 @@ export function assignRoomsToGroups<R extends AssignableRoom>(
     const score = (r: R): [number, number, number] => [
       // desk-appropriate first (sharers want >=2, solos leave >=2 for sharers)
       sharer ? (r.deskCapacity >= 2 ? 0 : 1) : r.deskCapacity < 2 ? 0 : 1,
-      r.hasWindow ? 0 : 1, // then window, so windows go by priority order
+      // window next, but only if the charter prioritizes windows
+      opts.prioritizeWindows ? (r.hasWindow ? 0 : 1) : 0,
       r.sortOrder, // then stable
     ];
     let best = 0;
